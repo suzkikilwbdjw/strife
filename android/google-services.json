@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "122925758220",
+    "firebase_url": "https://strife-aeeb5-default-rtdb.firebaseio.com",
+    "project_id": "strife-aeeb5",
+    "storage_bucket": "strife-aeeb5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:122925758220:android:d2f76750d15d508fe7fb29",
+        "android_client_info": {
+          "package_name": "com.example.strife"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "122925758220-me6bo5imb8o9v1612eteq474rfjatg9k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLBAll9ukq_bZbzQdxpKVt2-_6ojb9ttw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "122925758220-me6bo5imb8o9v1612eteq474rfjatg9k.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "122925758220-ue2ccnnlishoqqpn6bs0pt5upujk4ti9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.strife"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
