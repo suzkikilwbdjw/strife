@@ -82,6 +82,7 @@ class CreateRoomButton extends StatelessWidget {
 
         client.setParticipantIdemtity(textEditingController.text);
         client.setParticipantName(user.displayName!);
+        client.setParticipantPhotoUrl(user.photoURL!);
         //client.setParticipantRoom();
 
         final isConnected = await client.connectToRoom();

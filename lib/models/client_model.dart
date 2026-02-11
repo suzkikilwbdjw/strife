@@ -35,7 +35,8 @@ class ClientModel extends ChangeNotifier {
   bool _isEnableCamera = false;
   bool _isEnableMicrophone = false;
 
-  ConnectionQuality? _connectionQuality;
+  final Map<String?, ConnectionQuality?> _connectionQualities = {};
+  String? _participantPhotoUrl;
 
   //Listener
   late final EventsListener<RoomEvent> _listener = _room.createListener();
@@ -51,7 +52,7 @@ class ClientModel extends ChangeNotifier {
   String? get leaveParticipantDisplayName => _leaveParticipantDisplayName;
   bool get isEnableCamera => _isEnableCamera;
   bool get isEnableMicrophone => _isEnableMicrophone;
-  ConnectionQuality? get connectionQuality => _connectionQuality;
+  String? get participantPhotoUrl => _participantPhotoUrl;
   //
 
   //Сетеры
@@ -65,6 +66,10 @@ class ClientModel extends ChangeNotifier {
 
   void setParticipantRoom(String participantRoom) {
     _participantRoom = participantRoom;
+  }
+
+  void setParticipantPhotoUrl(String participantPhotoUrl) {
+    _participantPhotoUrl = participantPhotoUrl;
   }
   //
 
@@ -88,8 +93,35 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _updatePhotoCache(Participant participant) {
+    final metadata = participant.metadata;
+
+    if (metadata == null || metadata.isEmpty) {
+      _photoCache[participant.sid] = null;
+      return;
+    }
+
+    try {
+      final decoded = jsonDecode(metadata);
+      _photoCache[participant.sid] = decoded['photoUrl'];
+    } catch (_) {
+      _photoCache[participant.sid] = null;
+    }
+  }
+
+  ConnectionQuality? connectionQualityOf(Participant participant) {
+    return _connectionQualities[participant.sid];
+  }
+
+  final Map<String, String?> _photoCache = {};
+
+  String? photoUrlOf(Participant participant) {
+    return _photoCache[participant.sid];
+  }
+
   @override
   void dispose() {
+    _photoCache.clear();
     _listener.dispose();
     _room.dispose();
     super.dispose();
@@ -106,8 +138,10 @@ class ClientModel extends ChangeNotifier {
           'room_name': _participantRoom,
           'participant_identity': _participantIdentity,
           'participant_name': _participantName,
+          'photo_url': _participantPhotoUrl,
         }),
       );
+
       final data = jsonDecode(response.body);
       _token = data['participantToken'] as String;
 
@@ -124,6 +158,9 @@ class ClientModel extends ChangeNotifier {
       // Изменение числа участников
       _changeParticipants();
 
+      for (var p in _participants) {
+        if (p != null) _updatePhotoCache(p);
+      }
       //Обработка изменений комнаты и треков
       _handlingEventRoomAndTrack();
 
@@ -144,6 +181,7 @@ class ClientModel extends ChangeNotifier {
         print('(event) Отключение от комнаты (причина): ${e.reason}');
       })
       ..on<ParticipantConnectedEvent>((e) {
+        _updatePhotoCache(e.participant);
         _newParticipantDisplayName = e.participant.name;
         _changeParticipants();
         print('(event) Подключен участник: ${e.participant.name}');
@@ -212,7 +250,7 @@ class ClientModel extends ChangeNotifier {
         notifyListeners();
       })
       ..on<ParticipantConnectionQualityUpdatedEvent>((e) {
-        _connectionQuality = e.connectionQuality;
+        _connectionQualities[e.participant.sid] = e.connectionQuality;
         notifyListeners();
         print(
           '(event) Изменение в качестве соединения: ${e.connectionQuality}',
@@ -221,6 +259,10 @@ class ClientModel extends ChangeNotifier {
       ..on<ActiveSpeakersChangedEvent>((e) {
         notifyListeners();
         print('(event) Изменено число говорящих');
+      })
+      ..on<ParticipantMetadataUpdatedEvent>((e) {
+        _updatePhotoCache(e.participant);
+        notifyListeners();
       });
   }
 

@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -281,7 +280,7 @@ class ParticipantTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        UserPhoto(),
+        UserPhoto(participant: participant),
         VideoParticipantOrNothing(participant: participant),
         BottomStatusBarLeft(participant: participant),
         BottomStatusBarRight(participant: participant),
@@ -291,20 +290,20 @@ class ParticipantTile extends StatelessWidget {
 }
 
 class UserPhoto extends StatelessWidget {
-  const UserPhoto({super.key});
+  const UserPhoto({super.key, required this.participant});
+
+  final Participant participant;
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      top: 1,
-      bottom: 1,
-      left: 1,
-      right: 1,
-      child: Image.network(
-        FirebaseAuth.instance.currentUser!.photoURL!,
-        scale: 2,
-      ),
-    );
+    final client = context.read<ClientModel>();
+    final photoUrl = client.photoUrlOf(participant);
+
+    if (photoUrl == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned.fill(child: Image.network(photoUrl, scale: 1.2));
   }
 }
 
@@ -382,15 +381,20 @@ class BottomStatusBarLeft extends StatelessWidget {
 
 class BottomStatusBarRight extends StatelessWidget {
   const BottomStatusBarRight({super.key, required this.participant});
-
   final Participant participant;
+
   @override
   Widget build(BuildContext context) {
+    final ConnectionQuality? connectionQuality = context
+        .select<ClientModel, ConnectionQuality?>(
+          (c) => c.connectionQualityOf(participant),
+        );
+
     return Positioned(
       bottom: 2,
       right: 6,
       child: Icon(
-        switch (participant.connectionQuality) {
+        switch (connectionQuality) {
           ConnectionQuality.excellent => Icons.signal_cellular_alt_rounded,
           ConnectionQuality.good => Icons.signal_cellular_alt_2_bar_rounded,
           ConnectionQuality.poor => Icons.signal_cellular_alt_1_bar_rounded,
@@ -398,13 +402,15 @@ class BottomStatusBarRight extends StatelessWidget {
             Icons.signal_cellular_connected_no_internet_0_bar_rounded,
           ConnectionQuality.unknown =>
             Icons.signal_cellular_connected_no_internet_4_bar_rounded,
+          null => Icons.signal_cellular_connected_no_internet_4_bar_rounded,
         },
-        color: switch (participant.connectionQuality) {
+        color: switch (connectionQuality) {
           ConnectionQuality.excellent => Colors.green,
           ConnectionQuality.good => Colors.yellow,
           ConnectionQuality.poor => Colors.red,
           ConnectionQuality.lost => Colors.red,
           ConnectionQuality.unknown => Colors.red,
+          null => Colors.red,
         },
         semanticLabel: 'Качество сети',
       ),
