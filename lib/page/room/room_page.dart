@@ -132,7 +132,7 @@ class NavigationBottomAppBar extends StatelessWidget {
               icon: isEnableMicrophone ? Icon(Icons.mic) : Icon(Icons.mic_off),
             ),
             IconButton(
-              color: ColorScheme.of(context).onPrimary,
+              color: Colors.deepPurpleAccent,
               onPressed: () async {
                 showDialog(
                   context: context,
@@ -176,7 +176,27 @@ class ParticipantLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pinned = context.select<ClientModel, Participant?>(
+      (c) => c.pinnedParticipant,
+    );
+
     final participants = context.watch<ClientModel>().participants;
+
+    final activeSpeaker = context.select<ClientModel, Participant?>(
+      (c) => c.getActiveSpeaker(),
+    );
+
+    if (pinned != null) {
+      return PinnedParticipantView(pinned: pinned, participants: participants);
+    }
+
+    if (participants.length >= 3 && activeSpeaker != null) {
+      return ActiveSpeakerView(
+        activeSpeaker: activeSpeaker,
+        participants: participants,
+      );
+    }
+
     switch (participants.length) {
       case 0:
         {
@@ -198,7 +218,7 @@ class ParticipantLayout extends StatelessWidget {
             k: 2,
           );
         }
-      case <= 9:
+      case <= 8:
         {
           return GridParticipantsView(
             participants: participants,
@@ -211,6 +231,80 @@ class ParticipantLayout extends StatelessWidget {
           return SizedBox.shrink();
         }
     }
+  }
+}
+
+class PinnedParticipantView extends StatelessWidget {
+  const PinnedParticipantView({
+    super.key,
+    required this.pinned,
+    required this.participants,
+  });
+
+  final Participant pinned;
+  final List<Participant?> participants;
+
+  @override
+  Widget build(BuildContext context) {
+    final others = participants.where((p) => p != pinned).toList();
+
+    return Column(
+      children: [
+        Expanded(flex: 3, child: ParticipantTile(participant: pinned)),
+
+        Flexible(
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.all(8),
+            itemCount: others.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              return SizedBox(
+                width: 180,
+                child: ParticipantTile(participant: others[index]!),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class ActiveSpeakerView extends StatelessWidget {
+  const ActiveSpeakerView({
+    super.key,
+    required this.activeSpeaker,
+    required this.participants,
+  });
+
+  final Participant activeSpeaker;
+  final List<Participant?> participants;
+
+  @override
+  Widget build(BuildContext context) {
+    final others = participants.where((p) => p != activeSpeaker).toList();
+
+    return Column(
+      children: [
+        Expanded(flex: 3, child: ParticipantTile(participant: activeSpeaker)),
+
+        Flexible(
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.all(8),
+            itemCount: others.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              return SizedBox(
+                width: 180,
+                child: ParticipantTile(participant: others[index]!),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -278,13 +372,37 @@ class ParticipantTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        UserPhoto(participant: participant),
-        VideoParticipantOrNothing(participant: participant),
-        BottomStatusBarLeft(participant: participant),
-        BottomStatusBarRight(participant: participant),
-      ],
+    final isPinned = context.select<ClientModel, bool>(
+      (c) => c.pinnedParticipantSid == participant.sid,
+    );
+
+    return GestureDetector(
+      onLongPress: () {
+        context.read<ClientModel>().togglePin(participant);
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: participant.isSpeaking ? Colors.greenAccent : Colors.white24,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Stack(
+          children: [
+            if (isPinned)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Icon(Icons.push_pin, color: Colors.deepPurpleAccent),
+              ),
+
+            UserPhoto(participant: participant),
+            VideoParticipant(participant: participant),
+            BottomStatusBarLeft(participant: participant),
+            BottomStatusBarRight(participant: participant),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -307,8 +425,8 @@ class UserPhoto extends StatelessWidget {
   }
 }
 
-class VideoParticipantOrNothing extends StatelessWidget {
-  const VideoParticipantOrNothing({super.key, required this.participant});
+class VideoParticipant extends StatelessWidget {
+  const VideoParticipant({super.key, required this.participant});
   final Participant participant;
 
   @override
@@ -324,22 +442,16 @@ class VideoParticipantOrNothing extends StatelessWidget {
         )
         .cast<TrackPublication<Track>>()
         .firstOrNull;
-    return Container(
-      decoration: BoxDecoration(
-        border: BoxBorder.all(
-          color: participant.isSpeaking ? Colors.green : Colors.white54,
-          width: 2,
-        ),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: trackPublication != null
-          ? VideoTrackRenderer(
-              trackPublication.track as VideoTrack,
-              mirrorMode: VideoViewMirrorMode.mirror,
-              fit: VideoViewFit.cover,
-            )
-          : Container(),
-    );
+
+    if (trackPublication != null) {
+      return VideoTrackRenderer(
+        trackPublication.track as VideoTrack,
+        mirrorMode: VideoViewMirrorMode.mirror,
+        fit: VideoViewFit.cover,
+      );
+    } else {
+      return Container();
+    }
   }
 }
 

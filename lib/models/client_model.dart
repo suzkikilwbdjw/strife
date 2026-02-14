@@ -30,7 +30,9 @@ class ClientModel extends ChangeNotifier {
   String? _newParticipantDisplayName;
   String? _leaveParticipantDisplayName;
 
-  //Устловные
+  String? _pinnedParticipantSid;
+
+  //Условные
   bool _isReconnecting = false;
   bool _isEnableCamera = false;
   bool _isEnableMicrophone = false;
@@ -53,6 +55,25 @@ class ClientModel extends ChangeNotifier {
   bool get isEnableCamera => _isEnableCamera;
   bool get isEnableMicrophone => _isEnableMicrophone;
   String? get participantPhotoUrl => _participantPhotoUrl;
+  Participant? getActiveSpeaker() => activeSpeaker;
+  String? get pinnedParticipantSid => _pinnedParticipantSid;
+
+  Participant? get activeSpeaker {
+    try {
+      return _participants.firstWhere((p) => p != null && p.isSpeaking);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Participant? get pinnedParticipant {
+    if (_pinnedParticipantSid == null) return null;
+    try {
+      return _participants.firstWhere((p) => p?.sid == _pinnedParticipantSid);
+    } catch (_) {
+      return null;
+    }
+  }
   //
 
   //Сетеры
@@ -119,6 +140,15 @@ class ClientModel extends ChangeNotifier {
     return _photoCache[participant.sid];
   }
 
+  void togglePin(Participant participant) {
+    if (_pinnedParticipantSid == participant.sid) {
+      _pinnedParticipantSid = null;
+    } else {
+      _pinnedParticipantSid = participant.sid;
+    }
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _photoCache.clear();
@@ -183,6 +213,9 @@ class ClientModel extends ChangeNotifier {
       ..on<ParticipantConnectedEvent>((e) {
         _updatePhotoCache(e.participant);
         _newParticipantDisplayName = e.participant.name;
+        if (_pinnedParticipantSid == e.participant.sid) {
+          _pinnedParticipantSid = null;
+        }
         _changeParticipants();
         print('(event) Подключен участник: ${e.participant.name}');
       })
