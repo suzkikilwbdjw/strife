@@ -1,6 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:strife/page/start/start_page.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'firebase/firebase_options.dart';
@@ -40,18 +39,6 @@ class MyApp extends StatelessWidget {
           ),
         ],
         brightness: Brightness.light,
-        textTheme: TextTheme(
-          displayLarge: const TextStyle(
-            fontSize: 72,
-            fontWeight: FontWeight.bold,
-          ),
-          titleLarge: GoogleFonts.oswald(
-            fontSize: 30,
-            fontStyle: FontStyle.normal,
-          ),
-          bodyMedium: GoogleFonts.merriweather(),
-          displaySmall: GoogleFonts.pacifico(),
-        ),
       ),
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
@@ -64,7 +51,7 @@ class MyApp extends StatelessWidget {
           }
 
           if (!snapshot.hasData) {
-            return const StartPage();
+            return StartPage();
           }
 
           return HomePage();
