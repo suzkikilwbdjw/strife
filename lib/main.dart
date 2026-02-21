@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:strife/page/start/start_page.dart';
+import 'package:strife/themes/gradient_theme.dart';
 import 'firebase/firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:strife/page/home/home_page.dart';
@@ -31,10 +32,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurpleAccent,
-          brightness: Brightness.dark,
-        ),
+        extensions: const [
+          GradientTheme(
+            mainGradient: LinearGradient(
+              colors: [Color(0xFFB91ED0), Color(0xFF5E0F6A)],
+            ),
+          ),
+        ],
+        brightness: Brightness.light,
         textTheme: TextTheme(
           displayLarge: const TextStyle(
             fontSize: 72,

@@ -252,20 +252,21 @@ class PinnedParticipantView extends StatelessWidget {
       children: [
         Expanded(flex: 3, child: ParticipantTile(participant: pinned)),
 
-        Flexible(
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(8),
-            itemCount: others.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              return SizedBox(
-                width: 180,
-                child: ParticipantTile(participant: others[index]!),
-              );
-            },
+        if (others.isNotEmpty)
+          Flexible(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.all(8),
+              itemCount: others.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                return SizedBox(
+                  width: 180,
+                  child: ParticipantTile(participant: others[index]!),
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
   }
@@ -289,20 +290,21 @@ class ActiveSpeakerView extends StatelessWidget {
       children: [
         Expanded(flex: 3, child: ParticipantTile(participant: activeSpeaker)),
 
-        Flexible(
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(8),
-            itemCount: others.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              return SizedBox(
-                width: 180,
-                child: ParticipantTile(participant: others[index]!),
-              );
-            },
+        if (others.isNotEmpty)
+          Flexible(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.all(8),
+              itemCount: others.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                return SizedBox(
+                  width: 180,
+                  child: ParticipantTile(participant: others[index]!),
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
   }
@@ -389,15 +391,14 @@ class ParticipantTile extends StatelessWidget {
         ),
         child: Stack(
           children: [
+            UserPhoto(participant: participant),
+            VideoParticipant(participant: participant),
             if (isPinned)
               Positioned(
                 top: 6,
                 right: 6,
                 child: Icon(Icons.push_pin, color: Colors.deepPurpleAccent),
               ),
-
-            UserPhoto(participant: participant),
-            VideoParticipant(participant: participant),
             BottomStatusBarLeft(participant: participant),
             BottomStatusBarRight(participant: participant),
           ],
@@ -421,7 +422,14 @@ class UserPhoto extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Positioned.fill(child: Image.network(photoUrl, scale: 1.2));
+    return Positioned(
+      child: Center(
+        child: CircleAvatar(
+          radius: 40,
+          backgroundImage: NetworkImage(photoUrl),
+        ),
+      ),
+    );
   }
 }
 
