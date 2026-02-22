@@ -35,7 +35,7 @@ class AuthenticationModel extends ChangeNotifier {
     }
   }
 
-  Future<void> signWithGoole() async {
+  Future<void> signInWithGoole() async {
     try {
       // Инициализация
       final GoogleSignIn signIn = GoogleSignIn.instance;
