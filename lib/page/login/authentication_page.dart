@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+/*import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/models/authentication_model.dart';
 
@@ -197,7 +197,7 @@ class LoginButtonWithGoogle extends StatelessWidget {
           builder: (context) =>
               const Center(child: CircularProgressIndicator()),
         );
-        await context.read<AuthenticationModel>().signWithGoole();
+        await context.read<AuthenticationModel>().signInWithGoole();
 
         if (!context.mounted) return;
 
@@ -233,3 +233,4 @@ class LoginButtonWithGoogle extends StatelessWidget {
     );
   }
 }
+*/
