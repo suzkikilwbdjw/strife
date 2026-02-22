@@ -2,25 +2,28 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:random_string/random_string.dart';
 
 class RegistrationModel extends ChangeNotifier {
   // Атрибуты
   String? _email;
-  String? _displayName = randomAlpha(11);
+  String? _name;
+  String? _secondName;
+  late String _displayName;
   String? _password;
-  String? _passwordAgain;
   String? _error;
   String? _photoUrl;
+  PhoneAuthCredential? _phoneNumber;
+  DateTime? _dateOfBirth;
   bool _isRegister = false;
 
   // Геттеры
   String? get email => _email;
   String? get displayName => _displayName;
   String? get password => _password;
-  String? get passwordAgain => _passwordAgain;
   String? get error => _error;
   String? get photoUrl => _photoUrl;
+  String? get name => _name;
+  String? get secondName => _secondName;
   bool get isRegister => _isRegister;
 
   Map<String, dynamic> get data => {
@@ -28,7 +31,6 @@ class RegistrationModel extends ChangeNotifier {
     'email': _email,
   };
 
-  //Сеттеры
   void setEmail(String? email) {
     _email = email;
   }
@@ -37,16 +39,12 @@ class RegistrationModel extends ChangeNotifier {
     _password = password;
   }
 
-  void setPasswordAgain(String? passwordAgain) {
-    _passwordAgain = passwordAgain;
+  void setDateOfBirth(DateTime dateOfBirth) {
+    _dateOfBirth = dateOfBirth;
   }
 
-  void setDisplayName(String? displayName) {
-    _displayName = displayName;
-  }
-
-  void setPhotoUrl(String? photoUrl) {
-    _photoUrl = photoUrl;
+  void setPhoneNumber(PhoneAuthCredential phoneNumber) {
+    _phoneNumber = phoneNumber;
   }
 
   Future<void> registerWithEmailAndPassword() async {
@@ -55,7 +53,7 @@ class RegistrationModel extends ChangeNotifier {
       final userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: _email!, password: _password!);
 
-      // Обновление отображаемого имени пользователя
+      // Обновление пользователя
       await _defaultSetUpInfoUser(userCredential);
 
       // Запись о пользователе в БД
@@ -117,15 +115,20 @@ class RegistrationModel extends ChangeNotifier {
 
   Future<void> _writeToDB(User user) async {
     await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      'name': _name,
+      'secondName': _secondName,
+      'dateOfBirth': _dateOfBirth,
       'displayName': user.displayName,
       'photoUrl': user.photoURL,
       'email': user.email,
       'uid': user.uid,
+      'phoneNumber': user.phoneNumber,
       'createdAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
 
   Future<void> _defaultSetUpInfoUser(UserCredential userCredential) async {
+    _displayName = '$_name $_secondName';
     // Обновление отображаемого имени пользователя
     await userCredential.user!.updateDisplayName(_displayName);
 
@@ -133,6 +136,9 @@ class RegistrationModel extends ChangeNotifier {
     await userCredential.user!.updatePhotoURL(
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSeYnkXnb1ypzbGzYabcpPt7hWLDHUktc_BIQ&s',
     );
+
+    // Обновление номера телефона
+    await userCredential.user!.updatePhoneNumber(_phoneNumber!);
 
     await userCredential.user!.reload();
   }
