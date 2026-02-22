@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/models/registration_model.dart';
+import 'package:strife/themes/gradient_theme.dart';
 
 class RegistrationPage extends StatelessWidget {
   RegistrationPage({super.key});
@@ -13,43 +15,100 @@ class RegistrationPage extends StatelessWidget {
       create: (context) => RegistrationModel(),
       child: Scaffold(
         appBar: AppBar(
-          title: Text(
-            'Зарегистрироваться',
-            style: Theme.of(context).textTheme.headlineMedium,
+          toolbarHeight: 100,
+          title: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Strife',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 36,
+                ),
+                textAlign: TextAlign.right,
+              ),
+
+              Text(
+                'Видеоконференции',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.transparent,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: Theme.of(
+                context,
+              ).extension<GradientTheme>()!.mainGradient,
+            ),
           ),
         ),
-        body: Center(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    children: <Widget>[
-                      const SizedBox(height: 8),
-                      const EmailTextForm(),
-                      const SizedBox(height: 16),
-                      const PasswordTextForm(),
-                      const SizedBox(height: 16),
-                      PasswordAgainTextForm(),
-                      const SizedBox(height: 16),
-                      RegisterButtonWithEmailAndPassowrd(formKey: _formKey),
-                      const Divider(
-                        height: 80,
-                        indent: 20,
-                        endIndent: 20,
-                        thickness: 5,
-                        radius: BorderRadius.horizontal(
-                          left: Radius.circular(10),
-                          right: Radius.circular(10),
+
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: Theme.of(
+              context,
+            ).extension<GradientTheme>()!.mainGradient,
+          ),
+          child: SafeArea(
+            child: Center(
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    const Expanded(
+                      child: Text(
+                        'Добро пожаловать!',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 36,
                         ),
                       ),
-                      RegisterButtonWithGoogle(),
-                    ],
-                  ),
+                    ),
+
+                    const Row(
+                      children: <Widget>[
+                        SizedBox(width: 20),
+                        Expanded(child: NameTextForm()),
+                        SizedBox(width: 20),
+                        Expanded(child: SecondNameTextForm()),
+                        SizedBox(width: 20),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    const EmailTextForm(),
+
+                    const SizedBox(height: 20),
+
+                    const DateOfBirthTextForm(),
+
+                    const SizedBox(height: 20),
+
+                    const PhoneNumberTextForm(),
+
+                    const PasswordTextForm(),
+
+                    const SizedBox(height: 20),
+
+                    PasswordAgainTextForm(),
+
+                    const SizedBox(height: 20),
+
+                    RegisterButtonWithEmailAndPassowrd(formKey: _formKey),
+
+                    const SizedBox(height: 20),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -58,57 +117,152 @@ class RegistrationPage extends StatelessWidget {
   }
 }
 
-class RegisterButtonWithGoogle extends StatelessWidget {
-  const RegisterButtonWithGoogle({super.key});
+class PhoneNumberTextForm extends StatelessWidget {
+  const PhoneNumberTextForm({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      style: ButtonStyle(
-        fixedSize: WidgetStatePropertyAll(
-          Size(MediaQuery.sizeOf(context).width * 0.9, 50),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'Номер телефона',
+          style: TextStyle(fontSize: 14, color: Colors.grey),
         ),
-      ),
-      onPressed: () async {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) =>
-              const Center(child: CircularProgressIndicator()),
-        );
-        await context.read<RegistrationModel>().signWithGoole();
 
-        if (!context.mounted) return;
+        const SizedBox(height: 6),
 
-        Navigator.of(context).pop();
-
-        if (context.read<RegistrationModel>().isRegister) {
-          Navigator.of(context).pop();
-        } else if (context.read<RegistrationModel>().error != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Ошибка регестрации: ${context.read<RegistrationModel>().error}',
-                style: TextStyle(color: Theme.of(context).colorScheme.primary),
-              ),
-              width: MediaQuery.sizeOf(context).width * 0.9,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width * 0.9,
+          child: IntlPhoneField(
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
               ),
-              backgroundColor: Theme.of(context).colorScheme.onSecondaryFixed,
             ),
-          );
-        }
-      },
-      child: Row(
-        children: [
-          Image.asset('assets/images/google_logo.png', width: 24, height: 24),
-          SizedBox(width: 16),
-          Text('Войти с помощью Google', style: TextStyle(fontSize: 20)),
-        ],
-      ),
+            initialCountryCode: 'RU',
+            onChanged: (phoneNumber) {},
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class DateOfBirthTextForm extends StatelessWidget {
+  const DateOfBirthTextForm({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'Дата рождения',
+          style: TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+
+        const SizedBox(height: 6),
+
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width * 0.9,
+          child: TextFormField(
+            readOnly: true,
+
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+              suffixIcon: Icon(Icons.calendar_today),
+            ),
+
+            onTap: () async {
+              final dateOfBirth = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(1900),
+                lastDate: DateTime(2100),
+              );
+
+              if (!context.mounted) return;
+
+              context.read<RegistrationModel>().setDateOfBirth(dateOfBirth!);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class NameTextForm extends StatelessWidget {
+  const NameTextForm({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text('Имя', style: TextStyle(fontSize: 14, color: Colors.grey)),
+        const SizedBox(height: 6),
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width * 0.45,
+          child: TextFormField(
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class SecondNameTextForm extends StatelessWidget {
+  const SecondNameTextForm({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'Фамилия',
+          style: TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+
+        const SizedBox(height: 6),
+
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width * 0.45,
+
+          child: TextFormField(
+            textInputAction: TextInputAction.next,
+
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+
+              border: OutlineInputBorder(
+                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -165,10 +319,10 @@ class RegisterButtonWithEmailAndPassowrd extends StatelessWidget {
       },
       style: ButtonStyle(
         fixedSize: WidgetStatePropertyAll(
-          Size(MediaQuery.sizeOf(context).width * 0.9, 50),
+          Size(MediaQuery.sizeOf(context).width * 0.7, 60),
         ),
       ),
-      child: const Text('Зарегистрироваться', style: TextStyle(fontSize: 20)),
+      child: const Text('Создать аккаунт', style: TextStyle(fontSize: 16)),
     );
   }
 }
@@ -188,23 +342,42 @@ class PasswordAgainTextForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: MediaQuery.sizeOf(context).width * 0.9,
-      child: TextFormField(
-        obscureText: true,
-        onChanged: (value) {
-          context.read<RegistrationModel>().setPasswordAgain(value);
-        },
-        validator: (value) => validatePasswordAgain(
-          value,
-          context.read<RegistrationModel>().password,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'Подтвердите пароль',
+          style: TextStyle(fontSize: 14, color: Colors.grey),
         ),
-        decoration: InputDecoration(
-          border: OutlineInputBorder(),
-          labelText: 'Confirm Password',
+
+        const SizedBox(height: 6),
+
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width * 0.9,
+          child: TextFormField(
+            obscureText: true,
+
+            textInputAction: TextInputAction.next,
+
+            validator: (value) => validatePasswordAgain(
+              value,
+              context.read<RegistrationModel>().password,
+            ),
+
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+
+              border: OutlineInputBorder(
+                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+            ),
+
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+          ),
         ),
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-      ),
+      ],
     );
   }
 }
@@ -221,21 +394,43 @@ class PasswordTextForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: MediaQuery.sizeOf(context).width * 0.9,
-      child: TextFormField(
-        textInputAction: TextInputAction.next,
-        obscureText: true,
-        onChanged: (value) {
-          context.read<RegistrationModel>().setPassword(value);
-        },
-        validator: (value) => validatorPassword(value),
-        decoration: InputDecoration(
-          border: OutlineInputBorder(),
-          labelText: 'Password',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'Пароль',
+          style: TextStyle(fontSize: 14, color: Colors.grey),
         ),
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-      ),
+
+        const SizedBox(height: 6),
+
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width * 0.9,
+          child: TextFormField(
+            obscureText: true,
+
+            textInputAction: TextInputAction.next,
+
+            validator: (value) => validatorPassword(value),
+
+            onChanged: (value) {
+              context.read<RegistrationModel>().setPassword(value);
+            },
+
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+
+              border: OutlineInputBorder(
+                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+            ),
+
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -256,21 +451,40 @@ class EmailTextForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: MediaQuery.sizeOf(context).width * 0.9,
-      child: TextFormField(
-        keyboardType: TextInputType.emailAddress,
-        textInputAction: TextInputAction.next,
-        validator: (value) => validatorEmail(value),
-        onChanged: (value) {
-          context.read<RegistrationModel>().setEmail(value);
-        },
-        decoration: InputDecoration(
-          border: OutlineInputBorder(),
-          labelText: 'Email',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text('Email', style: TextStyle(fontSize: 14, color: Colors.grey)),
+
+        const SizedBox(height: 6),
+
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width * 0.9,
+          child: TextFormField(
+            keyboardType: TextInputType.emailAddress,
+
+            textInputAction: TextInputAction.next,
+
+            validator: (value) => validatorEmail(value),
+
+            onChanged: (value) {
+              context.read<RegistrationModel>().setEmail(value);
+            },
+
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+
+              border: OutlineInputBorder(
+                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+            ),
+
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+          ),
         ),
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-      ),
+      ],
     );
   }
 }
