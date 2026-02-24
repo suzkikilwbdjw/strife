@@ -32,6 +32,8 @@ class ClientModel extends ChangeNotifier {
 
   String? _pinnedParticipantSid;
 
+  final Map<String, VideoTrack?> _videoTracksBySid = {};
+
   //Условные
   bool _isReconnecting = false;
   bool _isEnableCamera = false;
@@ -140,6 +142,33 @@ class ClientModel extends ChangeNotifier {
     return _photoCache[participant.sid];
   }
 
+  bool hasVideoOf(Participant participant) {
+    try {
+      return participant.trackPublications.values.any(
+        (pub) =>
+            pub.kind == TrackType.VIDEO &&
+            !pub.muted &&
+            pub.subscribed &&
+            pub.track != null,
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  VideoTrack? videoTrackOf(Participant participant) {
+    final pub = participant.trackPublications.values.where((pub) {
+      return pub.kind == TrackType.VIDEO && pub.track is VideoTrack;
+    }).firstOrNull;
+
+    if (pub?.track != null) {
+      return pub!.track as VideoTrack;
+    }
+
+    // Если в списке публикаций пусто, проверяем ваш кэш по SID
+    return _videoTracksBySid[participant.sid];
+  }
+
   void togglePin(Participant participant) {
     if (_pinnedParticipantSid == participant.sid) {
       _pinnedParticipantSid = null;
@@ -189,8 +218,11 @@ class ClientModel extends ChangeNotifier {
       _changeParticipants();
 
       for (var p in _participants) {
-        if (p != null) _updatePhotoCache(p);
+        if (p != null) {
+          _updatePhotoCache(p);
+        }
       }
+
       //Обработка изменений комнаты и треков
       _handlingEventRoomAndTrack();
 
@@ -212,11 +244,18 @@ class ClientModel extends ChangeNotifier {
       })
       ..on<ParticipantConnectedEvent>((e) {
         _updatePhotoCache(e.participant);
+
         _newParticipantDisplayName = e.participant.name;
+
+        _videoTracksBySid[e.participant.sid] =
+            e.participant.videoTrackPublications.firstOrNull?.track;
+
         if (_pinnedParticipantSid == e.participant.sid) {
           _pinnedParticipantSid = null;
         }
+
         _changeParticipants();
+
         print('(event) Подключен участник: ${e.participant.name}');
       })
       ..on<ParticipantDisconnectedEvent>((e) {
@@ -226,15 +265,21 @@ class ClientModel extends ChangeNotifier {
           );
           return;
         }
+        _videoTracksBySid[e.participant.sid] =
+            e.participant.videoTrackPublications.firstOrNull?.track;
         print('(event) Участник вышел: ${e.participant.name}');
         _leaveParticipantDisplayName = e.participant.name;
         _changeParticipants();
       })
       ..on<LocalTrackPublishedEvent>((e) {
+        _videoTracksBySid[e.participant.sid] =
+            e.participant.videoTrackPublications.firstOrNull?.track;
         notifyListeners();
         print('(event) Локальный трек опубликован');
       })
       ..on<TrackPublishedEvent>((e) async {
+        _videoTracksBySid[e.participant.sid] =
+            e.participant.videoTrackPublications.firstOrNull?.track;
         notifyListeners();
         print('(event) Удаленный трек опубликован');
       })
@@ -275,10 +320,13 @@ class ClientModel extends ChangeNotifier {
         _changeParticipants();
       })
       ..on<TrackSubscribedEvent>((e) {
+        _videoTracksBySid[e.participant.sid] =
+            e.participant.videoTrackPublications.firstOrNull?.track;
         print('(event) Локальный участник подписался на трек');
         notifyListeners();
       })
       ..on<TrackUnsubscribedEvent>((e) {
+        _videoTracksBySid.remove(e.participant.sid);
         print('(event) Подписанный ранее трек был отписан');
         notifyListeners();
       })
