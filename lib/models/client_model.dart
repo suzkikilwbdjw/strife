@@ -38,6 +38,7 @@ class ClientModel extends ChangeNotifier {
   bool _isReconnecting = false;
   bool _isEnableCamera = false;
   bool _isEnableMicrophone = false;
+  bool _isRemoteAudioEnabled = true;
 
   final Map<String?, ConnectionQuality?> _connectionQualities = {};
   String? _participantPhotoUrl;
@@ -59,6 +60,7 @@ class ClientModel extends ChangeNotifier {
   String? get participantPhotoUrl => _participantPhotoUrl;
   Participant? getActiveSpeaker() => activeSpeaker;
   String? get pinnedParticipantSid => _pinnedParticipantSid;
+  bool get isRemoteAudioEnabled => _isRemoteAudioEnabled;
 
   Participant? get activeSpeaker {
     try {
@@ -395,6 +397,64 @@ class ClientModel extends ChangeNotifier {
       }
     } catch (e) {
       print('Ошибка включения/выключение микрофона: $e');
+    }
+  }
+
+  Future<void> enableDisableVolume() async {
+    try {
+      _isRemoteAudioEnabled = !_isRemoteAudioEnabled;
+      for (var participant in _room.remoteParticipants.values) {
+        for (var pubAudioTrack in participant.audioTrackPublications) {
+          if (pubAudioTrack.track != null) {
+            _isRemoteAudioEnabled
+                ? await pubAudioTrack.track!.enable()
+                : await pubAudioTrack.track!.disable();
+          }
+        }
+      }
+
+      _isRemoteAudioEnabled
+          ? print('Успешное включениe')
+          : print('Успешное выключение');
+      notifyListeners();
+    } catch (e) {
+      print('Ошибка вкл/выкл звука');
+    }
+  }
+
+  Future<void> flipCamera() async {
+    try {
+      if (_isEnableCamera) {
+        List<MediaDevice> videoDevices = await Hardware.instance
+            .enumerateDevices();
+        videoDevices = videoDevices
+            .where((d) => d.kind == 'videoinput')
+            .toList();
+
+        if (videoDevices.length < 2) {
+          print('Доступна только одна камера');
+          return;
+        }
+
+        final trackPub =
+            _room.localParticipant?.videoTrackPublications.firstOrNull;
+        final track = trackPub?.track;
+
+        if (track is LocalVideoTrack) {
+          final currentId = track.mediaStreamTrack.getSettings()['deviceId'];
+
+          final nextDevice = videoDevices.firstWhere(
+            (device) => device.deviceId != currentId,
+            orElse: () => videoDevices.first,
+          );
+
+          await track.switchCamera(nextDevice.deviceId);
+
+          print('Переключено на: ${nextDevice.label}');
+        }
+      }
+    } catch (e) {
+      print('Ошибка переключения: $e');
     }
   }
 
