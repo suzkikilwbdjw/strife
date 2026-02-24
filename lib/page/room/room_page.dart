@@ -115,70 +115,153 @@ class NavigationBottomAppBar extends StatelessWidget {
       (c) => c.isReconnecting,
     );
 
+    final isRemoteAudioEnabled = context.select<ClientModel, bool>(
+      (c) => c.isRemoteAudioEnabled,
+    );
+
     final client = context.read<ClientModel>();
     return BottomAppBar(
+      height: 144,
       color: Colors.black,
-      child: IconTheme(
-        data: IconThemeData(size: 43),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            IconButton(
-              color: isEnableCamera ? Colors.green : Colors.red,
-              onPressed: isClientReconnecting
-                  ? null
-                  : () async {
-                      await client.enableDisableCamera();
-                    },
+      child: Column(
+        children: <Widget>[
+          Row(
+            spacing: 16,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: const Color(0xFF474747),
+                child: IconButton(
+                  iconSize: 28,
+                  color: Colors.white,
+                  onPressed: isClientReconnecting
+                      ? null
+                      : () async {
+                          await client.enableDisableMicrophone();
+                        },
+                  icon: isEnableMicrophone
+                      ? const Icon(Icons.mic_none_outlined)
+                      : const Icon(Icons.mic_off_outlined),
+                ),
+              ),
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: const Color(0xFF474747),
+                child: IconButton(
+                  iconSize: 28,
+                  color: Colors.white,
+                  onPressed: isClientReconnecting
+                      ? null
+                      : () async {
+                          await client.enableDisableCamera();
+                        },
 
-              icon: isEnableCamera
-                  ? Icon(Icons.videocam)
-                  : Icon(Icons.videocam_off),
-            ),
-            IconButton(
-              color: isEnableMicrophone ? Colors.green : Colors.red,
-              onPressed: isClientReconnecting
-                  ? null
-                  : () async {
-                      await client.enableDisableMicrophone();
-                    },
-              icon: isEnableMicrophone ? Icon(Icons.mic) : Icon(Icons.mic_off),
-            ),
-            IconButton(
-              color: Colors.deepPurpleAccent,
-              onPressed: () async {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    content: const Text(
-                      'Вы действительно хотите покинуть комнату?',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: const Text('Нет'),
+                  icon: isEnableCamera
+                      ? const Icon(Icons.videocam_outlined)
+                      : const Icon(Icons.videocam_off_outlined),
+                ),
+              ),
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: const Color(0xFFA60A0A),
+                child: IconButton(
+                  iconSize: 34,
+                  color: Colors.white,
+                  onPressed: () async {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        content: const Text(
+                          'Вы действительно хотите покинуть комнату?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text('Нет'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              await client.disconnectFromRoom();
+                              if (!context.mounted) return;
+                              // Закрываем диалог
+                              Navigator.of(context).pop();
+                              //Закрываем страницу
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text('Да'),
+                          ),
+                        ],
                       ),
-                      TextButton(
-                        onPressed: () async {
-                          await client.disconnectFromRoom();
-                          if (!context.mounted) return;
-                          // Закрываем диалог
-                          Navigator.of(context).pop();
-                          //Закрываем страницу
-                          Navigator.of(context).pop();
+                    );
+                  },
+                  icon: const Icon(Icons.call_end_outlined),
+                ),
+              ),
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: const Color(0xFF474747),
+                child: IconButton(
+                  iconSize: 28,
+                  color: Colors.white,
+                  onPressed: isClientReconnecting
+                      ? null
+                      : () async {
+                          await client.enableDisableVolume();
                         },
-                        child: const Text('Да'),
-                      ),
-                    ],
+
+                  icon: Icon(
+                    isRemoteAudioEnabled
+                        ? Icons.volume_up_outlined
+                        : Icons.volume_off_outlined,
                   ),
-                );
-              },
-              icon: const Icon(Icons.exit_to_app),
-            ),
-          ],
-        ),
+                ),
+              ),
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: const Color(0xFF474747),
+                child: IconButton(
+                  iconSize: 28,
+                  color: Colors.white,
+                  onPressed: isClientReconnecting
+                      ? null
+                      : () async {
+                          client.flipCamera();
+                        },
+
+                  icon: const Icon(Icons.flip_camera_ios_outlined),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          Row(
+            spacing: 24,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF474747),
+                  padding: const EdgeInsets.symmetric(horizontal: 50),
+                ),
+                onPressed: () {},
+                icon: Icon(Icons.chat_bubble_outline_rounded),
+                label: const Text('Чат'),
+              ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF474747),
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                ),
+                onPressed: () {},
+                icon: Icon(Icons.group_outlined, size: 25),
+                label: const Text('Участники'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
