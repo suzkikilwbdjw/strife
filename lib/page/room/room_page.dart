@@ -3,6 +3,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/models/client_model.dart';
+import 'package:strife/themes/gradient_theme.dart';
 
 class RoomPage extends StatefulWidget {
   const RoomPage({super.key});
@@ -75,10 +76,21 @@ class _RoomPageState extends State<RoomPage> {
         return child!;
       },
       child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          automaticallyImplyLeading: false,
+        ),
+
         bottomNavigationBar: NavigationBottomAppBar(),
-        body: const Center(
-          child: Column(
-            children: [Expanded(child: SafeArea(child: ParticipantLayout()))],
+
+        body: Container(
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 20, 40, 153),
+          ),
+          child: const Center(
+            child: Column(
+              children: [Expanded(child: SafeArea(child: ParticipantLayout()))],
+            ),
           ),
         ),
       ),
@@ -105,6 +117,7 @@ class NavigationBottomAppBar extends StatelessWidget {
 
     final client = context.read<ClientModel>();
     return BottomAppBar(
+      color: Colors.black,
       child: IconTheme(
         data: IconThemeData(size: 43),
         child: Row(
@@ -200,7 +213,7 @@ class ParticipantLayout extends StatelessWidget {
     switch (participants.length) {
       case 0:
         {
-          return SizedBox.shrink();
+          return Container();
         }
       case 1:
         {
@@ -228,7 +241,7 @@ class ParticipantLayout extends StatelessWidget {
         }
       default:
         {
-          return SizedBox.shrink();
+          return Container();
         }
     }
   }
@@ -374,6 +387,10 @@ class ParticipantTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasVideo = context.select<ClientModel, bool>(
+      (c) => c.hasVideoOf(participant),
+    );
+
     final isPinned = context.select<ClientModel, bool>(
       (c) => c.pinnedParticipantSid == participant.sid,
     );
@@ -382,26 +399,44 @@ class ParticipantTile extends StatelessWidget {
       onLongPress: () {
         context.read<ClientModel>().togglePin(participant);
       },
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: participant.isSpeaking ? Colors.greenAccent : Colors.white24,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: !hasVideo
+                ? Theme.of(context).extension<GradientTheme>()!.mainGradient
+                : LinearGradient(
+                    colors: const <Color>[Colors.black, Colors.black],
+                  ),
+
+            border: Border.all(
+              color: participant.isSpeaking ? Colors.green : Colors.white24,
+              width: 2,
+            ),
+            borderRadius: BorderRadiusDirectional.circular(20),
           ),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Stack(
-          children: [
-            UserPhoto(participant: participant),
-            VideoParticipant(participant: participant),
-            if (isPinned)
-              Positioned(
-                top: 6,
-                right: 6,
-                child: Icon(Icons.push_pin, color: Colors.deepPurpleAccent),
-              ),
-            BottomStatusBarLeft(participant: participant),
-            BottomStatusBarRight(participant: participant),
-          ],
+          child: ClipRRect(
+            borderRadius: BorderRadiusGeometry.all(Radius.circular(20)),
+            child: Stack(
+              children: [
+                if (!hasVideo)
+                  UserPhoto(participant: participant)
+                else
+                  VideoParticipant(participant: participant),
+
+                if (isPinned)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Icon(Icons.push_pin, color: Colors.deepPurpleAccent),
+                  ),
+
+                BottomStatusBarLeft(participant: participant),
+
+                BottomStatusBarRight(participant: participant),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -439,6 +474,29 @@ class VideoParticipant extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final track = context.select<ClientModel, VideoTrack?>(
+      (c) => c.videoTrackOf(participant),
+    );
+
+    if (track == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return VideoTrackRenderer(
+      track,
+      mirrorMode: VideoViewMirrorMode.auto,
+      fit: VideoViewFit.contain,
+    );
+  }
+}
+
+/*
+class VideoParticipant extends StatelessWidget {
+  const VideoParticipant({super.key, required this.participant});
+  final Participant participant;
+
+  @override
+  Widget build(BuildContext context) {
     final TrackPublication<Track>? trackPublication = participant
         .trackPublications
         .values
@@ -455,45 +513,49 @@ class VideoParticipant extends StatelessWidget {
       return VideoTrackRenderer(
         trackPublication.track as VideoTrack,
         mirrorMode: VideoViewMirrorMode.mirror,
-        fit: VideoViewFit.cover,
+        fit: VideoViewFit.contain,
       );
     } else {
       return Container();
     }
   }
-}
+}*/
 
 class BottomStatusBarLeft extends StatelessWidget {
   const BottomStatusBarLeft({super.key, required this.participant});
 
   final Participant participant;
 
-  bool hasVideo() {
-    try {
-      participant.videoTrackPublications.firstWhere(
-        (pub) => !pub.muted && pub.subscribed && pub.track is VideoTrack,
-      );
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: 2,
+      bottom: 4,
       left: 8,
-      child: Row(
-        children: [
-          Text(participant.name),
-          Icon(hasVideo() ? Icons.videocam : Icons.videocam_off),
-          Icon(
-            participant.hasAudio && !participant.isMuted
-                ? Icons.mic
-                : Icons.mic_off,
-          ),
-        ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+        ),
+        padding: EdgeInsets.only(left: 4, top: 3, bottom: 3, right: 4),
+        child: Row(
+          children: [
+            Text(participant.name, style: TextStyle(color: Colors.white)),
+            Icon(
+              context.read<ClientModel>().hasVideoOf(participant)
+                  ? Icons.videocam
+                  : Icons.videocam_off,
+              color: Colors.white,
+              size: 20,
+            ),
+            Icon(
+              participant.hasAudio && !participant.isMuted
+                  ? Icons.mic
+                  : Icons.mic_off,
+              color: Colors.white,
+              size: 20,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -511,7 +573,7 @@ class BottomStatusBarRight extends StatelessWidget {
         );
 
     return Positioned(
-      bottom: 2,
+      bottom: 4,
       right: 6,
       child: Icon(
         switch (connectionQuality) {
