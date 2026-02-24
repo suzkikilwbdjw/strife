@@ -201,8 +201,9 @@ class LoginButton extends StatelessWidget {
         if (formKey.currentState!.validate()) {
           showDialog(
             context: context,
-            barrierDismissible: true,
-            builder: (_) => const Center(child: CircularProgressIndicator()),
+            barrierDismissible: false,
+            builder: (context) =>
+                const Center(child: CircularProgressIndicator()),
           );
 
           await context
@@ -212,6 +213,9 @@ class LoginButton extends StatelessWidget {
           if (!context.mounted) return;
 
           Navigator.of(context).pop();
+
+          Navigator.of(context).focusNode.unfocus();
+
           if (!context.read<AuthenticationModel>().isAuth) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -233,8 +237,6 @@ class LoginButton extends StatelessWidget {
                 backgroundColor: Theme.of(context).colorScheme.onSecondaryFixed,
               ),
             );
-          } else {
-            Navigator.of(context).pop();
           }
         }
       },
