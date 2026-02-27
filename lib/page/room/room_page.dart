@@ -621,19 +621,20 @@ class BottomStatusBarLeft extends StatelessWidget {
         ),
         padding: EdgeInsets.only(left: 4, top: 3, bottom: 3, right: 4),
         child: Row(
+          spacing: 4,
           children: [
             Text(participant.name, style: TextStyle(color: Colors.white)),
             Icon(
               context.read<ClientModel>().hasVideoOf(participant)
-                  ? Icons.videocam
-                  : Icons.videocam_off,
+                  ? Icons.videocam_outlined
+                  : Icons.videocam_off_outlined,
               color: Colors.white,
               size: 20,
             ),
             Icon(
               participant.hasAudio && !participant.isMuted
-                  ? Icons.mic
-                  : Icons.mic_off,
+                  ? Icons.mic_none_outlined
+                  : Icons.mic_off_outlined,
               color: Colors.white,
               size: 20,
             ),
