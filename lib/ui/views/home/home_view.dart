@@ -1,12 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:strife/page/room/room_page.dart';
-import 'package:strife/models/client_model.dart';
-import 'package:provider/provider.dart';
+import 'package:livekit_client/livekit_client.dart';
+import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
+import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:strife/ui/views/room/room_view.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class HomeView extends StatelessWidget {
+  const HomeView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -158,41 +160,33 @@ class CreateRoomButton extends StatelessWidget {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) =>
-              const Center(child: CircularProgressIndicator()),
+          builder: (_) => const Center(child: CircularProgressIndicator()),
         );
 
-        final client = ClientModel();
+        final vcsBloc = context.read<VCSBloc>();
 
-        client.setParticipantIdemtity(textEditingController.text);
-        client.setParticipantName(user.displayName!);
-        client.setParticipantPhotoUrl(user.photoURL!);
-        //client.setParticipantRoom();
+        // Отправляем событие подключения
+        vcsBloc.add(
+          ConnectRequested(
+            roomName: 'test-room',
+            identity: textEditingController.text,
+            name: user.displayName ?? 'bobik',
+            photoUrl: user.photoURL,
+          ),
+        );
 
-        final isConnected = await client.connectToRoom();
+        // Ждём, пока localParticipant появится в состоянии
+        await vcsBloc.stream.firstWhere(
+          (state) => state.participants.any((p) => p is LocalParticipant),
+        );
 
         if (!context.mounted) return;
 
-        FocusScope.of(context).unfocus();
+        Navigator.of(context).pop(); // закрываем индикатор
 
-        if (isConnected) {
-          Navigator.of(context).pop();
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ChangeNotifierProvider.value(
-                value: client,
-                child: RoomPage(),
-              ),
-            ),
-          );
-        } else {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Не удалось создать комнату: ${client.error}'),
-            ),
-          );
-        }
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const RoomView()));
       },
 
       style: ElevatedButton.styleFrom(

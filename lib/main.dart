@@ -1,35 +1,52 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/material.dart';
-import 'package:strife/page/start/start_page.dart';
-import 'package:strife/themes/gradient_theme.dart';
-import 'firebase/firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:strife/page/home/home_page.dart';
-//import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
+import 'package:strife/data/repositories/chat_repository.dart';
+import 'package:strife/data/repositories/vcs_repository.dart';
 
-/*Future<void> _checkPermissions() async {
-  var status = await Permission.bluetooth.request();
-  if (status.isPermanentlyDenied) {
-    print('Bluetooth Permission disabled');
-  }
-  status = await Permission.bluetoothConnect.request();
-  if (status.isPermanentlyDenied) {
-    print('Bluetooth Connect Permission disabled');
-  }
-}*/
+// Импорты слоев
+import 'package:strife/firebase/firebase_options.dart';
+import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
+import 'package:strife/themes/gradient_theme.dart';
+import 'package:strife/data/repositories/auth_repository.dart';
+import 'package:strife/ui/view_models/auth_view_model.dart';
+import 'package:strife/ui/view_models/chat_view_model.dart';
+//import 'package:strife/ui/view_models/vcs_view_model.dart';
+
+// Импорты экранов
+import 'package:strife/ui/views/login/login_view.dart';
+import 'package:strife/ui/views/home/home_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  //await _checkPermissions();
-  runApp(MyApp());
+
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider(create: (_) => AuthRepository()),
+        Provider(create: (_) => ChatRepository()),
+        // ViewModels
+        ChangeNotifierProvider(create: (_) => AuthViewModel()),
+        ChangeNotifierProvider(create: (_) => ChatViewModel()),
+      ],
+      child: BlocProvider(
+        create: (_) => VCSBloc(VCSRepository()),
+        child: const MyApp(),
+      ),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         extensions: const [
           GradientTheme(
@@ -42,19 +59,18 @@ class MyApp extends StatelessWidget {
       ),
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
-          if (snapshot.hasError) {
-            return const Text('Что-то пошло не так');
-          }
+        builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Text("Загрука...");
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
 
-          if (!snapshot.hasData) {
-            return StartPage();
+          if (snapshot.hasData) {
+            return const HomeView(); // Пользователь залогинен
           }
 
-          return HomePage();
+          return LoginView(); // Пользователь не залогинен
         },
       ),
     );

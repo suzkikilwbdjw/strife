@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../view_models/chat_view_model.dart';
-import '../widgets/message_bubble.dart';
+import '../../view_models/chat_view_model.dart';
+import '../../widgets/message_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -10,8 +10,8 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     required this.chatId,
     required this.currentUserId,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -24,9 +24,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     // Инициализируем подписку на сообщения при входе
-    Future.microtask(
-      () => context.read<ChatViewModel>().initChat(widget.chatId),
-    );
+    context.read<ChatViewModel>().initChat(widget.chatId);
   }
 
   void _onSend() {
