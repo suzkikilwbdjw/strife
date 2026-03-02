@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 enum ChatType { private, room }
 
 class ChatModel {
-  final String id;
+  final String? id;
   final ChatType type;
   final List<String> participants;
   final String? lastMessage;
@@ -11,7 +11,7 @@ class ChatModel {
   final String? liveKitRoomId;
 
   ChatModel({
-    required this.id,
+    this.id,
     required this.type,
     required this.participants,
     this.lastMessage,
@@ -20,10 +20,11 @@ class ChatModel {
   });
 
   factory ChatModel.fromFirestore(DocumentSnapshot documentSnapshot) {
-    Map data = documentSnapshot.data() as Map;
+    final Map<String, dynamic> data =
+        documentSnapshot.data() as Map<String, dynamic>;
 
     return ChatModel(
-      id: data['id'],
+      id: documentSnapshot.id,
       type: data['type'] == 'room' ? ChatType.room : ChatType.private,
       participants: List<String>.from(data['participants'] ?? []),
       lastMessage: data['lastMessage'],

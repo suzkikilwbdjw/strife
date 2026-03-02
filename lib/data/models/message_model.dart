@@ -2,14 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MessageModel {
   MessageModel({
-    required this.id,
+    this.id,
     required this.senderId,
     required this.text,
     required this.timestamp,
     this.readBy,
   });
 
-  final String id;
+  final String? id;
   final String senderId;
   final String text;
   final DateTime timestamp;
@@ -17,13 +17,16 @@ class MessageModel {
 
   // Превращаем Snapshot из Firestore в объект
   factory MessageModel.fromFirestore(DocumentSnapshot documentSnapshot) {
-    Map data = documentSnapshot.data() as Map;
+    final Map<String, dynamic> data =
+        documentSnapshot.data() as Map<String, dynamic>;
+
+    final Timestamp? firestoreTimestamp = data['timestamp'] as Timestamp?;
 
     return MessageModel(
       id: documentSnapshot.id,
-      senderId: data['senderId'] ?? ' ',
+      senderId: data['senderId'] ?? '',
       text: data['text'] ?? '',
-      timestamp: (data['timestamp'] as Timestamp).toDate(),
+      timestamp: firestoreTimestamp?.toDate() ?? DateTime.now(),
       readBy: List<String>.from(data['readBy'] ?? []),
     );
   }
@@ -31,7 +34,7 @@ class MessageModel {
   // Для отправки в Firestore
   Map<String, dynamic> toFirestore() {
     return {
-      'senderId': id,
+      'senderId': senderId,
       'text': text,
       'timestamp': FieldValue.serverTimestamp(),
       'readBy': readBy ?? [senderId],
