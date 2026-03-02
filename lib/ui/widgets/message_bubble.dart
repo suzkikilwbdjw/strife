@@ -30,7 +30,7 @@ class MessageBubble extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${messageModel.timestamp.hour}:${messageModel.timestamp.minute}',
+              '${messageModel.timestamp.hour}:${messageModel.timestamp.minute.toString().padLeft(2, '0')}',
               style: TextStyle(
                 fontSize: 10,
                 color: isMe ? Colors.white30 : Colors.black54,

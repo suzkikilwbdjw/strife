@@ -24,7 +24,10 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     // Инициализируем подписку на сообщения при входе
-    context.read<ChatViewModel>().initChat(widget.chatId);
+    Future.microtask(() {
+      if (!mounted) return;
+      context.read<ChatViewModel>().initChat(widget.chatId);
+    });
   }
 
   void _onSend() {

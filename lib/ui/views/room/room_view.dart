@@ -5,6 +5,7 @@ import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
 import 'package:strife/themes/gradient_theme.dart';
+import 'package:strife/ui/views/chat/chat_view.dart';
 
 class RoomView extends StatelessWidget {
   const RoomView({super.key});
@@ -187,15 +188,31 @@ class NavigationBottomAppBar extends StatelessWidget {
                 spacing: 24,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
+                  // Чат
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF474747),
                       padding: const EdgeInsets.symmetric(horizontal: 50),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => ChatScreen(
+                            chatId: 'test-room',
+                            currentUserId: bloc.state.participants
+                                .firstWhere(
+                                  (participant) =>
+                                      participant is LocalParticipant,
+                                )
+                                .sid,
+                          ),
+                        ),
+                      );
+                    },
                     icon: Icon(Icons.chat_bubble_outline_rounded),
                     label: const Text('Чат'),
                   ),
+                  // Участники
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF474747),

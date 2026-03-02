@@ -36,7 +36,6 @@ class ChatViewModel extends ChangeNotifier {
     if (text.trim().isEmpty) return;
 
     final newMessage = MessageModel(
-      id: '',
       senderId: senderId,
       text: text,
       timestamp: DateTime.now(),

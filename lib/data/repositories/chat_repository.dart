@@ -27,14 +27,14 @@ class ChatRepository {
     // Ссылка на новое сообщение
     DocumentReference messageReference = _firestore
         .collection('chats')
-        .doc('chatId')
+        .doc(chatId)
         .collection('messages')
         .doc();
 
     // Ссылка на чат
     DocumentReference chatReference = _firestore
         .collection('chats')
-        .doc('chatId');
+        .doc(chatId);
 
     batch.set(messageReference, message.toFirestore());
 
