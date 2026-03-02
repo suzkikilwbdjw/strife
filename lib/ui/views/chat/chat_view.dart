@@ -59,7 +59,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 return ListView.builder(
                   reverse: true,
-                  controller: widget.controller ?? null,
+                  controller: widget.controller,
                   itemCount: vm.messages.length,
                   itemBuilder: (context, index) {
                     final messageModel = vm.messages[index];
