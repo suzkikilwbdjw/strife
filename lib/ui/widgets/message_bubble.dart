@@ -15,28 +15,37 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        padding: EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isMe ? Colors.blueAccent : Colors.grey,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            Text(
-              messageModel.text,
-              style: TextStyle(color: isMe ? Colors.white : Colors.black),
+      child: Padding(
+        padding: const EdgeInsets.all(3.0),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: MediaQuery.widthOf(context) * 0.27,
+            maxWidth: MediaQuery.widthOf(context) * 0.5,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isMe ? Colors.blueAccent : Colors.grey,
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(height: 4),
-            Text(
-              '${messageModel.timestamp.hour}:${messageModel.timestamp.minute.toString().padLeft(2, '0')}',
-              style: TextStyle(
-                fontSize: 10,
-                color: isMe ? Colors.white30 : Colors.black54,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                Text(
+                  messageModel.text,
+                  style: TextStyle(color: isMe ? Colors.white : Colors.black),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${messageModel.timestamp.hour}:${messageModel.timestamp.minute.toString().padLeft(2, '0')}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isMe ? Colors.white30 : Colors.black54,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
