@@ -194,17 +194,32 @@ class NavigationBottomAppBar extends StatelessWidget {
                       backgroundColor: const Color(0xFF474747),
                       padding: const EdgeInsets.symmetric(horizontal: 50),
                     ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => ChatScreen(
-                            chatId: 'test-room',
-                            currentUserId: bloc.state.participants
-                                .firstWhere(
-                                  (participant) =>
-                                      participant is LocalParticipant,
-                                )
-                                .sid,
+                    onPressed: () async {
+                      await showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => DraggableScrollableSheet(
+                          initialChildSize: 0.75,
+                          maxChildSize: 0.8,
+                          minChildSize: 0.45,
+                          expand: false,
+                          builder: (context, scrollController) => Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
+                            ),
+                            child: ChatScreen(
+                              controller: scrollController,
+                              chatId: 'test-room',
+                              currentUserId: bloc.state.participants
+                                  .firstWhere(
+                                    (participant) =>
+                                        participant is LocalParticipant,
+                                  )
+                                  .sid,
+                            ),
                           ),
                         ),
                       );

@@ -6,10 +6,12 @@ import '../../widgets/message_bubble.dart';
 class ChatScreen extends StatefulWidget {
   final String chatId;
   final String currentUserId;
+  final ScrollController? controller;
 
   const ChatScreen({
     required this.chatId,
     required this.currentUserId,
+    this.controller,
     super.key,
   });
 
@@ -57,6 +59,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 return ListView.builder(
                   reverse: true,
+                  controller: widget.controller ?? null,
                   itemCount: vm.messages.length,
                   itemBuilder: (context, index) {
                     final messageModel = vm.messages[index];
