@@ -63,7 +63,7 @@ class LoginView extends StatelessWidget {
                   const SizedBox(height: 80),
 
                   EmailTextForm(controller: _emailController),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 10),
                   PasswordTextForm(controller: _passwordController),
                   const SizedBox(height: 24),
 
@@ -75,7 +75,7 @@ class LoginView extends StatelessWidget {
 
                   const SizedBox(height: 16),
                   const RegisterNavigationText(),
-                  const SizedBox(height: 150),
+                  const SizedBox(height: 70),
                   const Text(
                     'или войти с помощью',
                     style: TextStyle(color: Color(0xFF999393), fontSize: 24),
@@ -143,10 +143,8 @@ class EmailTextForm extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: MediaQuery.sizeOf(context).width * 0.9,
-      child: TextFormField(
-        textInputAction: TextInputAction.next,
-        controller: controller,
-        keyboardType: TextInputType.emailAddress,
+      child: FormField<String>(
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         validator: (value) {
           if (value == null || value.isEmpty) return 'Пожалуйста введите почту';
           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
@@ -154,16 +152,69 @@ class EmailTextForm extends StatelessWidget {
           }
           return null;
         },
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: const Color(0xFFD9D9D9).withValues(alpha: 0.4),
-          border: const OutlineInputBorder(
-            borderSide: BorderSide.none,
-            borderRadius: BorderRadius.all(Radius.circular(25)),
-          ),
-          hintText: 'Почта...',
-        ),
-        autovalidateMode: AutovalidateMode.onUserInteraction,
+        builder: (field) {
+          final hasError = field.errorText != null;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                textInputAction: TextInputAction.next,
+                controller: controller,
+                keyboardType: TextInputType.emailAddress,
+                onChanged: field.didChange,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFFD9D9D9).withValues(alpha: 0.4),
+                  border: const OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.all(Radius.circular(25)),
+                  ),
+                  hintText: 'Почта...',
+                ),
+              ),
+              SizedBox(
+                height: 36,
+                child: hasError
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(left: 10, top: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFA60A0A),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  field.errorText!,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -177,21 +228,75 @@ class PasswordTextForm extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: MediaQuery.sizeOf(context).width * 0.9,
-      child: TextFormField(
-        controller: controller,
-        obscureText: true,
-        validator: (value) =>
-            (value == null || value.length < 6) ? 'Минимум 6 символов' : null,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: const Color(0xFFD9D9D9).withValues(alpha: 0.4),
-          border: const OutlineInputBorder(
-            borderSide: BorderSide.none,
-            borderRadius: BorderRadius.all(Radius.circular(25)),
-          ),
-          hintText: 'Пароль...',
-        ),
+      child: FormField<String>(
         autovalidateMode: AutovalidateMode.onUserInteraction,
+        validator: (value) =>
+            (value == null || value.length < 6)
+                ? 'Пароль должен содержать минимум 6 символов'
+                : null,
+        builder: (field) {
+          final hasError = field.errorText != null;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: controller,
+                obscureText: true,
+                onChanged: field.didChange,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor:
+                      const Color(0xFFD9D9D9).withValues(alpha: 0.4),
+                  border: const OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.all(Radius.circular(25)),
+                  ),
+                  hintText: 'Пароль...',
+                ),
+              ),
+              SizedBox(
+                height: 36,
+                child: hasError
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(left: 10, top: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFA60A0A),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  field.errorText!,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
