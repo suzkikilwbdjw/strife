@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/data/repositories/chat_repository.dart';
+import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 
 // Импорты слоев
 import 'package:strife/firebase/firebase_options.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
+import 'package:strife/presentation/contacts/contacts_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/data/repositories/auth_repository.dart';
 import 'package:strife/ui/view_models/auth_view_model.dart';
@@ -32,8 +34,11 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
         ChangeNotifierProvider(create: (_) => ChatViewModel()),
       ],
-      child: BlocProvider(
-        create: (_) => VCSBloc(VCSRepository()),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => VCSBloc(VCSRepository())),
+          BlocProvider(create: (_) => ContactsBloc(UserRepository())),
+        ],
         child: const MyApp(),
       ),
     ),

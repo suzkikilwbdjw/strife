@@ -6,6 +6,7 @@ import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/chat/chat_view.dart';
+import 'package:strife/ui/views/room/participants_view.dart';
 
 class RoomView extends StatelessWidget {
   const RoomView({super.key});
@@ -233,7 +234,28 @@ class NavigationBottomAppBar extends StatelessWidget {
                       backgroundColor: const Color(0xFF474747),
                       padding: const EdgeInsets.symmetric(horizontal: 30),
                     ),
-                    onPressed: () {},
+                    onPressed: () async {
+                      await showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => DraggableScrollableSheet(
+                          initialChildSize: 0.75,
+                          maxChildSize: 0.8,
+                          minChildSize: 0.45,
+                          builder: (context, controller) => Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
+                            ),
+                            child: ParticipantsView(
+                              scrollController: controller,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                     icon: Icon(Icons.group_outlined, size: 25),
                     label: const Text('Участники'),
                   ),
