@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -13,45 +14,117 @@ class RoomView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<VCSBloc, VCSState>(
-      listenWhen: (previous, current) =>
-          previous.isReconnecting != current.isReconnecting,
-      listener: (context, state) {
-        if (state.isReconnecting) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => const Dialog(
-              backgroundColor: Colors.transparent,
-              child: SizedBox(
-                height: 100,
-                child: Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Переподключение к комнате...'),
-                      SizedBox(width: 8),
-                      CircularProgressIndicator(),
-                    ],
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    return MultiBlocListener(
+      listeners: [
+        // 1. СЛУШАТЕЛЬ ПЕРЕПОДКЛЮЧЕНИЯ
+        BlocListener<VCSBloc, VCSState>(
+          listenWhen: (p, c) => p.isReconnecting != c.isReconnecting,
+          listener: (context, state) {
+            if (state.isReconnecting) {
+              showDialog(
+                context: context,
+                useRootNavigator: true,
+                barrierDismissible: false,
+                builder: (_) => const PopScope(
+                  canPop: false,
+                  child: AlertDialog(
+                    content: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 16),
+                        Text('Переподключение...'),
+                      ],
+                    ),
                   ),
                 ),
+              );
+            } else {
+              Navigator.of(
+                context,
+                rootNavigator: true,
+              ).popUntil((route) => route.isFirst || route is! RawDialogRoute);
+            }
+          },
+        ),
+
+        // 2. СЛУШАТЕЛЬ КИКА
+        BlocListener<VCSBloc, VCSState>(
+          listenWhen: (p, c) => p.wasKicked != c.wasKicked,
+          listener: (context, state) {
+            if (state.wasKicked) {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Вы были удалены из комнаты")),
+              );
+            }
+          },
+        ),
+
+        // 3. СЛУШАТЕЛЬ МИКРОФОНА
+        BlocListener<VCSBloc, VCSState>(
+          listenWhen: (p, c) {
+            final sid = _getSid(c, uid);
+            if (sid == null) return false;
+            return p.mutedMicrophoneByHostSids[sid] !=
+                c.mutedMicrophoneByHostSids[sid];
+          },
+          listener: (context, state) {
+            final sid = _getSid(state, uid)!;
+            final isMuted = state.mutedMicrophoneByHostSids[sid];
+            if (isMuted == null) return;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  isMuted
+                      ? "Модератор отключил ваш микрофон"
+                      : "Модератор разрешил доступ к микрофону",
+                ),
               ),
-            ),
-          );
-        } else {
-          if (Navigator.canPop(context)) {
-            Navigator.of(context).pop();
-          }
-        }
-      },
+            );
+
+            context.read<VCSBloc>().add(
+              SyncHardwareStatus(isMicEnabled: false),
+            );
+          },
+        ),
+
+        // 4. СЛУШАТЕЛЬ КАМЕРЫ
+        BlocListener<VCSBloc, VCSState>(
+          listenWhen: (p, c) {
+            final sid = _getSid(c, uid);
+            if (sid == null) return false;
+            return p.mutedCameraByHostSids[sid] != c.mutedCameraByHostSids[sid];
+          },
+          listener: (context, state) {
+            final sid = _getSid(state, uid)!;
+            final isMuted = state.mutedCameraByHostSids[sid];
+            if (isMuted == null) return;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  isMuted
+                      ? "Модератор отключил вашу камеру"
+                      : "Модератор разрешил доступ к камере",
+                ),
+              ),
+            );
+
+            context.read<VCSBloc>().add(
+              SyncHardwareStatus(isCamEnabled: false),
+            );
+          },
+        ),
+      ],
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.black,
           automaticallyImplyLeading: false,
         ),
-
-        bottomNavigationBar: NavigationBottomAppBar(),
-
+        bottomNavigationBar: const NavigationBottomAppBar(),
         body: Container(
           decoration: const BoxDecoration(
             color: Color.fromARGB(255, 20, 40, 153),
@@ -60,6 +133,15 @@ class RoomView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Вспомогательный метод для поиска SID
+  String? _getSid(VCSState state, String? uid) {
+    try {
+      return state.participants.firstWhere((p) => p.identity == uid).sid;
+    } catch (_) {
+      return null;
+    }
   }
 }
 
@@ -71,6 +153,39 @@ class NavigationBottomAppBar extends StatelessWidget {
     return BlocBuilder<VCSBloc, VCSState>(
       builder: (context, state) {
         final bloc = context.read<VCSBloc>();
+
+        final isMutedMicrophoneByHost = context.select<VCSBloc, bool>((bloc) {
+          final uid = FirebaseAuth.instance.currentUser!.uid;
+
+          final hasLocal = bloc.state.participants.any(
+            (p) => p.identity == uid,
+          );
+
+          if (!hasLocal) return false;
+
+          final sid = bloc.state.participants
+              .firstWhere((p) => p.identity == uid)
+              .sid;
+
+          return bloc.state.mutedMicrophoneByHostSids[sid] ?? false;
+        });
+
+        final isMutedCameraByHost = context.select<VCSBloc, bool>((bloc) {
+          final uid = FirebaseAuth.instance.currentUser!.uid;
+
+          final hasLocal = bloc.state.participants.any(
+            (p) => p.identity == uid,
+          );
+
+          if (!hasLocal) return false;
+
+          final sid = bloc.state.participants
+              .firstWhere((p) => p.identity == uid)
+              .sid;
+
+          return bloc.state.mutedCameraByHostSids[sid] ?? false;
+        });
+
         return BottomAppBar(
           height: 144,
           color: Colors.black,
@@ -87,11 +202,16 @@ class NavigationBottomAppBar extends StatelessWidget {
                     child: IconButton(
                       iconSize: 28,
                       color: Colors.white,
-                      onPressed: state.isReconnecting
+                      onPressed: state.isReconnecting || isMutedMicrophoneByHost
                           ? null
                           : () => bloc.add(ToggleMicrophoneRequested()),
-                      icon: state.isMicrophoneEnabled
-                          ? const Icon(Icons.mic_none_outlined)
+                      icon: isMutedMicrophoneByHost
+                          ? const Icon(
+                              Icons.mic_off_outlined,
+                              color: Colors.red,
+                            )
+                          : state.isMicrophoneEnabled
+                          ? const Icon(Icons.mic_outlined)
                           : const Icon(Icons.mic_off_outlined),
                     ),
                   ),
@@ -103,10 +223,15 @@ class NavigationBottomAppBar extends StatelessWidget {
                     child: IconButton(
                       iconSize: 28,
                       color: Colors.white,
-                      onPressed: state.isReconnecting
+                      onPressed: state.isReconnecting || isMutedCameraByHost
                           ? null
                           : () => bloc.add(ToggleCameraRequested()),
-                      icon: state.isCameraEnabled
+                      icon: isMutedCameraByHost
+                          ? const Icon(
+                              Icons.videocam_off_outlined,
+                              color: Colors.red,
+                            )
+                          : state.isCameraEnabled
                           ? const Icon(Icons.videocam_outlined)
                           : const Icon(Icons.videocam_off_outlined),
                     ),
@@ -128,12 +253,13 @@ class NavigationBottomAppBar extends StatelessWidget {
                             ),
                             actions: [
                               TextButton(
+                                child: const Text('Нет'),
                                 onPressed: () {
                                   Navigator.of(context).pop();
                                 },
-                                child: const Text('Нет'),
                               ),
                               TextButton(
+                                child: const Text('Да'),
                                 onPressed: () {
                                   bloc.add(DisconnectRequested());
                                   // Закрываем диалог
@@ -141,7 +267,6 @@ class NavigationBottomAppBar extends StatelessWidget {
                                   //Закрываем страницу
                                   Navigator.of(context).pop();
                                 },
-                                child: const Text('Да'),
                               ),
                             ],
                           ),
@@ -178,7 +303,9 @@ class NavigationBottomAppBar extends StatelessWidget {
                       color: Colors.white,
                       onPressed: state.isReconnecting
                           ? null
-                          : () => bloc.add(FlipCameraRequested()),
+                          : () => state.isCameraEnabled
+                                ? bloc.add(FlipCameraRequested())
+                                : null,
                       icon: const Icon(Icons.flip_camera_ios_outlined),
                     ),
                   ),
@@ -338,7 +465,7 @@ class ParticipantLayout extends StatelessWidget {
             k: 2,
           );
         }
-      case <= 8:
+      case >= 5:
         {
           return GridParticipantsView(
             participants: participants,

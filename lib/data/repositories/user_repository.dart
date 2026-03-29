@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class UserRepository {
   final _firestore = FirebaseFirestore.instance;
 
+  // Добавление контакта
   Future<void> addContact(String currentUserId, String contactId) async {
     try {
       await _firestore
@@ -11,8 +12,38 @@ class UserRepository {
           .collection('contacts')
           .doc(contactId)
           .set({'addedAt': FieldValue.serverTimestamp()});
+    } catch (_) {
+      return;
+    }
+  }
+
+  // Получение списка ID контактов
+  Future<List<String>> getContacts(String currentUserId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(currentUserId)
+          .collection('contacts')
+          .get();
+
+      // Извлекаем ID документов
+      return snapshot.docs.map((doc) => doc.id).toList();
     } catch (e) {
-      print('Ошибка: $e');
+      return []; // Возвращаем пустой список при ошибке
+    }
+  }
+
+  // Удаление контакта
+  Future<void> removeContact(String currentUserId, String contactId) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(currentUserId)
+          .collection('contacts')
+          .doc(contactId)
+          .delete();
+    } catch (e) {
+      return;
     }
   }
 }
