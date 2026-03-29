@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:livekit_client/livekit_client.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
@@ -157,16 +156,16 @@ class CreateRoomButton extends StatelessWidget {
         vcsBloc.add(
           ConnectRequested(
             roomName: 'test-room',
-            identity: textEditingController.text,
+            identity: textEditingController.text.isNotEmpty
+                ? textEditingController.text
+                : FirebaseAuth.instance.currentUser!.uid,
             name: user.displayName ?? 'bobik',
             photoUrl: user.photoURL,
           ),
         );
 
         // Ждём, пока localParticipant появится в состоянии
-        await vcsBloc.stream.firstWhere(
-          (state) => state.participants.any((p) => p is LocalParticipant),
-        );
+        await vcsBloc.stream.firstWhere((state) => state.isConnected == true);
 
         if (!context.mounted) return;
 

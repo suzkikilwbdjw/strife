@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:livekit_client/livekit_client.dart';
 
@@ -14,13 +15,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   late final EventsListener<RoomEvent> _listener;
 
   VCSBloc(this._repository) : super(const VCSState()) {
-    _room = Room(
-      roomOptions: const RoomOptions(adaptiveStream: true, dynacast: true),
-    );
-
-    _listener = _room.createListener();
-
-    // Регестрация обработчиков событий
+    // Регистрируем обработчики
     _registerEventHandlers();
   }
 
@@ -33,6 +28,14 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     on<FlipCameraRequested>(_onFlipCamera);
     on<ToggleRemoteAudioRequested>(_onToggleRemoteAudio);
     on<TogglePinRequested>(_onTogglePin);
+    on<MuteParticipantRequested>(_onMuteParticipant);
+    on<UnmuteParticipantRequested>(_onUnmuteParticipant);
+    on<DisableCameraParticipantRequested>(_onDisableCameraParticipant);
+    on<EnableCameraParticipantRequested>(_onEnableCameraParticipant);
+    on<KickParticipantRequested>(_onKickParticipant);
+    on<TransferHostRequested>(_onTransferHost);
+    on<KickedFromRoomRequested>(_onKickedFromRoom);
+    on<SyncHardwareStatus>(_onSyncHardwareStatus);
 
     // Внутренние
     on<RoomDataChanged>((event, emit) {
@@ -44,11 +47,122 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     on<ReconnectingFinished>(_onReconnectingFinished);
   }
 
+  Future<void> _onSyncHardwareStatus(
+    SyncHardwareStatus event,
+    Emitter<VCSState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        isMicrophoneEnabled: event.isMicEnabled ?? state.isMicrophoneEnabled,
+        isCameraEnabled: event.isCamEnabled ?? state.isCameraEnabled,
+      ),
+    );
+  }
+
+  Future<void> _onKickedFromRoom(
+    KickedFromRoomRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    emit(state.copyWith(wasKicked: true));
+  }
+
+  Future<void> _onMuteParticipant(
+    MuteParticipantRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    try {
+      await _repository.muteParticipant(
+        roomId: _room.name!,
+        participantIdentity: event.participantIdentity,
+      );
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onUnmuteParticipant(
+    UnmuteParticipantRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    try {
+      await _repository.unmuteParticipant(
+        roomId: _room.name!,
+        participantIdentity: event.participantIdentity,
+      );
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onDisableCameraParticipant(
+    DisableCameraParticipantRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    try {
+      await _repository.disableCamera(
+        roomId: _room.name!,
+        participantIdentity: event.participantIdentity,
+      );
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onEnableCameraParticipant(
+    EnableCameraParticipantRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    try {
+      await _repository.enableCamera(
+        roomId: _room.name!,
+        participantIdentity: event.participantIdentity,
+      );
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onKickParticipant(
+    KickParticipantRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    try {
+      await _repository.kickParticipant(
+        roomId: _room.name!,
+        participantIdentity: event.participantIdentity,
+      );
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onTransferHost(
+    TransferHostRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    try {
+      await _repository.transferHost(
+        roomId: _room.name!,
+        newHostId: event.participantIdentity,
+      );
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
   Future<void> _onConnect(
     ConnectRequested event,
     Emitter<VCSState> emit,
   ) async {
     try {
+      // Создаем экземпляр комнаты
+      _room = Room(
+        roomOptions: const RoomOptions(adaptiveStream: true, dynacast: true),
+      );
+
+      _listener = _room.createListener();
+      _setupRoomListeners(); // Настраиваем подписки LiveKit
+
       final data = await _repository.fetchToken(
         room: event.roomName,
         identity: event.identity,
@@ -56,14 +170,11 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
         photoUrl: event.photoUrl,
       );
 
-      final serverUrl = data['serverURL'] as String;
-      final token = data['participantToken'] as String;
-
-      await _room.connect(serverUrl, token);
-
-      _setupRoomListeners();
+      // Подключаемся к комнате
+      await _room.connect(data['serverURL'], data['participantToken']);
 
       add(RoomDataChanged());
+      emit(state.copyWith(isConnected: true));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -165,6 +276,15 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
 
   void _setupRoomListeners() {
     _listener
+      ..on<ParticipantMetadataUpdatedEvent>((event) {
+        add(RoomDataChanged());
+      })
+      ..on<RoomDisconnectedEvent>((event) {
+        // Если участника выгнали
+        if (event.reason == DisconnectReason.participantRemoved) {
+          add(KickedFromRoomRequested());
+        }
+      })
       // Участник подключился
       ..on<ParticipantConnectedEvent>((event) {
         add(RoomDataChanged());
@@ -189,9 +309,6 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
       })
       //
       ..on<SpeakingChangedEvent>((event) {
-        print(
-          'Participant ${event.participant.name} is speaking: ${event.participant.isSpeaking}',
-        );
         add(RoomDataChanged());
       })
       // Качество соединения изменилось
@@ -225,24 +342,54 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     final videoTracks = <String, VideoTrack>{};
     final audioTracks = <String, AudioTrack>{};
     final photoUrls = <String, String>{};
+    final hostSids = <String, bool>{};
+    final mutedMicrophoneByHostSids = <String, bool>{};
+    final mutedCameraByHostSids = <String, bool>{};
 
     for (final participant in participants) {
-      // Видео
+      Map<String, dynamic> decoded = {};
+
+      final metadata = participant.metadata;
+      if (metadata != null && metadata.isNotEmpty) {
+        decoded = jsonDecode(metadata);
+      }
+
+      // фото / host / mute
+      photoUrls[participant.sid] = decoded['photoUrl'] ?? '';
+      hostSids[participant.sid] = decoded['isHost'] == true;
+      mutedMicrophoneByHostSids[participant.sid] =
+          decoded['mutedByHost'] == true;
+      mutedCameraByHostSids[participant.sid] =
+          decoded['cameraMutedByHost'] == true;
+
+      // только для локального пользователя
+      final isLocal =
+          participant.identity == FirebaseAuth.instance.currentUser!.uid;
+
+      if (isLocal) {
+        final isMutedByHost = decoded['mutedByHost'] == true;
+
+        if (isMutedByHost &&
+            _room.localParticipant?.isMicrophoneEnabled() == true) {
+          _room.localParticipant?.setMicrophoneEnabled(false);
+        }
+
+        final isCameraMutedByHost = decoded['cameraMutedByHost'] == true;
+
+        if (isCameraMutedByHost &&
+            _room.localParticipant?.isCameraEnabled() == true) {
+          _room.localParticipant?.setCameraEnabled(false);
+        }
+      }
+
+      // video
       for (final pub in participant.videoTrackPublications) {
         if (pub.track is VideoTrack && pub.subscribed && !pub.muted) {
           videoTracks[participant.sid] = pub.track as VideoTrack;
         }
       }
 
-      // Фото
-      final metadata = participant.metadata;
-      if (metadata == null || metadata.isEmpty) {
-      } else {
-        final decoded = jsonDecode(metadata);
-        photoUrls[participant.sid] = decoded['photoUrl'];
-      }
-
-      // Аудио
+      // audio
       for (final pub in participant.audioTrackPublications) {
         if (pub.track is AudioTrack && pub.subscribed && !pub.muted) {
           audioTracks[participant.sid] = pub.track as AudioTrack;
@@ -256,6 +403,9 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
         videoTracks: videoTracks,
         audioTracks: audioTracks,
         photoUrls: photoUrls,
+        hostSids: hostSids,
+        mutedMicrophoneByHostSids: mutedMicrophoneByHostSids,
+        mutedCameraByHostSids: mutedCameraByHostSids,
       ),
     );
   }
