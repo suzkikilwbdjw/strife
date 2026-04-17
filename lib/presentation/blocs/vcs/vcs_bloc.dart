@@ -11,8 +11,8 @@ import 'vcs_state.dart';
 class VCSBloc extends Bloc<VCSEvent, VCSState> {
   final VCSRepository _repository;
 
-  late final Room _room;
-  late final EventsListener<RoomEvent> _listener;
+  Room? _room;
+  EventsListener<RoomEvent>? _listener;
 
   VCSBloc(this._repository) : super(const VCSState()) {
     // Регистрируем обработчики
@@ -72,7 +72,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     try {
       await _repository.muteParticipant(
-        roomId: _room.name!,
+        roomId: _room!.name!,
         participantIdentity: event.participantIdentity,
       );
     } catch (e) {
@@ -86,7 +86,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     try {
       await _repository.unmuteParticipant(
-        roomId: _room.name!,
+        roomId: _room!.name!,
         participantIdentity: event.participantIdentity,
       );
     } catch (e) {
@@ -100,7 +100,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     try {
       await _repository.disableCamera(
-        roomId: _room.name!,
+        roomId: _room!.name!,
         participantIdentity: event.participantIdentity,
       );
     } catch (e) {
@@ -114,7 +114,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     try {
       await _repository.enableCamera(
-        roomId: _room.name!,
+        roomId: _room!.name!,
         participantIdentity: event.participantIdentity,
       );
     } catch (e) {
@@ -128,7 +128,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     try {
       await _repository.kickParticipant(
-        roomId: _room.name!,
+        roomId: _room!.name!,
         participantIdentity: event.participantIdentity,
       );
     } catch (e) {
@@ -142,7 +142,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     try {
       await _repository.transferHost(
-        roomId: _room.name!,
+        roomId: _room!.name!,
         newHostId: event.participantIdentity,
       );
     } catch (e) {
@@ -160,7 +160,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
         roomOptions: const RoomOptions(adaptiveStream: true, dynacast: true),
       );
 
-      _listener = _room.createListener();
+      _listener = _room!.createListener();
       _setupRoomListeners(); // Настраиваем подписки LiveKit
 
       final data = await _repository.fetchToken(
@@ -171,7 +171,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
       );
 
       // Подключаемся к комнате
-      await _room.connect(data['serverURL'], data['participantToken']);
+      await _room!.connect(data['serverURL'], data['participantToken']);
 
       add(RoomDataChanged());
       emit(state.copyWith(isConnected: true));
@@ -184,7 +184,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     DisconnectRequested event,
     Emitter<VCSState> emit,
   ) async {
-    await _room.disconnect();
+    await _room!.disconnect();
     emit(const VCSState());
   }
 
@@ -194,7 +194,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     final newValue = !state.isMicrophoneEnabled;
 
-    await _room.localParticipant?.setMicrophoneEnabled(newValue);
+    await _room!.localParticipant?.setMicrophoneEnabled(newValue);
 
     emit(state.copyWith(isMicrophoneEnabled: newValue));
   }
@@ -205,7 +205,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     final newValue = !state.isCameraEnabled;
 
-    await _room.localParticipant?.setCameraEnabled(newValue);
+    await _room!.localParticipant?.setCameraEnabled(newValue);
 
     emit(state.copyWith(isCameraEnabled: newValue));
   }
@@ -214,7 +214,8 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     FlipCameraRequested event,
     Emitter<VCSState> emit,
   ) async {
-    final trackPub = _room.localParticipant?.videoTrackPublications.firstOrNull;
+    final trackPub =
+        _room!.localParticipant?.videoTrackPublications.firstOrNull;
     final track = trackPub?.track;
 
     if (track is LocalVideoTrack) {
@@ -255,7 +256,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     final newValue = !state.isRemoteAudioEnabled;
 
-    for (final participant in _room.remoteParticipants.values) {
+    for (final participant in _room!.remoteParticipants.values) {
       for (final pub in participant.audioTrackPublications) {
         if (pub.track != null) {
           newValue ? await pub.track!.enable() : await pub.track!.disable();
@@ -275,7 +276,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   }
 
   void _setupRoomListeners() {
-    _listener
+    _listener!
       ..on<ParticipantMetadataUpdatedEvent>((event) {
         add(RoomDataChanged());
       })
@@ -332,11 +333,11 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   }
 
   void _updateParticipants(Emitter<VCSState> emit) {
-    if (_room.localParticipant == null) return;
+    if (_room!.localParticipant == null) return;
 
     final participants = <Participant>[
-      _room.localParticipant!,
-      ..._room.remoteParticipants.values,
+      _room!.localParticipant!,
+      ..._room!.remoteParticipants.values,
     ];
 
     final videoTracks = <String, VideoTrack>{};
@@ -370,15 +371,15 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
         final isMutedByHost = decoded['mutedByHost'] == true;
 
         if (isMutedByHost &&
-            _room.localParticipant?.isMicrophoneEnabled() == true) {
-          _room.localParticipant?.setMicrophoneEnabled(false);
+            _room!.localParticipant?.isMicrophoneEnabled() == true) {
+          _room!.localParticipant?.setMicrophoneEnabled(false);
         }
 
         final isCameraMutedByHost = decoded['cameraMutedByHost'] == true;
 
         if (isCameraMutedByHost &&
-            _room.localParticipant?.isCameraEnabled() == true) {
-          _room.localParticipant?.setCameraEnabled(false);
+            _room!.localParticipant?.isCameraEnabled() == true) {
+          _room!.localParticipant?.setCameraEnabled(false);
         }
       }
 
@@ -434,8 +435,8 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
 
   @override
   Future<void> close() async {
-    await _listener.dispose();
-    await _room.dispose();
+    await _listener!.dispose();
+    await _room!.dispose();
     return super.close();
   }
 }
