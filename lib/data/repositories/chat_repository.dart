@@ -38,10 +38,10 @@ class ChatRepository {
 
     batch.set(messageReference, message.toFirestore());
 
-    batch.update(chatReference, {
+    batch.set(chatReference, {
       'lastMessage': message.text,
       'lastUpdate': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
 
     await batch.commit();
   }
