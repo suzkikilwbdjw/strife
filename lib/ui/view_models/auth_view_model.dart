@@ -32,6 +32,28 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+  Future<bool> signInYandex() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      final credential = await _authRepository.loginWithYandex();
+
+      if (credential == null) {
+        throw Exception('Yandex login failed');
+      }
+
+      final user = credential.user!;
+
+      await _authRepository.saveUserData(user);
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _setLoading(false);
+      return false;
+    }
+  }
+
   // Логика регистрации
   Future<bool> signUp({
     required String email,

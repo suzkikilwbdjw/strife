@@ -17,35 +17,34 @@ class LoginView extends StatelessWidget {
   Widget build(BuildContext context) {
     final gradient = Theme.of(context).extension<GradientTheme>()!.mainGradient;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        toolbarHeight: 100,
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'Strife',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 36,
-              ),
-            ),
-            Text(
-              'Видеоконференции',
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          ],
-        ),
+    return Container(
+      decoration: BoxDecoration(gradient: gradient),
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        flexibleSpace: Container(decoration: BoxDecoration(gradient: gradient)),
-      ),
-      resizeToAvoidBottomInset: true,
-      body: Form(
-        key: _formKey,
-        child: Container(
-          decoration: BoxDecoration(gradient: gradient),
+        appBar: AppBar(
+          toolbarHeight: 100,
+          title: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Strife',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 36,
+                ),
+              ),
+              Text(
+                'Видеоконференции',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.transparent,
+        ),
+        resizeToAvoidBottomInset: true,
+        body: Form(
+          key: _formKey,
           child: SafeArea(
             child: SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -60,12 +59,16 @@ class LoginView extends StatelessWidget {
                       fontSize: 36,
                     ),
                   ),
+
                   const SizedBox(height: 80),
 
                   EmailTextForm(controller: _emailController),
-                  const SizedBox(height: 10),
+
+                  const SizedBox(height: 8),
+
                   PasswordTextForm(controller: _passwordController),
-                  const SizedBox(height: 24),
+
+                  const SizedBox(height: 12),
 
                   LoginButton(
                     formKey: _formKey,
@@ -73,15 +76,40 @@ class LoginView extends StatelessWidget {
                     passwordController: _passwordController,
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+
                   const RegisterNavigationText(),
-                  const SizedBox(height: 70),
-                  const Text(
-                    'или войти с помощью',
-                    style: TextStyle(color: Color(0xFF999393), fontSize: 24),
+
+                  const SizedBox(height: 120),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Divider(
+                            thickness: 2,
+                            color: Color(0xFF999393),
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 5),
+                          child: Text(
+                            'или войти с помощью',
+                            style: TextStyle(
+                              color: Color(0xFF999393),
+                              fontSize: 24,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(thickness: 1, color: Colors.grey),
+                        ),
+                      ],
+                    ),
                   ),
+
                   const SocialLogosRow(),
-                  const SizedBox(height: 50),
                 ],
               ),
             ),
@@ -102,6 +130,7 @@ class RegisterNavigationText extends StatelessWidget {
         style: const TextStyle(fontSize: 20, color: Color(0xFF999393)),
         children: [
           const TextSpan(text: 'Нет аккаунта?'),
+
           TextSpan(
             text: ' Зарегестрироваться',
             style: TextStyle(color: Color.fromARGB(255, 28, 91, 239)),
@@ -127,9 +156,15 @@ class SocialLogosRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       spacing: 32,
       children: <Widget>[
-        Image.asset('assets/images/mail_logo.png', scale: 1.3),
-        Image.asset('assets/images/yandex_logo.png', scale: 1.3),
-        Image.asset('assets/images/vk_logo.png', scale: 1.3),
+        //Image.asset('assets/images/mail_logo.png', scale: 1.3),
+        IconButton(
+          icon: Image.asset('assets/images/yandex_logo.png', scale: 1.3),
+          onPressed: () async {
+            await context.read<AuthViewModel>().signInYandex();
+          },
+        ),
+
+        //Image.asset('assets/images/vk_logo.png', scale: 1.3),
       ],
     );
   }
@@ -177,7 +212,7 @@ class EmailTextForm extends StatelessWidget {
                 height: 36,
                 child: hasError
                     ? Align(
-                        alignment: Alignment.centerLeft,
+                        alignment: Alignment.center,
                         child: Container(
                           margin: const EdgeInsets.only(left: 10, top: 4),
                           decoration: BoxDecoration(
@@ -185,7 +220,7 @@ class EmailTextForm extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
+                            horizontal: 14,
                             vertical: 6,
                           ),
                           child: Row(
@@ -230,10 +265,9 @@ class PasswordTextForm extends StatelessWidget {
       width: MediaQuery.sizeOf(context).width * 0.9,
       child: FormField<String>(
         autovalidateMode: AutovalidateMode.onUserInteraction,
-        validator: (value) =>
-            (value == null || value.length < 6)
-                ? 'Пароль должен содержать минимум 6 символов'
-                : null,
+        validator: (value) => (value == null || value.length < 6)
+            ? 'Пароль должен содержать минимум 6 символов'
+            : null,
         builder: (field) {
           final hasError = field.errorText != null;
 
@@ -246,8 +280,7 @@ class PasswordTextForm extends StatelessWidget {
                 onChanged: field.didChange,
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor:
-                      const Color(0xFFD9D9D9).withValues(alpha: 0.4),
+                  fillColor: const Color(0xFFD9D9D9).withValues(alpha: 0.4),
                   border: const OutlineInputBorder(
                     borderSide: BorderSide.none,
                     borderRadius: BorderRadius.all(Radius.circular(25)),
@@ -259,7 +292,7 @@ class PasswordTextForm extends StatelessWidget {
                 height: 36,
                 child: hasError
                     ? Align(
-                        alignment: Alignment.centerLeft,
+                        alignment: Alignment.center,
                         child: Container(
                           margin: const EdgeInsets.only(left: 10, top: 4),
                           decoration: BoxDecoration(
@@ -267,7 +300,7 @@ class PasswordTextForm extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
+                            horizontal: 14,
                             vertical: 6,
                           ),
                           child: Row(

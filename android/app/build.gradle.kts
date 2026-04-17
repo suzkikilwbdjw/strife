@@ -31,6 +31,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // ИСПРАВЛЕННЫЙ СИНТАКСИС
+        manifestPlaceholders.apply {
+            put("appAuthRedirectScheme", "com.example.strife")
+        }
     }
 
     buildTypes {
