@@ -4,6 +4,7 @@ import 'package:strife/ui/view_models/auth_view_model.dart';
 import 'package:strife/ui/views/register/registration_view.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:provider/provider.dart';
+import 'package:strife/ui/widgets/error_label_widget.dart';
 
 class LoginView extends StatelessWidget {
   LoginView({super.key});
@@ -68,7 +69,7 @@ class LoginView extends StatelessWidget {
 
                   PasswordTextForm(controller: _passwordController),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 30),
 
                   LoginButton(
                     formKey: _formKey,
@@ -209,42 +210,8 @@ class EmailTextForm extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                height: 36,
                 child: hasError
-                    ? Align(
-                        alignment: Alignment.center,
-                        child: Container(
-                          margin: const EdgeInsets.only(left: 10, top: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFA60A0A),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.warning_amber_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  field.errorText!,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
+                    ? ErrorLabel(errorText: field.errorText)
                     : const SizedBox.shrink(),
               ),
             ],
@@ -289,42 +256,8 @@ class PasswordTextForm extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                height: 36,
                 child: hasError
-                    ? Align(
-                        alignment: Alignment.center,
-                        child: Container(
-                          margin: const EdgeInsets.only(left: 10, top: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFA60A0A),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.warning_amber_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  field.errorText!,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
+                    ? ErrorLabel(errorText: field.errorText)
                     : const SizedBox.shrink(),
               ),
             ],

@@ -88,8 +88,19 @@ class AuthViewModel extends ChangeNotifier {
 
       _setLoading(false);
       return true;
-    } catch (e) {
-      _error = e.toString();
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'email-already-in-use':
+          _error = 'Эта почта уже занята другим пользователем.';
+        case 'invalid-email':
+          _error = 'Некорректный формат электронной почты.';
+        case 'weak-password':
+          _error = 'Пароль слишком простой. Придумайте что-то посложнее.';
+        case 'network-request-failed':
+          _error = 'Проблемы с интернет-соединением.';
+        default:
+          _error = 'Ошибка авторизации: ${e.message}';
+      }
       _setLoading(false);
       return false;
     }

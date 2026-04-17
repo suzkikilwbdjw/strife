@@ -15,10 +15,14 @@ class AuthRepository {
 
   // Регистрация
   Future<UserCredential> register(String email, String password) {
-    return _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    try {
+      return _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } on FirebaseAuthException catch (_) {
+      rethrow;
+    }
   }
 
   // Вход
