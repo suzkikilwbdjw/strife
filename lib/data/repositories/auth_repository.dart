@@ -27,7 +27,11 @@ class AuthRepository {
 
   // Вход
   Future<UserCredential> login(String email, String password) {
-    return _auth.signInWithEmailAndPassword(email: email, password: password);
+    try {
+      return _auth.signInWithEmailAndPassword(email: email, password: password);
+    } on FirebaseAuthException catch (_) {
+      rethrow;
+    }
   }
 
   // Запись в БД

@@ -25,8 +25,21 @@ class AuthViewModel extends ChangeNotifier {
       await _authRepository.login(email, password);
       _setLoading(false);
       return true;
-    } catch (e) {
-      _error = e.toString();
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          _error = 'Пользователь с такой почтой не найден.';
+        case 'wrong-password':
+          _error = 'Неверный пароль. Попробуйте еще раз.';
+        case 'invalid-credential':
+          _error = 'Неверная почта или пароль.';
+        case 'user-disabled':
+          _error = ' Ваш аккаунт заблокирован.';
+        case 'too-many-requests':
+          _error = 'Слишком много попыток. Попробуйте позже.';
+        default:
+          _error = 'Ошибка входа: ${e.message}';
+      }
       _setLoading(false);
       return false;
     }

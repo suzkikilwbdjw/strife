@@ -307,9 +307,9 @@ class LoginButton extends StatelessWidget {
                 if (!context.mounted) return;
 
                 if (!success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Ошибка: ${authVM.error}')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('${authVM.error}')));
                 }
               }
             },
