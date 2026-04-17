@@ -29,13 +29,17 @@ class MessageBubble extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: isMe
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
                   messageModel.text,
                   style: TextStyle(color: isMe ? Colors.white : Colors.black),
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
                   '${messageModel.timestamp.hour}:${messageModel.timestamp.minute.toString().padLeft(2, '0')}',
                   style: TextStyle(
