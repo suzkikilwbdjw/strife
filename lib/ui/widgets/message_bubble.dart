@@ -33,6 +33,7 @@ class MessageBubble extends StatelessWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: <Widget>[
+                // Отображение самого сообщения
                 Text(
                   messageModel.text,
                   style: TextStyle(color: isMe ? Colors.white : Colors.black),
@@ -40,12 +41,29 @@ class MessageBubble extends StatelessWidget {
 
                 const SizedBox(height: 4),
 
-                Text(
-                  '${messageModel.timestamp.hour}:${messageModel.timestamp.minute.toString().padLeft(2, '0')}',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isMe ? Colors.white30 : Colors.black54,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Отображение времени отправки
+                    Text(
+                      '${messageModel.timestamp.hour}:${messageModel.timestamp.minute.toString().padLeft(2, '0')}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isMe ? Colors.white30 : Colors.black54,
+                      ),
+                    ),
+                    if (isMe) ...[
+                      const SizedBox(width: 4),
+                      Icon(
+                        messageModel.isPending
+                            ? Icons
+                                  .access_time_rounded // Часики
+                            : Icons.done, // Одна галочка
+                        size: 12,
+                        color: isMe ? Colors.white30 : Colors.black54,
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

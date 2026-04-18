@@ -12,7 +12,7 @@ class ChatRepository {
         .doc(chatId)
         .collection('messages')
         .orderBy('timestamp', descending: true)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map(
           (snapshot) => snapshot.docs
               .map((doc) => MessageModel.fromFirestore(doc))
@@ -22,28 +22,32 @@ class ChatRepository {
 
   // Отправка сообщений
   Future<void> sendMessage(String chatId, MessageModel message) async {
-    final batch = _firestore.batch();
+    try {
+      final batch = _firestore.batch();
 
-    // Ссылка на новое сообщение
-    DocumentReference messageReference = _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .doc();
+      // Ссылка на новое сообщение
+      DocumentReference messageReference = _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .doc();
 
-    // Ссылка на чат
-    DocumentReference chatReference = _firestore
-        .collection('chats')
-        .doc(chatId);
+      // Ссылка на чат
+      DocumentReference chatReference = _firestore
+          .collection('chats')
+          .doc(chatId);
 
-    batch.set(messageReference, message.toFirestore());
+      batch.set(messageReference, message.toFirestore());
 
-    batch.set(chatReference, {
-      'lastMessage': message.text,
-      'lastUpdate': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+      batch.set(chatReference, {
+        'lastMessage': message.text,
+        'lastUpdate': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
-    await batch.commit();
+      await batch.commit();
+    } on FirebaseException catch (_) {
+      rethrow;
+    }
   }
 
   // Создание или получение id личного чата, вне комнаты

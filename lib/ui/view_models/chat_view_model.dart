@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:strife/data/models/message_model.dart';
 import 'package:strife/data/repositories/chat_repository.dart';
@@ -11,10 +12,12 @@ class ChatViewModel extends ChangeNotifier {
   List<MessageModel> _messages = [];
   bool _isLoading = false;
   StreamSubscription? _streamSubscription;
+  String? _error;
 
   // Геттеры для UI
   List<MessageModel> get messages => _messages;
   bool get isLoading => _isLoading;
+  String? get error => _error;
 
   // Инициализация чата
   void initChat(String chatId) {
@@ -40,12 +43,24 @@ class ChatViewModel extends ChangeNotifier {
       text: text,
       timestamp: DateTime.now(),
     );
-
+    _error = null;
     try {
       await _chatRepository.sendMessage(chatId, newMessage);
-    } catch (e) {
-      print('Ошибка отправки сообщения: $e');
+    } on FirebaseException catch (_) {
+      /*switch (e.code) {
+        case 'unavailable':
+          _error = 'Проблемы с сетью. Проверьте интернет.';
+        case 'deadline-exceeded':
+          _error = 'Время ожидания операции истекло.';
+        default:
+          _error = 'Ошибка входа: ${e.message}';
+      }
+      notifyListeners();*/
     }
+  }
+
+  void clearError() {
+    _error = null;
   }
 
   @override
