@@ -12,7 +12,7 @@ class ChatRepository {
         .doc(chatId)
         .collection('messages')
         .orderBy('timestamp', descending: true)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map(
           (snapshot) => snapshot.docs
               .map((doc) => MessageModel.fromFirestore(doc))
@@ -22,28 +22,32 @@ class ChatRepository {
 
   // Отправка сообщений
   Future<void> sendMessage(String chatId, MessageModel message) async {
-    final batch = _firestore.batch();
+    try {
+      final batch = _firestore.batch();
 
-    // Ссылка на новое сообщение
-    DocumentReference messageReference = _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .doc();
+      // Ссылка на новое сообщение
+      DocumentReference messageReference = _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .doc();
 
-    // Ссылка на чат
-    DocumentReference chatReference = _firestore
-        .collection('chats')
-        .doc(chatId);
+      // Ссылка на чат
+      DocumentReference chatReference = _firestore
+          .collection('chats')
+          .doc(chatId);
 
-    batch.set(messageReference, message.toFirestore());
+      batch.set(messageReference, message.toFirestore());
 
-    batch.update(chatReference, {
-      'lastMessage': message.text,
-      'lastUpdate': FieldValue.serverTimestamp(),
-    });
+      batch.set(chatReference, {
+        'lastMessage': message.text,
+        'lastUpdate': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
-    await batch.commit();
+      await batch.commit();
+    } on FirebaseException catch (_) {
+      rethrow;
+    }
   }
 
   // Создание или получение id личного чата, вне комнаты
@@ -71,6 +75,33 @@ class ChatRepository {
     }
 
     return chatId;
+  }
+
+  // Пометка сообщений прочитанными
+  Future<void> markAsRead(String chatId, String userId) async {
+    final query = await _firestore
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .where('senderId', isNotEqualTo: userId) // Берем только чужие сообщения
+        .orderBy('timestamp', descending: true)
+        .limit(10) // Проверяем только последние 10 сообщений
+        .get();
+
+    final batch = _firestore.batch();
+
+    for (var doc in query.docs) {
+      List readBy = doc.data()['readBy'] ?? [];
+      if (!readBy.contains(userId)) {
+        batch.update(doc.reference, {
+          'readBy': FieldValue.arrayUnion([
+            userId,
+          ]), // Добавляем наш ID в список
+        });
+      }
+    }
+
+    await batch.commit();
   }
 
   Future<void> syncRoomChat(

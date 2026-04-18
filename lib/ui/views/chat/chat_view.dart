@@ -25,11 +25,18 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+
     // Инициализируем подписку на сообщения при входе
     Future.microtask(() {
       if (!mounted) return;
       context.read<ChatViewModel>().initChat(widget.chatId);
     });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void _onSend() {
@@ -45,6 +52,17 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final error = context.select<ChatViewModel, String?>((vm) => vm.error);
+
+    /*if (error != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: Colors.red),
+        );
+        context.read<ChatViewModel>().clearError();
+      });
+    }*/
+
     return Scaffold(
       appBar: AppBar(title: const Text("Чат")),
       body: Column(
@@ -72,6 +90,15 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
+
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                error,
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
 
           // Поле ввода
           Padding(
