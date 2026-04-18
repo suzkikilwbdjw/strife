@@ -77,6 +77,33 @@ class ChatRepository {
     return chatId;
   }
 
+  // Пометка сообщений прочитанными
+  Future<void> markAsRead(String chatId, String userId) async {
+    final query = await _firestore
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .where('senderId', isNotEqualTo: userId) // Берем только чужие сообщения
+        .orderBy('timestamp', descending: true)
+        .limit(10) // Проверяем только последние 10 сообщений
+        .get();
+
+    final batch = _firestore.batch();
+
+    for (var doc in query.docs) {
+      List readBy = doc.data()['readBy'] ?? [];
+      if (!readBy.contains(userId)) {
+        batch.update(doc.reference, {
+          'readBy': FieldValue.arrayUnion([
+            userId,
+          ]), // Добавляем наш ID в список
+        });
+      }
+    }
+
+    await batch.commit();
+  }
+
   Future<void> syncRoomChat(
     String liveKitRoomId,
     List<String> participantIds,

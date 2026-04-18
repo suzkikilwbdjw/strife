@@ -14,7 +14,6 @@ import 'package:strife/presentation/contacts/contacts_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/data/repositories/auth_repository.dart';
 import 'package:strife/ui/view_models/auth_view_model.dart';
-import 'package:strife/ui/view_models/chat_view_model.dart';
 
 // Импорты экранов
 import 'package:strife/ui/views/login/login_view.dart';
@@ -31,7 +30,6 @@ Future<void> main() async {
         Provider(create: (_) => ChatRepository()),
         // ViewModels
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
-        ChangeNotifierProvider(create: (_) => ChatViewModel()),
       ],
       child: MultiBlocProvider(
         providers: [

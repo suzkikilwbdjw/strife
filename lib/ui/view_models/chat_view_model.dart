@@ -7,6 +7,7 @@ import 'package:strife/data/repositories/chat_repository.dart';
 
 class ChatViewModel extends ChangeNotifier {
   final ChatRepository _chatRepository = ChatRepository();
+  final String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
   // Состояния
   List<MessageModel> _messages = [];
@@ -22,6 +23,7 @@ class ChatViewModel extends ChangeNotifier {
   // Инициализация чата
   void initChat(String chatId) {
     _isLoading = true;
+
     notifyListeners();
 
     _streamSubscription?.cancel();
@@ -32,7 +34,17 @@ class ChatViewModel extends ChangeNotifier {
       _messages = newMessages;
       _isLoading = false;
       notifyListeners();
+
+      // Проверка, есть ли во входящих сообщениях те, где нет моего id
+      bool hasUnread = newMessages.any(
+        (msg) =>
+            msg.senderId != currentUserId &&
+            !(msg.readBy?.contains(currentUserId) ?? false),
+      );
+      if (hasUnread) _chatRepository.markAsRead(chatId, currentUserId!);
     });
+
+    _chatRepository.markAsRead(chatId, FirebaseAuth.instance.currentUser!.uid);
   }
 
   Future<void> sendText(String chatId, String senderId, String text) async {
