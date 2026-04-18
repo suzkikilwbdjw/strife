@@ -64,7 +64,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }*/
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Чат")),
+      appBar: AppBar(
+        title: const Text("Чат", style: TextStyle(color: Colors.purple)),
+        centerTitle: true,
+      ),
       body: Column(
         children: [
           // Список сообщений
@@ -108,14 +111,17 @@ class _ChatScreenState extends State<ChatScreen> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: "Введите сообщение...",
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: 'Напишите сообщение...',
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(30)),
+                      ),
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send, color: Colors.blue),
+                  icon: const Icon(Icons.send, color: Colors.pinkAccent),
                   onPressed: _onSend,
                 ),
               ],
