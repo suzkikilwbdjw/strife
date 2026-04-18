@@ -52,8 +52,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final error = context.select<ChatViewModel, String?>((vm) => vm.error);
-
     /*if (error != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -65,7 +63,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Чат", style: TextStyle(color: Colors.purple)),
+        title: const Text("Чат", style: TextStyle(color: Colors.deepPurple)),
         centerTitle: true,
       ),
       body: Column(
@@ -84,9 +82,36 @@ class _ChatScreenState extends State<ChatScreen> {
                   itemCount: vm.messages.length,
                   itemBuilder: (context, index) {
                     final messageModel = vm.messages[index];
+                    final isMe = messageModel.senderId == widget.currentUserId;
+
+                    bool showSenderName = false;
+                    bool showAvatar = false;
+
+                    if (!isMe) {
+                      if (index == vm.messages.length - 1 ||
+                          vm.messages[index + 1].senderId !=
+                              messageModel.senderId) {
+                        showSenderName = true;
+                      }
+                      if (index == 0 ||
+                          vm.messages[index - 1].senderId !=
+                              messageModel.senderId) {
+                        showAvatar = true;
+                      }
+                    }
+                    final userData = vm.getUserData(messageModel.senderId);
+                    final String name =
+                        userData?['displayName'] ?? "Загрузка...";
+                    final String? photoUrl = userData?['photoUrl'];
+
                     return MessageBubble(
                       messageModel: messageModel,
-                      isMe: messageModel.senderId == widget.currentUserId,
+                      isMe: isMe,
+                      showSenderName:
+                          showSenderName, // Показывать ли имя отправителя
+                      showAvatar: showAvatar, // Показывать ли аватар
+                      senderName: name, // Передаем имя
+                      senderPhoto: photoUrl, // Передаем ссылку на фото
                     );
                   },
                 );
@@ -94,14 +119,14 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
 
-          if (error != null)
+          /*if (error != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 error,
                 style: TextStyle(color: Colors.red, fontSize: 12),
               ),
-            ),
+            ),*/
 
           // Поле ввода
           Padding(
@@ -121,7 +146,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send, color: Colors.pinkAccent),
+                  icon: const Icon(Icons.send, color: Colors.deepPurple),
                   onPressed: _onSend,
                 ),
               ],

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:strife/data/models/message_model.dart';
@@ -8,6 +9,7 @@ import 'package:strife/data/repositories/chat_repository.dart';
 class ChatViewModel extends ChangeNotifier {
   final ChatRepository _chatRepository = ChatRepository();
   final String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  final Map<String, Map<String, dynamic>> _usersCache = {};
 
   // Состояния
   List<MessageModel> _messages = [];
@@ -19,6 +21,24 @@ class ChatViewModel extends ChangeNotifier {
   List<MessageModel> get messages => _messages;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  // Получение данных пользователя для отображения (фото, отображаемое имя)
+  Map<String, dynamic>? getUserData(String userId) {
+    if (_usersCache.containsKey(userId)) {
+      return _usersCache[userId];
+    }
+
+    // Если данных нет, запускаем загрузку в фоне
+    _fetchUser(userId);
+    return null;
+  }
+
+  Future<void> _fetchUser(String userId) async {
+    // Чтобы не запускать загрузку одного и того же ID дважды
+    _usersCache[userId] = {'loading': true};
+    _usersCache[userId] = await _chatRepository.getUser(userId);
+    notifyListeners(); // Перерисовываем чат, когда данные приехали
+  }
 
   // Инициализация чата
   void initChat(String chatId) {
