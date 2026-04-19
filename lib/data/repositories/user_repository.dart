@@ -11,7 +11,9 @@ class UserRepository {
           .doc(currentUserId)
           .collection('contacts')
           .doc(contactId)
-          .set({'addedAt': FieldValue.serverTimestamp()});
+          .set({
+            'addedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
     } catch (_) {
       return;
     }
@@ -48,18 +50,43 @@ class UserRepository {
   }
 
   // Стрим для отслеживаний изменений
-  Stream<List<String>> contactsIdsStream(String currentUserId) {
+  Stream<List<Map<String, dynamic>>> contactsStream(String currentUserId) {
     return _firestore
         .collection('users')
         .doc(currentUserId)
         .collection('contacts')
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => doc.id).toList());
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            return {
+              'id': doc.id,
+              'isFavorite': doc.data()['isFavorite'] ?? false,
+            };
+          }).toList(),
+        );
   }
 
   // Получение данных конкретного пользователя
   Future<Map<String, dynamic>> getUserData(String userId) async {
     final doc = await _firestore.collection('users').doc(userId).get();
     return doc.data() ?? {};
+  }
+
+  // Добавление контакта в избранный
+  Future<void> toggleFavorite(
+    String currentUserId,
+    String contactId,
+    bool isFavorite,
+  ) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(currentUserId)
+          .collection('contacts')
+          .doc(contactId)
+          .update({'isFavorite': isFavorite});
+    } catch (_) {
+      rethrow;
+    }
   }
 }

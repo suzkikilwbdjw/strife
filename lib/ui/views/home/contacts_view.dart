@@ -6,25 +6,33 @@ import 'package:strife/presentation/contacts/contacts_event.dart';
 import 'package:strife/presentation/contacts/contacts_state.dart';
 import 'package:strife/themes/gradient_theme.dart';
 
-class ContactsView extends StatelessWidget {
+class ContactsView extends StatefulWidget {
   const ContactsView({super.key});
 
   @override
+  State<ContactsView> createState() => _ContactsViewState();
+}
+
+class _ContactsViewState extends State<ContactsView> {
+  // Флаг для показа только избранных контактов
+  bool _showFavorites = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Загружаем данные
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+    context.read<ContactsBloc>().add(
+      LoadContactsRequested(currentUserId: userId),
+    );
+    context.read<ContactsBloc>().add(SearchContactsRequested(searchQuery: ''));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Загружаем список контактов
-    Future.microtask(() {
-      final userId = FirebaseAuth.instance.currentUser!.uid;
-
-      if (!context.mounted) return;
-
-      context.read<ContactsBloc>().add(
-        LoadContactsRequested(currentUserId: userId),
-      );
-
-      context.read<ContactsBloc>().add(
-        SearchContactsRequested(searchQuery: ''),
-      );
-    });
+    final mainGradient = Theme.of(
+      context,
+    ).extension<GradientTheme>()!.mainGradient;
 
     return Scaffold(
       // AppBar
@@ -78,15 +86,11 @@ class ContactsView extends StatelessWidget {
       body: BlocBuilder<ContactsBloc, ContactsState>(
         builder: (context, state) {
           // Получаем список контактов
-          final contacts = state.filteredContacts;
-
-          if (contacts.isEmpty && state.searchQuery.isEmpty) {
-            return const Center(child: Text('Список контактов пуст'));
-          }
-
-          if (contacts.isEmpty && state.searchQuery.isNotEmpty) {
-            return const Center(child: Text('Ничего не найдено'));
-          }
+          final displayedContacts = _showFavorites
+              ? state.filteredContacts
+                    .where((c) => c['isFavorite'] == true)
+                    .toList()
+              : state.filteredContacts;
 
           return Column(
             children: <Widget>[
@@ -99,20 +103,27 @@ class ContactsView extends StatelessWidget {
                   children: <Widget>[
                     // Кнопка "Все контакты"
                     Expanded(
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          gradient: Theme.of(
-                            context,
-                          ).extension<GradientTheme>()!.mainGradient,
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Все контакты',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _showFavorites = false),
+
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            gradient: !_showFavorites ? mainGradient : null,
+                            color: _showFavorites
+                                ? const Color(0xFFD9D9D9)
+                                : null,
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Все контакты',
+                              style: TextStyle(
+                                color: !_showFavorites
+                                    ? Colors.white
+                                    : Colors.black54,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
@@ -123,29 +134,41 @@ class ContactsView extends StatelessWidget {
 
                     // Кнопка "Избранные"
                     Expanded(
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD9D9D9),
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.star_border,
-                              size: 18,
-                              color: Colors.black54,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Избранные',
-                              style: TextStyle(
-                                color: Colors.black54,
-                                fontWeight: FontWeight.w500,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _showFavorites = true),
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            gradient: _showFavorites ? mainGradient : null,
+                            color: !_showFavorites
+                                ? const Color(0xFFD9D9D9)
+                                : null,
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _showFavorites ? Icons.star : Icons.star_border,
+                                size: 18,
+                                color: _showFavorites
+                                    ? Colors.white
+                                    : Colors.black54,
                               ),
-                            ),
-                          ],
+
+                              const SizedBox(width: 4),
+
+                              Text(
+                                'Избранные',
+                                style: TextStyle(
+                                  color: _showFavorites
+                                      ? Colors.white
+                                      : Colors.black54,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -157,19 +180,26 @@ class ContactsView extends StatelessWidget {
 
               // Список контактов
               Expanded(
-                child: ListView.separated(
-                  itemCount: contacts.length,
-                  separatorBuilder: (context, index) => const Divider(
-                    height: 1,
-                    thickness: 0.5,
-                    indent: 75,
-                    endIndent: 16,
-                    color: Colors.white24,
-                  ),
-                  itemBuilder: (context, index) {
-                    return ContactWidget(userData: contacts[index]);
-                  },
-                ),
+                child: displayedContacts.isEmpty
+                    ? Center(
+                        child: Text(
+                          _showFavorites
+                              ? 'Нет избранных контактов'
+                              : 'Список пуст',
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: displayedContacts.length,
+                        separatorBuilder: (context, index) => const Divider(
+                          height: 1,
+                          thickness: 0.5,
+                          indent: 75,
+                          endIndent: 16,
+                          color: Colors.black12,
+                        ),
+                        itemBuilder: (context, index) =>
+                            ContactWidget(userData: displayedContacts[index]),
+                      ),
               ),
             ],
           );
@@ -189,6 +219,7 @@ class ContactWidget extends StatelessWidget {
     final photoUrl = userData['photoUrl'] as String?;
     final displayName = userData['displayName'] as String? ?? 'Без имени';
     final email = userData['email'] as String? ?? '';
+    final isFavorite = userData['isFavorite'] ?? false;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -205,9 +236,17 @@ class ContactWidget extends StatelessWidget {
       ),
 
       // Отображаемое имя
-      title: Text(
-        displayName,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      title: Row(
+        children: [
+          Text(
+            displayName,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+
+          const SizedBox(width: 4),
+
+          if (isFavorite) const Icon(Icons.star, color: Colors.amberAccent),
+        ],
       ),
 
       // Выпадающие меню с редактирование контакта
@@ -231,24 +270,43 @@ class ContactWidget extends StatelessWidget {
 
           Container(
             decoration: BoxDecoration(
+              // Обводка
               shape: BoxShape.circle,
               color: Colors.grey.shade100,
             ),
+
             child: PopupMenuButton(
               icon: const Icon(Icons.more_vert_outlined),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+
               color: Colors.purple.shade700,
+
               itemBuilder: (context) => [
+                // Добавление в избранное
                 PopupMenuItem(
-                  child: Text(
-                    'Добавить в избранный',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onTap: () {},
+                  child: !isFavorite
+                      ? const Text(
+                          'Добавить в избранное',
+                          style: TextStyle(color: Colors.white),
+                        )
+                      : const Text(
+                          'Удалить из избранных',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                  onTap: () {
+                    context.read<ContactsBloc>().add(
+                      ToggleFavoriteRequested(
+                        currentUserId: FirebaseAuth.instance.currentUser!.uid,
+                        contactId: userData['id'],
+                        isFavorite: !isFavorite,
+                      ),
+                    );
+                  },
                 ),
 
+                // Удаление контакта
                 PopupMenuItem(
                   child: Text(
                     'Удалить из контактов',

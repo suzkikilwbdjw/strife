@@ -36,3 +36,14 @@ class SearchContactsRequested extends ContactsEvent {
 
   SearchContactsRequested({required this.searchQuery});
 }
+
+class ToggleFavoriteRequested extends ContactsEvent {
+  final String currentUserId;
+  final String contactId;
+  final bool isFavorite;
+  ToggleFavoriteRequested({
+    required this.currentUserId,
+    required this.contactId,
+    required this.isFavorite,
+  });
+}
