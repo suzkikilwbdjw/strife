@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../view_models/chat_view_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
+import 'package:strife/presentation/blocs/chats/chat_event.dart';
+import 'package:strife/presentation/blocs/chats/chat_state.dart';
 import '../../widgets/message_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -29,7 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
     // Инициализируем подписку на сообщения при входе
     Future.microtask(() {
       if (!mounted) return;
-      context.read<ChatViewModel>().initChat(widget.chatId);
+      context.read<ChatBloc>().add(InitChat(widget.chatId));
     });
   }
 
@@ -39,28 +41,25 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
+  // Метод отвечающий за отправку сообщения
   void _onSend() {
-    if (_controller.text.isNotEmpty) {
-      context.read<ChatViewModel>().sendText(
-        widget.chatId,
-        widget.currentUserId,
-        _controller.text,
-      );
-      _controller.clear();
-    }
+    final text = _controller.text;
+
+    if (text.trim().isEmpty) return;
+
+    context.read<ChatBloc>().add(
+      SendMessage(
+        chatId: widget.chatId,
+        senderId: widget.currentUserId,
+        text: text,
+      ),
+    );
+
+    _controller.clear();
   }
 
   @override
   Widget build(BuildContext context) {
-    /*if (error != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error), backgroundColor: Colors.red),
-        );
-        context.read<ChatViewModel>().clearError();
-      });
-    }*/
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Чат", style: TextStyle(color: Colors.deepPurple)),
@@ -70,63 +69,57 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           // Список сообщений
           Expanded(
-            child: Consumer<ChatViewModel>(
-              builder: (context, vm, child) {
-                if (vm.isLoading) {
+            child: BlocBuilder<ChatBloc, ChatState>(
+              builder: (context, state) {
+                if (state.isLoading) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
                 return ListView.builder(
                   reverse: true,
                   controller: widget.controller,
-                  itemCount: vm.messages.length,
+                  itemCount: state.messages.length,
                   itemBuilder: (context, index) {
-                    final messageModel = vm.messages[index];
-                    final isMe = messageModel.senderId == widget.currentUserId;
+                    final message = state.messages[index];
+                    final isMe = message.senderId == widget.currentUserId;
 
                     bool showSenderName = false;
                     bool showAvatar = false;
 
                     if (!isMe) {
-                      if (index == vm.messages.length - 1 ||
-                          vm.messages[index + 1].senderId !=
-                              messageModel.senderId) {
+                      if (index == state.messages.length - 1 ||
+                          state.messages[index + 1].senderId !=
+                              message.senderId) {
                         showSenderName = true;
                       }
                       if (index == 0 ||
-                          vm.messages[index - 1].senderId !=
-                              messageModel.senderId) {
+                          state.messages[index - 1].senderId !=
+                              message.senderId) {
                         showAvatar = true;
                       }
                     }
-                    final userData = vm.getUserData(messageModel.senderId);
-                    final String name =
-                        userData?['displayName'] ?? "Загрузка...";
-                    final String? photoUrl = userData?['photoUrl'];
+                    final userData = state.usersCache[message.senderId];
+
+                    final name =
+                        userData?['displayName'] ??
+                        (userData?['loading'] == true
+                            ? 'Загрузка...'
+                            : 'Unknown');
+
+                    final photo = userData?['photoUrl'];
 
                     return MessageBubble(
-                      messageModel: messageModel,
+                      messageModel: message,
                       isMe: isMe,
-                      showSenderName:
-                          showSenderName, // Показывать ли имя отправителя
-                      showAvatar: showAvatar, // Показывать ли аватар
-                      senderName: name, // Передаем имя
-                      senderPhoto: photoUrl, // Передаем ссылку на фото
+                      showSenderName: showSenderName,
+                      showAvatar: showAvatar,
+                      senderName: name,
+                      senderPhoto: photo,
                     );
                   },
                 );
               },
             ),
           ),
-
-          /*if (error != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                error,
-                style: TextStyle(color: Colors.red, fontSize: 12),
-              ),
-            ),*/
 
           // Поле ввода
           Padding(

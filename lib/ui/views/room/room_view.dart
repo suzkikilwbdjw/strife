@@ -2,13 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:provider/provider.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
 import 'package:strife/themes/gradient_theme.dart';
-import 'package:strife/ui/view_models/chat_view_model.dart';
-import 'package:strife/ui/views/chat/chat_view.dart';
+import 'package:strife/ui/views/chat/chat_screen.dart';
 import 'package:strife/ui/views/room/participants_view.dart';
 
 class RoomView extends StatelessWidget {
@@ -340,18 +338,15 @@ class NavigationBottomAppBar extends StatelessWidget {
                                 top: Radius.circular(20),
                               ),
                             ),
-                            child: ChangeNotifierProvider(
-                              create: (_) => ChatViewModel(),
-                              child: ChatScreen(
-                                controller: scrollController,
-                                chatId: 'test-room',
-                                currentUserId: bloc.state.participants
-                                    .firstWhere(
-                                      (participant) =>
-                                          participant is LocalParticipant,
-                                    )
-                                    .identity,
-                              ),
+                            child: ChatScreen(
+                              controller: scrollController,
+                              chatId: 'test-room',
+                              currentUserId: bloc.state.participants
+                                  .firstWhere(
+                                    (participant) =>
+                                        participant is LocalParticipant,
+                                  )
+                                  .identity,
                             ),
                           ),
                         ),

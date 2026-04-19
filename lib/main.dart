@@ -9,8 +9,9 @@ import 'package:strife/data/repositories/vcs_repository.dart';
 
 // Импорты слоев
 import 'package:strife/firebase/firebase_options.dart';
+import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
-import 'package:strife/presentation/contacts/contacts_bloc.dart';
+import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/data/repositories/auth_repository.dart';
 import 'package:strife/ui/view_models/auth_view_model.dart';
@@ -41,6 +42,12 @@ Future<void> main() async {
           ),
           BlocProvider(
             create: (context) => ContactsBloc(context.read<UserRepository>()),
+          ),
+          BlocProvider(
+            create: (context) => ChatBloc(
+              chatRepository: context.read<ChatRepository>(),
+              userRepository: context.read<UserRepository>(),
+            ),
           ),
         ],
         child: const MyApp(),

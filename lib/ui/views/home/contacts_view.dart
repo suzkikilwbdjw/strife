@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:strife/presentation/contacts/contacts_bloc.dart';
-import 'package:strife/presentation/contacts/contacts_event.dart';
-import 'package:strife/presentation/contacts/contacts_state.dart';
+import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
+import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
+import 'package:strife/presentation/blocs/contacts/contacts_state.dart';
 import 'package:strife/themes/gradient_theme.dart';
 
 class ContactsView extends StatefulWidget {
