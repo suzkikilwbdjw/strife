@@ -52,7 +52,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     CreateRoomRequested event,
     Emitter<VCSState> emit,
   ) async {
-    _repository.createRoom();
+    await _repository.createRoom();
   }
 
   Future<void> _onSyncHardwareStatus(

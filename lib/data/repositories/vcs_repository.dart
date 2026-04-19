@@ -130,4 +130,17 @@ class VCSRepository {
 
     return roomRef.id;
   }
+
+  // Проверить существует ли комната
+  Future<bool> checkRoomExists(String roomId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('rooms')
+          .doc(roomId)
+          .get();
+      return doc.exists;
+    } catch (e) {
+      return false;
+    }
+  }
 }
