@@ -36,6 +36,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     on<TransferHostRequested>(_onTransferHost);
     on<KickedFromRoomRequested>(_onKickedFromRoom);
     on<SyncHardwareStatus>(_onSyncHardwareStatus);
+    on<CreateRoomRequested>(_onCreateRoom);
 
     // Внутренние
     on<RoomDataChanged>((event, emit) {
@@ -45,6 +46,13 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     on<ActiveSpeakerChanged>(_onActiveSpeakerChanged);
     on<ReconnectingStarted>(_onReconnectingStarted);
     on<ReconnectingFinished>(_onReconnectingFinished);
+  }
+
+  Future<void> _onCreateRoom(
+    CreateRoomRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    _repository.createRoom();
   }
 
   Future<void> _onSyncHardwareStatus(

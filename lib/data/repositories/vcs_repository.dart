@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 
 class VCSRepository {
@@ -116,5 +117,17 @@ class VCSRepository {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'room': roomId, 'newHostId': newHostId}),
     );
+  }
+
+  // Создать запись комнаты в БД
+  Future<String> createRoom() async {
+    final roomRef = FirebaseFirestore.instance.collection('rooms').doc();
+
+    await roomRef.set({
+      'createdAt': FieldValue.serverTimestamp(),
+      'status': 'active',
+    });
+
+    return roomRef.id;
   }
 }
