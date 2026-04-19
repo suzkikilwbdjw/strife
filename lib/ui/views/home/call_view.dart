@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/contacts/contacts_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/room/room_view.dart';
+import 'package:strife/ui/widgets/app_notifications.dart';
 
 class CallView extends StatelessWidget {
   const CallView({super.key});
@@ -14,6 +18,7 @@ class CallView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextEditingController textEditingController = TextEditingController();
+
     return Scaffold(
       // Заголовок в верху страницы
       appBar: AppBar(
@@ -62,15 +67,15 @@ class CallView extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 // Кнопка создания комнаты
-                CreateRoomButton(
-                  textEditingController: textEditingController,
-                  user: FirebaseAuth.instance.currentUser!,
-                ),
+                CreateRoomButton(user: FirebaseAuth.instance.currentUser!),
 
                 const SizedBox(width: 8),
 
                 // Кнопка присоединения к звонку
-                JoinRoomButton(),
+                JoinRoomButton(
+                  user: FirebaseAuth.instance.currentUser!,
+                  textEditingController: textEditingController,
+                ),
 
                 const SizedBox(width: 8),
               ],
@@ -118,18 +123,169 @@ class CallView extends StatelessWidget {
 }
 
 class JoinRoomButton extends StatelessWidget {
-  const JoinRoomButton({super.key});
+  const JoinRoomButton({
+    super.key,
+    required this.user,
+    required this.textEditingController,
+  });
+
+  final TextEditingController textEditingController;
+  final User user;
 
   @override
   Widget build(BuildContext context) {
     return OutlinedButton(
-      onPressed: () async {},
+      onPressed: () async {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) => DraggableScrollableSheet(
+            initialChildSize: 0.65,
+            maxChildSize: 0.65,
+            minChildSize: 0.4,
+            expand: false,
+            builder: (context, scrollController) {
+              return Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(top: 20),
+                child: Column(
+                  children: <Widget>[
+                    // Заголовок
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 9.0),
+                      child: Text(
+                        'Присоединиться к звонку',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
 
+                    // Поле с вводом id комнаты
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: TextField(
+                        controller: textEditingController,
+                        decoration: InputDecoration(
+                          hintText: 'Введите id встречи...',
+                          hintStyle: TextStyle(color: Colors.grey),
+                          prefixIcon: Icon(
+                            Icons.connect_without_contact_rounded,
+                            color: Colors.grey,
+                          ), // Иконка поиска
+                          filled: true,
+
+                          fillColor: Color(0xFFD9D9D9),
+
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Кнопка присоединиться
+                    FilledButton(
+                      onPressed: () async {
+                        final roomId = textEditingController.text.trim();
+                        if (roomId.isEmpty) return;
+
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) =>
+                              const Center(child: CircularProgressIndicator()),
+                        );
+
+                        final exists = await context
+                            .read<VCSRepository>()
+                            .checkRoomExists(roomId);
+
+                        if (!context.mounted) return;
+
+                        final vcsBloc = context.read<VCSBloc>();
+
+                        if (exists) {
+                          try {
+                            vcsBloc.add(
+                              ConnectRequested(
+                                roomName: roomId,
+                                identity: user.uid,
+                                name: user.displayName ?? 'bobik',
+                                photoUrl: user.photoURL,
+                              ),
+                            );
+
+                            // Ждём, пока localParticipant появится в состоянии
+                            await vcsBloc.stream
+                                .firstWhere(
+                                  (state) => state.isConnected == true,
+                                )
+                                .timeout(const Duration(seconds: 10));
+
+                            if (!context.mounted) return;
+
+                            Navigator.of(context).pop(); // закрываем индикатор
+
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const RoomView(),
+                              ),
+                            );
+                          } on TimeoutException catch (_) {
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop(); // Закрываем лоадер
+
+                            AppNotifications.showError(
+                              context,
+                              'Превышено время ожидания. Проверьте интернет.',
+                            );
+                          }
+                        } else {
+                          // Ошибка в случае неправельного id комнаты
+                          if (!context.mounted) return;
+
+                          Navigator.of(context).pop(); // закрываем лоадер
+
+                          // Показываем ошибку пользователю
+                          AppNotifications.showError(
+                            context,
+                            'Введен неверный id комнаты',
+                          );
+
+                          return;
+                        }
+                      },
+
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            Colors.purpleAccent, // Цвет фона кнопки
+                        fixedSize: Size(
+                          MediaQuery.widthOf(context) * 0.8,
+                          60,
+                        ), // Размер кнопки
+                        textStyle: TextStyle(fontSize: 18),
+                      ),
+
+                      child: Text('Присоединиться'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+
+      // Оформление кнопки
       style: ElevatedButton.styleFrom(
         padding: EdgeInsets.all(8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
       ),
 
+      // Оформление кнопки
       child: Ink(
         height: 150,
         width: 150,
@@ -160,13 +316,8 @@ class JoinRoomButton extends StatelessWidget {
 }
 
 class CreateRoomButton extends StatelessWidget {
-  const CreateRoomButton({
-    super.key,
-    required this.user,
-    required this.textEditingController,
-  });
+  const CreateRoomButton({super.key, required this.user});
 
-  final TextEditingController textEditingController;
   final User user;
 
   @override
@@ -292,7 +443,7 @@ class CreateRoomButton extends StatelessWidget {
                             width: 1.3,
                           ), // Обводка кнопки
                           foregroundColor: Colors.black, // Цвет текста и иконки
-                          textStyle: TextStyle(fontSize: 16),
+                          textStyle: TextStyle(fontSize: 18),
                         ),
                         child: const Text('Начать звонок'),
 
@@ -306,33 +457,45 @@ class CreateRoomButton extends StatelessWidget {
                           );
 
                           final vcsBloc = context.read<VCSBloc>();
+
                           // Отправляем событие на создание комнаты в БД
                           vcsBloc.add(CreateRoomRequested());
+                          try {
+                            // Отправляем событие подключения
+                            vcsBloc.add(
+                              ConnectRequested(
+                                roomName: 'test-room',
+                                identity: user.uid,
+                                name: user.displayName ?? 'bobik',
+                                photoUrl: user.photoURL,
+                              ),
+                            );
 
-                          // Отправляем событие подключения
-                          vcsBloc.add(
-                            ConnectRequested(
-                              roomName: 'test-room',
-                              identity: textEditingController.text.isNotEmpty
-                                  ? textEditingController.text
-                                  : FirebaseAuth.instance.currentUser!.uid,
-                              name: user.displayName ?? 'bobik',
-                              photoUrl: user.photoURL,
-                            ),
-                          );
+                            // Ждём, пока localParticipant появится в состоянии
+                            await vcsBloc.stream
+                                .firstWhere(
+                                  (state) => state.isConnected == true,
+                                )
+                                .timeout(const Duration(seconds: 10));
 
-                          // Ждём, пока localParticipant появится в состоянии
-                          await vcsBloc.stream.firstWhere(
-                            (state) => state.isConnected == true,
-                          );
+                            if (!context.mounted) return;
 
-                          if (!context.mounted) return;
+                            Navigator.of(context).pop(); // закрываем индикатор
 
-                          Navigator.of(context).pop(); // закрываем индикатор
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const RoomView(),
+                              ),
+                            );
+                          } on TimeoutException catch (_) {
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop();
 
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const RoomView()),
-                          );
+                            AppNotifications.showError(
+                              context,
+                              'Превышено время ожидания. Проверьте интернет соединение.',
+                            );
+                          }
                         },
                       ),
                     ),

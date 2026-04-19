@@ -28,13 +28,20 @@ Future<void> main() async {
       providers: [
         Provider(create: (_) => AuthRepository()),
         Provider(create: (_) => ChatRepository()),
+        Provider(create: (_) => UserRepository()),
+        Provider(create: (_) => VCSRepository()),
+
         // ViewModels
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider(create: (_) => VCSBloc(VCSRepository())),
-          BlocProvider(create: (_) => ContactsBloc(UserRepository())),
+          BlocProvider(
+            create: (context) => VCSBloc(context.read<VCSRepository>()),
+          ),
+          BlocProvider(
+            create: (context) => ContactsBloc(context.read<UserRepository>()),
+          ),
         ],
         child: const MyApp(),
       ),
