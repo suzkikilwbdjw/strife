@@ -306,6 +306,8 @@ class CreateRoomButton extends StatelessWidget {
                           );
 
                           final vcsBloc = context.read<VCSBloc>();
+                          // Отправляем событие на создание комнаты в БД
+                          vcsBloc.add(CreateRoomRequested());
 
                           // Отправляем событие подключения
                           vcsBloc.add(
