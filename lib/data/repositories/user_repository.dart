@@ -46,4 +46,20 @@ class UserRepository {
       return;
     }
   }
+
+  // Стрим для отслеживаний изменений
+  Stream<List<String>> contactsIdsStream(String currentUserId) {
+    return _firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('contacts')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => doc.id).toList());
+  }
+
+  // Получение данных конкретного пользователя
+  Future<Map<String, dynamic>> getUserData(String userId) async {
+    final doc = await _firestore.collection('users').doc(userId).get();
+    return doc.data() ?? {};
+  }
 }

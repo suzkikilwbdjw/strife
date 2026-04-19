@@ -24,3 +24,15 @@ class RemoveContactsRequested extends ContactsEvent {
     required this.contactId,
   });
 }
+
+class UpdateContactsListRequested extends ContactsEvent {
+  final List<Map<String, dynamic>> fullContacts;
+
+  UpdateContactsListRequested({required this.fullContacts});
+}
+
+class SearchContactsRequested extends ContactsEvent {
+  final String searchQuery;
+
+  SearchContactsRequested({required this.searchQuery});
+}

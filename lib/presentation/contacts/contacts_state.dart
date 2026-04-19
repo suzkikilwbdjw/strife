@@ -2,13 +2,30 @@ class ContactsState {
   final bool isSubmitted;
 
   // Контакты
-  final List<String> myContactsId;
-  const ContactsState({this.isSubmitted = false, this.myContactsId = const []});
+  final List<Map<String, dynamic>> allContacts; // ID, имена, фото
+  // Отфильтрованные контакты
+  final List<Map<String, dynamic>> filteredContacts;
+  // Запрос на поиск
+  final String searchQuery;
 
-  ContactsState copyWith({bool? isSubmitted, List<String>? myContactsId}) {
+  const ContactsState({
+    this.isSubmitted = false,
+    this.allContacts = const [],
+    this.filteredContacts = const [],
+    this.searchQuery = '',
+  });
+
+  ContactsState copyWith({
+    bool? isSubmitted,
+    List<Map<String, dynamic>>? allContacts,
+    List<Map<String, dynamic>>? filteredContacts,
+    String? searchQuery,
+  }) {
     return ContactsState(
       isSubmitted: isSubmitted ?? this.isSubmitted,
-      myContactsId: myContactsId ?? this.myContactsId,
+      allContacts: allContacts ?? this.allContacts,
+      filteredContacts: filteredContacts ?? this.filteredContacts,
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 }

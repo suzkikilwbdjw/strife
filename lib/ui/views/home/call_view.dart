@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
+import 'package:strife/presentation/contacts/contacts_bloc.dart';
+import 'package:strife/presentation/contacts/contacts_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/room/room_view.dart';
 
@@ -163,6 +165,7 @@ class CreateRoomButton extends StatelessWidget {
     required this.user,
     required this.textEditingController,
   });
+
   final TextEditingController textEditingController;
   final User user;
 
@@ -170,101 +173,171 @@ class CreateRoomButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return FilledButton(
       onPressed: () async {
+        // Загружаем список контактов
+        context.read<ContactsBloc>().add(
+          LoadContactsRequested(currentUserId: user.uid),
+        );
+
+        context.read<ContactsBloc>().add(
+          SearchContactsRequested(searchQuery: ''),
+        );
+
         // Открывает диалоговое окно с созданием звонка
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
           builder: (context) => DraggableScrollableSheet(
-            initialChildSize: 0.6, // Откроется на 60% высоты
-            maxChildSize: 0.6,
+            initialChildSize: 0.65, // Откроется на 60% высоты
+            maxChildSize: 0.65,
+            minChildSize: 0.4,
             expand: false,
-            builder: (context, scrollController) => Container(
-              margin: const EdgeInsets.only(top: 60),
-              child: Column(
-                children: <Widget>[
-                  // Заголовок
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text(
-                      "Начать звонок",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+            builder: (context, scrollController) {
+              // Получаем актуальный список контактов
+              final contacts = context
+                  .watch<ContactsBloc>()
+                  .state
+                  .filteredContacts;
+
+              return Container(
+                margin: const EdgeInsets.only(top: 20),
+                child: Column(
+                  children: <Widget>[
+                    // Заголовок
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 9.0),
+                      child: Text(
+                        "Начать звонок",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
 
-                  // Поиск контактов
+                    // Поиск контактов
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 16.0,
+                      ),
+                      child: TextField(
+                        onChanged: (value) {
+                          // При изменеии текста отправляем событие на поиcк
+                          context.read<ContactsBloc>().add(
+                            SearchContactsRequested(searchQuery: value),
+                          );
+                        },
 
-                  // Список контактов
-                  Expanded(
-                    child: ListView.separated(
-                      controller: scrollController,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(
-                            'Контакт',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                        decoration: InputDecoration(
+                          hintText: 'Поиск контакта...',
+                          hintStyle: TextStyle(color: Colors.grey),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: Colors.grey,
+                          ), // Иконка поиска
+                          filled: true,
+
+                          fillColor: Color(0xFFD9D9D9),
+
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Список контактов
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: contacts.length,
+                        controller: scrollController,
+                        itemBuilder: (context, index) {
+                          final contact = contacts[index];
+
+                          // Сам участник
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundImage: contact['photoUrl'] != null
+                                  ? NetworkImage(contact['photoUrl'])
+                                  : null,
                             ),
-                          ),
-                        );
-                      },
-                      separatorBuilder: (context, index) =>
-                          Divider(thickness: 1, color: Colors.grey, height: 24),
-                      itemCount: 20,
+                            title: Text(
+                              contact['displayName'],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
+                        separatorBuilder: (context, index) => Divider(
+                          thickness: 1,
+                          color: Colors.grey,
+                          height: 24,
+                        ),
+                      ),
                     ),
-                  ),
 
-                  // Кнопка начать звонок
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(),
-                      child: const Text('Начать звонок'),
-
-                      onPressed: () async {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (_) =>
-                              const Center(child: CircularProgressIndicator()),
-                        );
-
-                        final vcsBloc = context.read<VCSBloc>();
-
-                        // Отправляем событие подключения
-                        vcsBloc.add(
-                          ConnectRequested(
-                            roomName: 'test-room',
-                            identity: textEditingController.text.isNotEmpty
-                                ? textEditingController.text
-                                : FirebaseAuth.instance.currentUser!.uid,
-                            name: user.displayName ?? 'bobik',
-                            photoUrl: user.photoURL,
+                    // Кнопка начать звонок
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          fixedSize: Size(
+                            MediaQuery.widthOf(context) * 0.8,
+                            60,
                           ),
-                        );
+                          side: BorderSide(
+                            color: Colors.black,
+                            width: 1.3,
+                          ), // Обводка кнопки
+                          foregroundColor: Colors.black, // Цвет текста и иконки
+                          textStyle: TextStyle(fontSize: 16),
+                        ),
+                        child: const Text('Начать звонок'),
 
-                        // Ждём, пока localParticipant появится в состоянии
-                        await vcsBloc.stream.firstWhere(
-                          (state) => state.isConnected == true,
-                        );
+                        onPressed: () async {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
 
-                        if (!context.mounted) return;
+                          final vcsBloc = context.read<VCSBloc>();
 
-                        Navigator.of(context).pop(); // закрываем индикатор
+                          // Отправляем событие подключения
+                          vcsBloc.add(
+                            ConnectRequested(
+                              roomName: 'test-room',
+                              identity: textEditingController.text.isNotEmpty
+                                  ? textEditingController.text
+                                  : FirebaseAuth.instance.currentUser!.uid,
+                              name: user.displayName ?? 'bobik',
+                              photoUrl: user.photoURL,
+                            ),
+                          );
 
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const RoomView()),
-                        );
-                      },
+                          // Ждём, пока localParticipant появится в состоянии
+                          await vcsBloc.stream.firstWhere(
+                            (state) => state.isConnected == true,
+                          );
+
+                          if (!context.mounted) return;
+
+                          Navigator.of(context).pop(); // закрываем индикатор
+
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const RoomView()),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                  ],
+                ),
+              );
+            },
           ),
         );
       },

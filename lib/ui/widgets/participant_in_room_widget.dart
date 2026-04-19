@@ -51,7 +51,9 @@ class ParticipantWidget extends StatelessWidget {
 
     // Находится ли участник уже в контактах
     final isAlreadyContact = context.select<ContactsBloc, bool>(
-      (bloc) => bloc.state.myContactsId.contains(participant.identity),
+      (bloc) => bloc.state.allContacts.any(
+        (contact) => contact['id'] == participant.identity,
+      ),
     );
 
     if (photoUrl == null) {
