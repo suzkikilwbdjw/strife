@@ -81,6 +81,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
               'id': id,
               'displayName': data['displayName'] ?? 'Без имени',
               'photoUrl': data['photoUrl'],
+              'email': data['email'],
             });
           }
 
