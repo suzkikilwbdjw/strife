@@ -12,16 +12,32 @@ class ChatsView extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'Чаты',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 24,
-              ),
-              textAlign: TextAlign.right,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Чаты',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+
+                Container(
+                  padding: EdgeInsets.all(4.0),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFBDBDBD).withValues(alpha: 0.4),
+                  ),
+                  child: Icon(Icons.add, color: Colors.white, size: 24.0),
+                ),
+              ],
             ),
+
             const SizedBox(height: 8),
+
             TextField(
               decoration: InputDecoration(
                 filled: true,
@@ -30,7 +46,7 @@ class ChatsView extends StatelessWidget {
                   borderSide: BorderSide.none,
                   borderRadius: BorderRadius.all(Radius.circular(25)),
                 ),
-                hintText: 'Поиск...',
+                hintText: 'Поиск чата...',
                 hintStyle: TextStyle(color: Color(0xFFD3C9C9)),
               ),
             ),
