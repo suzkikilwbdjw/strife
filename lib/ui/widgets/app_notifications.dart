@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:strife/themes/gradient_theme.dart';
 
 class AppNotifications {
   static void showError(BuildContext context, String message) {
@@ -14,11 +15,9 @@ class AppNotifications {
           padding: const EdgeInsets.all(16),
           height: 80,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFB91ED0), Color(0xFF5E0F6A)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: Theme.of(
+              context,
+            ).extension<GradientTheme>()!.mainGradient,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(

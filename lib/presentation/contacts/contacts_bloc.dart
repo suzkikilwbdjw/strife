@@ -19,6 +19,18 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     on<RemoveContactsRequested>(_onRemoveContacts);
     on<UpdateContactsListRequested>(_onUpdateContactsList);
     on<SearchContactsRequested>(_onSearchContacts);
+    on<ToggleFavoriteRequested>(_toggleFavorite);
+  }
+
+  Future<void> _toggleFavorite(
+    ToggleFavoriteRequested event,
+    Emitter<ContactsState> emit,
+  ) async {
+    await _repository.toggleFavorite(
+      event.currentUserId,
+      event.contactId,
+      event.isFavorite,
+    );
   }
 
   Future<void> _onUpdateContactsList(
@@ -70,17 +82,22 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
 
     // Подписываемся на стрим ID контактов
     _contactsSubscription = _repository
-        .contactsIdsStream(event.currentUserId)
-        .listen((ids) async {
+        .contactsStream(event.currentUserId)
+        .listen((contactInfos) async {
           // Для каждого ID получаем данные пользователя
           final List<Map<String, dynamic>> fullContacts = [];
 
-          for (String id in ids) {
-            final data = await _repository.getUserData(id);
+          for (var info in contactInfos) {
+            final userId = info['id'];
+
+            final isFavorite = info['isFavorite'];
+
+            final userData = await _repository.getUserData(userId);
+
             fullContacts.add({
-              'id': id,
-              'displayName': data['displayName'] ?? 'Без имени',
-              'photoUrl': data['photoUrl'],
+              ...userData,
+              'id': userId,
+              'isFavorite': isFavorite,
             });
           }
 
