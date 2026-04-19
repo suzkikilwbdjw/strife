@@ -85,8 +85,6 @@ class SyncHardwareStatus extends VCSEvent {
   SyncHardwareStatus({this.isMicEnabled, this.isCamEnabled});
 }
 
-// События записи комнаты в БД
-class CreateRoomRequested extends VCSEvent {}
 /*===========================================================*/
 
 /*=========================Внутренние события================*/

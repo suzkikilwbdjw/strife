@@ -458,42 +458,56 @@ class CreateRoomButton extends StatelessWidget {
 
                           final vcsBloc = context.read<VCSBloc>();
 
-                          // Отправляем событие на создание комнаты в БД
-                          vcsBloc.add(CreateRoomRequested());
-                          try {
-                            // Отправляем событие подключения
-                            vcsBloc.add(
-                              ConnectRequested(
-                                roomName: 'test-room',
-                                identity: user.uid,
-                                name: user.displayName ?? 'bobik',
-                                photoUrl: user.photoURL,
-                              ),
-                            );
+                          // создание комнаты в БД
+                          final roomId = await context
+                              .read<VCSRepository>()
+                              .createRoom();
 
-                            // Ждём, пока localParticipant появится в состоянии
-                            await vcsBloc.stream
-                                .firstWhere(
-                                  (state) => state.isConnected == true,
-                                )
-                                .timeout(const Duration(seconds: 10));
+                          if (!context.mounted) return;
 
-                            if (!context.mounted) return;
+                          if (roomId.isNotEmpty) {
+                            try {
+                              // Отправляем событие подключения
+                              vcsBloc.add(
+                                ConnectRequested(
+                                  roomName: roomId,
+                                  identity: user.uid,
+                                  name: user.displayName ?? 'bobik',
+                                  photoUrl: user.photoURL,
+                                ),
+                              );
 
-                            Navigator.of(context).pop(); // закрываем индикатор
+                              // Ждём, пока localParticipant появится в состоянии
+                              await vcsBloc.stream
+                                  .firstWhere(
+                                    (state) => state.isConnected == true,
+                                  )
+                                  .timeout(const Duration(seconds: 10));
 
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const RoomView(),
-                              ),
-                            );
-                          } on TimeoutException catch (_) {
-                            if (!context.mounted) return;
-                            Navigator.of(context).pop();
+                              if (!context.mounted) return;
 
+                              Navigator.of(
+                                context,
+                              ).pop(); // закрываем индикатор
+
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const RoomView(),
+                                ),
+                              );
+                            } on TimeoutException catch (_) {
+                              if (!context.mounted) return;
+                              Navigator.of(context).pop();
+
+                              AppNotifications.showError(
+                                context,
+                                'Превышено время ожидания. Проверьте интернет соединение.',
+                              );
+                            }
+                          } else {
                             AppNotifications.showError(
                               context,
-                              'Превышено время ожидания. Проверьте интернет соединение.',
+                              'Не удалось создать комнату',
                             );
                           }
                         },
