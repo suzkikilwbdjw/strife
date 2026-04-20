@@ -37,18 +37,153 @@ class _ContactsViewState extends State<ContactsView> {
     return Scaffold(
       // AppBar
       appBar: AppBar(
-        toolbarHeight: 100,
+        toolbarHeight: 130,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'Контакты',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 24,
-              ),
-              textAlign: TextAlign.right,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Контакты',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+
+                // Плюсик добавления контакта
+                Container(
+                  padding: const EdgeInsets.all(4.0),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFBDBDBD).withValues(alpha: 0.4),
+                  ),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    child: const Icon(
+                      Icons.add,
+                      color: Colors.white,
+                      size: 24.0,
+                    ),
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => Padding(
+                          padding: EdgeInsets.only(
+                            bottom: MediaQuery.of(context).viewInsets.bottom,
+                          ),
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.45,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(30),
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const SizedBox(width: 24),
+                                    const Text(
+                                      'Новый контакт',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      icon: const Icon(Icons.close),
+                                    ),
+                                  ],
+                                ),
+
+                                const Text(
+                                  'Введите почту пользователя, которого хотите добавить',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 13,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Поле ввода email
+                                TextField(
+                                  keyboardType: TextInputType.emailAddress,
+                                  decoration: InputDecoration(
+                                    hintText: 'Введите email...',
+                                    hintStyle: TextStyle(
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 16,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey.shade200,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey.shade200,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                const Spacer(),
+
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 20),
+                                  child: OutlinedButton(
+                                    onPressed: () {},
+                                    style: OutlinedButton.styleFrom(
+                                      minimumSize: const Size(
+                                        double.infinity,
+                                        55,
+                                      ),
+                                      side: const BorderSide(
+                                        color: Colors.black,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Отправить запрос...',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 8),
