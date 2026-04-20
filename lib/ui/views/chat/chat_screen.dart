@@ -5,58 +5,19 @@ import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/chats/chat_state.dart';
 import '../../widgets/message_bubble.dart';
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends StatelessWidget {
   final String chatId;
   final String currentUserId;
   final ScrollController? controller;
 
-  const ChatScreen({
+  final TextEditingController _controller = TextEditingController();
+
+  ChatScreen({
     required this.chatId,
     required this.currentUserId,
     this.controller,
     super.key,
   });
-
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
-}
-
-class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _controller = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-
-    // Инициализируем подписку на сообщения при входе
-    Future.microtask(() {
-      if (!mounted) return;
-      context.read<ChatBloc>().add(InitChat(widget.chatId));
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  // Метод отвечающий за отправку сообщения
-  void _onSend() {
-    final text = _controller.text;
-
-    if (text.trim().isEmpty) return;
-
-    context.read<ChatBloc>().add(
-      SendMessage(
-        chatId: widget.chatId,
-        senderId: widget.currentUserId,
-        text: text,
-      ),
-    );
-
-    _controller.clear();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,11 +37,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 }
                 return ListView.builder(
                   reverse: true,
-                  controller: widget.controller,
+                  controller: controller,
                   itemCount: state.messages.length,
                   itemBuilder: (context, index) {
                     final message = state.messages[index];
-                    final isMe = message.senderId == widget.currentUserId;
+                    final isMe = message.senderId == currentUserId;
 
                     bool showSenderName = false;
                     bool showAvatar = false;
@@ -138,9 +99,25 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                 ),
+
+                // Иконка отправки сообщения - самолетик
                 IconButton(
                   icon: const Icon(Icons.send, color: Colors.deepPurple),
-                  onPressed: _onSend,
+                  onPressed: () {
+                    final text = _controller.text;
+
+                    if (text.trim().isEmpty) return;
+
+                    context.read<ChatBloc>().add(
+                      SendMessage(
+                        chatId: chatId,
+                        senderId: currentUserId,
+                        text: text,
+                      ),
+                    );
+
+                    _controller.clear();
+                  },
                 ),
               ],
             ),

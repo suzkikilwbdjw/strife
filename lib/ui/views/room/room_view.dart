@@ -330,7 +330,6 @@ class NavigationBottomAppBar extends StatelessWidget {
                         builder: (context) => DraggableScrollableSheet(
                           initialChildSize: 0.75,
                           maxChildSize: 0.75,
-                          minChildSize: 0.45,
                           expand: false,
                           builder: (context, scrollController) => Container(
                             decoration: BoxDecoration(
