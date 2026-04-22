@@ -23,7 +23,15 @@ class ChatScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Чат", style: TextStyle(color: Colors.deepPurple)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close), // Иконка крестика
+            onPressed: () =>
+                Navigator.of(context).pop(), // Закрывает модальное окно
+          ),
+        ],
+        automaticallyImplyLeading: false,
+        title: const Text('Чат', style: TextStyle(color: Colors.deepPurple)),
         centerTitle: true,
       ),
       body: Column(
@@ -35,6 +43,7 @@ class ChatScreen extends StatelessWidget {
                 if (state.isLoading) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
                 return ListView.builder(
                   reverse: true,
                   controller: controller,
@@ -85,41 +94,60 @@ class ChatScreen extends StatelessWidget {
           // Поле ввода
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      hintText: 'Напишите сообщение...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(30)),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50, // Фон формы ввода
+                borderRadius: BorderRadius.circular(30),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: 'Напишите сообщение...',
+                        hintStyle: TextStyle(color: Colors.grey.shade400),
+
+                        // Убираем внутренние границы TextField
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                       ),
                     ),
                   ),
-                ),
 
-                // Иконка отправки сообщения - самолетик
-                IconButton(
-                  icon: const Icon(Icons.send, color: Colors.deepPurple),
-                  onPressed: () {
-                    final text = _controller.text;
+                  // Кнопка-круг с самолетиком
+                  GestureDetector(
+                    onTap: () {
+                      final text = _controller.text;
+                      if (text.trim().isEmpty) return;
 
-                    if (text.trim().isEmpty) return;
+                      context.read<ChatBloc>().add(
+                        SendMessage(
+                          chatId: chatId,
+                          senderId: currentUserId,
+                          text: text,
+                        ),
+                      );
+                      _controller.clear();
+                    },
 
-                    context.read<ChatBloc>().add(
-                      SendMessage(
-                        chatId: chatId,
-                        senderId: currentUserId,
-                        text: text,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Colors.purple,
+                        shape: BoxShape.circle,
                       ),
-                    );
-
-                    _controller.clear();
-                  },
-                ),
-              ],
+                      child: const Icon(
+                        Icons.send,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

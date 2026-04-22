@@ -332,7 +332,9 @@ class NavigationBottomAppBar extends StatelessWidget {
                           maxChildSize: 0.75,
                           expand: false,
                           builder: (context, scrollController) => Container(
-                            decoration: BoxDecoration(
+                            clipBehavior: Clip.antiAlias,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
                               borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(20),
                               ),
@@ -370,7 +372,9 @@ class NavigationBottomAppBar extends StatelessWidget {
                           maxChildSize: 0.8,
                           minChildSize: 0.45,
                           builder: (context, controller) => Container(
+                            clipBehavior: Clip.antiAlias,
                             decoration: BoxDecoration(
+                              color: Colors.white,
                               borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(20),
                               ),

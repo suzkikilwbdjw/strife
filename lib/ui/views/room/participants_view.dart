@@ -13,7 +13,21 @@ class ParticipantsView extends StatelessWidget {
     final participants = context.watch<VCSBloc>().state.participants;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Участники (${participants.length})')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        centerTitle: true,
+        title: Text(
+          'Участники (${participants.length})',
+          style: TextStyle(color: Colors.deepPurple),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close), // Иконка крестика
+            onPressed: () =>
+                Navigator.of(context).pop(), // Закрывает модальное окно
+          ),
+        ],
+      ),
       body: ListView.builder(
         itemCount: participants.length,
         controller: scrollController,
