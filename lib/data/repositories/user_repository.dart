@@ -89,4 +89,19 @@ class UserRepository {
       rethrow;
     }
   }
+
+  // Создание записи об уведомлении
+  Future<void> addNotifications(
+    String typeNotifications,
+    String recipientId,
+    String currentUserName,
+  ) async {
+    await _firestore.collection('notifications').add({
+      'to': recipientId,
+      'fromName': currentUserName,
+      'type': typeNotifications,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

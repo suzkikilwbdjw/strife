@@ -71,7 +71,7 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> signUp({
     required String email,
     required String password,
-    required String name,
+    required String firtstName,
     required String secondName,
     required DateTime dob,
   }) async {
@@ -82,10 +82,15 @@ class AuthViewModel extends ChangeNotifier {
 
       final user = credential.user!;
 
-      await user.updateDisplayName('$name $secondName');
+      // Обновление отображаемого имени пользователя
+      await user.updateDisplayName('$firtstName $secondName');
+
+      // Обновление аватарки пользователя
       await user.updatePhotoURL(
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRL5SN9kRO7M2hLQYFw-dNivpt11E-XLyIYcw&s',
       );
+
+      // Перезагрузка пользователя для применения изменений
       await user.reload();
 
       final updatedUser = FirebaseAuth.instance.currentUser!;
@@ -93,7 +98,7 @@ class AuthViewModel extends ChangeNotifier {
       await _authRepository.saveUserData(
         updatedUser,
         extraData: {
-          'name': name,
+          'firstName': firtstName,
           'secondName': secondName,
           'dateOfBirth': dob.toIso8601String(),
         },
