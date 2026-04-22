@@ -2,6 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:strife/data/repositories/chat_repository.dart';
+import 'package:strife/data/repositories/user_repository.dart';
+import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
@@ -18,7 +21,21 @@ class RoomView extends StatelessWidget {
 
     return MultiBlocListener(
       listeners: [
-        // 1. СЛУШАТЕЛЬ ПЕРЕПОДКЛЮЧЕНИЯ
+        // СЛУШАТЕЛЬ ПОДКЛЮЧЕНИЯ
+        BlocListener<VCSBloc, VCSState>(
+          listenWhen: (p, c) =>
+              p.isConnected != c.isConnected || p.error != c.error,
+          listener: (context, state) {
+            if (state.error != null) {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.error!)));
+            }
+          },
+        ),
+
+        // СЛУШАТЕЛЬ ПЕРЕПОДКЛЮЧЕНИЯ
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) => p.isReconnecting != c.isReconnecting,
           listener: (context, state) {
@@ -49,24 +66,28 @@ class RoomView extends StatelessWidget {
           },
         ),
 
-        // 2. СЛУШАТЕЛЬ КИКА
+        // СЛУШАТЕЛЬ КИКА
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) => p.wasKicked != c.wasKicked,
           listener: (context, state) {
             if (state.wasKicked) {
               Navigator.of(context).popUntil((route) => route.isFirst);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Вы были удалены из комнаты")),
+                const SnackBar(content: Text('Вы были удалены из комнаты')),
               );
             }
           },
         ),
 
-        // 3. СЛУШАТЕЛЬ МИКРОФОНА
+        // СЛУШАТЕЛЬ МИКРОФОНА
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) {
             final sid = _getSid(c, uid);
+
             if (sid == null) return false;
+
+            if (!_hasParticipant(p, uid)) return false;
+
             return p.mutedMicrophoneByHostSids[sid] !=
                 c.mutedMicrophoneByHostSids[sid];
           },
@@ -79,8 +100,8 @@ class RoomView extends StatelessWidget {
               SnackBar(
                 content: Text(
                   isMuted
-                      ? "Модератор отключил ваш микрофон"
-                      : "Модератор разрешил доступ к микрофону",
+                      ? 'Модератор отключил ваш микрофон'
+                      : 'Модератор разрешил доступ к микрофону',
                 ),
               ),
             );
@@ -91,24 +112,28 @@ class RoomView extends StatelessWidget {
           },
         ),
 
-        // 4. СЛУШАТЕЛЬ КАМЕРЫ
+        // СЛУШАТЕЛЬ КАМЕРЫ
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) {
             final sid = _getSid(c, uid);
             if (sid == null) return false;
+            if (!_hasParticipant(p, uid)) return false;
+
             return p.mutedCameraByHostSids[sid] != c.mutedCameraByHostSids[sid];
           },
           listener: (context, state) {
             final sid = _getSid(state, uid)!;
+
             final isMuted = state.mutedCameraByHostSids[sid];
+
             if (isMuted == null) return;
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
                   isMuted
-                      ? "Модератор отключил вашу камеру"
-                      : "Модератор разрешил доступ к камере",
+                      ? 'Модератор отключил вашу камеру'
+                      : 'Модератор разрешил доступ к камере',
                 ),
               ),
             );
@@ -119,17 +144,54 @@ class RoomView extends StatelessWidget {
           },
         ),
       ],
+
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.black,
           automaticallyImplyLeading: false,
         ),
-        bottomNavigationBar: const NavigationBottomAppBar(),
-        body: Container(
-          decoration: const BoxDecoration(
-            color: Color.fromARGB(255, 20, 40, 153),
-          ),
-          child: const SafeArea(child: ParticipantLayout()),
+
+        bottomNavigationBar: BlocBuilder<VCSBloc, VCSState>(
+          builder: (context, state) {
+            if (!state.isConnected) return const SizedBox.shrink();
+            return const NavigationBottomAppBar();
+          },
+        ),
+
+        body: Stack(
+          children: [
+            // Основной контент
+            Container(
+              decoration: const BoxDecoration(
+                color: Color.fromARGB(255, 20, 40, 153),
+              ),
+              child: const SafeArea(child: ParticipantLayout()),
+            ),
+
+            // Overlay загрузки
+            BlocBuilder<VCSBloc, VCSState>(
+              builder: (context, state) {
+                if (state.isConnected) return const SizedBox.shrink();
+
+                return Container(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  child: const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Colors.white),
+                        SizedBox(height: 16),
+                        Text(
+                          'Подключение...',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -142,6 +204,11 @@ class RoomView extends StatelessWidget {
     } catch (_) {
       return null;
     }
+  }
+
+  // Вспомогательный медот для проверки был ли участник
+  bool _hasParticipant(VCSState state, String? uid) {
+    return state.participants.any((p) => p.identity == uid);
   }
 }
 
@@ -311,7 +378,10 @@ class NavigationBottomAppBar extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 16),
+
+              const SizedBox(height: 16),
+
+              // Нижняя панель с кнопками чат и участники
               Row(
                 spacing: 24,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -327,27 +397,33 @@ class NavigationBottomAppBar extends StatelessWidget {
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
-                        builder: (context) => DraggableScrollableSheet(
-                          initialChildSize: 0.75,
-                          maxChildSize: 0.75,
-                          expand: false,
-                          builder: (context, scrollController) => Container(
-                            clipBehavior: Clip.antiAlias,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(20),
+                        builder: (context) => BlocProvider(
+                          create: (context) => ChatBloc(
+                            chatRepository: context.read<ChatRepository>(),
+                            userRepository: context.read<UserRepository>(),
+                          ),
+                          child: DraggableScrollableSheet(
+                            initialChildSize: 0.75,
+                            maxChildSize: 0.75,
+                            expand: false,
+                            builder: (context, scrollController) => Container(
+                              clipBehavior: Clip.antiAlias,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(20),
+                                ),
                               ),
-                            ),
-                            child: ChatScreen(
-                              controller: scrollController,
-                              chatId: 'test-room',
-                              currentUserId: bloc.state.participants
-                                  .firstWhere(
-                                    (participant) =>
-                                        participant is LocalParticipant,
-                                  )
-                                  .identity,
+                              child: ChatScreen(
+                                controller: scrollController,
+                                chatId: bloc.roomId,
+                                currentUserId: bloc.state.participants
+                                    .firstWhere(
+                                      (participant) =>
+                                          participant is LocalParticipant,
+                                    )
+                                    .identity,
+                              ),
                             ),
                           ),
                         ),
@@ -367,20 +443,23 @@ class NavigationBottomAppBar extends StatelessWidget {
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
-                        builder: (context) => DraggableScrollableSheet(
-                          initialChildSize: 0.75,
-                          maxChildSize: 0.75,
-                          expand: false,
-                          builder: (context, controller) => Container(
-                            clipBehavior: Clip.antiAlias,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(20),
+                        builder: (context) => BlocProvider.value(
+                          value: bloc,
+                          child: DraggableScrollableSheet(
+                            initialChildSize: 0.75,
+                            maxChildSize: 0.75,
+                            expand: false,
+                            builder: (context, controller) => Container(
+                              clipBehavior: Clip.antiAlias,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(20),
+                                ),
                               ),
-                            ),
-                            child: ParticipantsView(
-                              scrollController: controller,
+                              child: ParticipantsView(
+                                scrollController: controller,
+                              ),
                             ),
                           ),
                         ),

@@ -11,6 +11,8 @@ import 'vcs_state.dart';
 class VCSBloc extends Bloc<VCSEvent, VCSState> {
   final VCSRepository _repository;
 
+  late final String roomId;
+
   Room? _room;
   EventsListener<RoomEvent>? _listener;
 
@@ -175,6 +177,8 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
 
       add(RoomDataChanged());
       emit(state.copyWith(isConnected: true));
+
+      roomId = _room!.name!;
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }

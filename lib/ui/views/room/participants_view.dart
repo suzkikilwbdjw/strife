@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/ui/widgets/participant_in_room_widget.dart';
 
@@ -10,14 +10,19 @@ class ParticipantsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final participants = context.watch<VCSBloc>().state.participants;
+    final participants = context.select(
+      (VCSBloc bloc) => bloc.state.participants,
+    );
 
+    final count = context.select(
+      (VCSBloc bloc) => bloc.state.participants.length,
+    );
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         centerTitle: true,
         title: Text(
-          'Участники (${participants.length})',
+          'Участники ($count)',
           style: TextStyle(color: Colors.deepPurple),
         ),
         actions: [
@@ -29,7 +34,7 @@ class ParticipantsView extends StatelessWidget {
         ],
       ),
       body: ListView.builder(
-        itemCount: participants.length,
+        itemCount: count,
         controller: scrollController,
         itemBuilder: (context, index) => Padding(
           padding: const EdgeInsets.all(8.0),
