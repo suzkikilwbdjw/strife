@@ -21,6 +21,8 @@ class ChatScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.read<ChatBloc>().add(InitChat(chatId));
+
     return Scaffold(
       appBar: AppBar(
         actions: [
@@ -42,6 +44,10 @@ class ChatScreen extends StatelessWidget {
               builder: (context, state) {
                 if (state.isLoading) {
                   return const Center(child: CircularProgressIndicator());
+                }
+
+                if (state.messages.isEmpty) {
+                  return const Center(child: Text('Сообщений пока нет'));
                 }
 
                 return ListView.builder(
