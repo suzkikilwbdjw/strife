@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -34,11 +35,14 @@ class AuthRepository {
     }
   }
 
-  // Запись в БД
+  /// Запись в БД
   Future<void> saveUserData(
     User user, {
     Map<String, dynamic>? extraData,
   }) async {
+    // Токен для получения уведомлений
+    String? token = await FirebaseMessaging.instance.getToken();
+
     final data = {
       'uid': user.uid,
       'email': user.email,
@@ -46,6 +50,7 @@ class AuthRepository {
       'photoUrl': user.photoURL,
       'lastSeen': FieldValue.serverTimestamp(),
       if (extraData != null) ...extraData,
+      if (token != null) ...{'fcmToken': token},
     };
 
     await _firestore

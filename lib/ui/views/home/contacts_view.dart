@@ -1,10 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_state.dart';
 import 'package:strife/themes/gradient_theme.dart';
+import 'package:strife/ui/widgets/app_notifications.dart';
 
 class ContactsView extends StatefulWidget {
   const ContactsView({super.key});
@@ -16,6 +19,9 @@ class ContactsView extends StatefulWidget {
 class _ContactsViewState extends State<ContactsView> {
   // Флаг для показа только избранных контактов
   bool _showFavorites = false;
+
+  // Для получения адреса почты
+  final TextEditingController textEditingController = TextEditingController();
 
   @override
   void initState() {
@@ -123,6 +129,7 @@ class _ContactsViewState extends State<ContactsView> {
 
                                 // Поле ввода email
                                 TextField(
+                                  controller: textEditingController,
                                   keyboardType: TextInputType.emailAddress,
                                   decoration: InputDecoration(
                                     hintText: 'Введите email...',
@@ -155,7 +162,51 @@ class _ContactsViewState extends State<ContactsView> {
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 20),
                                   child: OutlinedButton(
-                                    onPressed: () {},
+                                    onPressed: () async {
+                                      // Адрес почты участника которого хотите добавить
+                                      final email = textEditingController.text
+                                          .trim();
+
+                                      // Находим получателя по почте
+                                      final userSnap = await FirebaseFirestore
+                                          .instance
+                                          .collection('users')
+                                          .where('email', isEqualTo: email)
+                                          .get();
+
+                                      if (!context.mounted) return;
+
+                                      if (userSnap.docs.isEmpty) {
+                                        AppNotifications.showError(
+                                          context,
+                                          'Пользователь не найден.',
+                                        );
+                                        return;
+                                      }
+
+                                      // id получателя
+                                      final recipientId =
+                                          userSnap.docs.first.id;
+
+                                      if (!context.mounted) return;
+
+                                      // Делаем запись в бд
+                                      await context
+                                          .read<UserRepository>()
+                                          .addNotifications(
+                                            'friend_request',
+                                            recipientId,
+                                            FirebaseAuth
+                                                .instance
+                                                .currentUser!
+                                                .displayName!,
+                                          );
+
+                                      if (!context.mounted) return;
+
+                                      Navigator.pop(context);
+                                      print('Запрос отправлен');
+                                    },
                                     style: OutlinedButton.styleFrom(
                                       minimumSize: const Size(
                                         double.infinity,

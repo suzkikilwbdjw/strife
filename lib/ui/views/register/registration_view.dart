@@ -280,7 +280,7 @@ class RegisterButton extends StatelessWidget {
                 final success = await authVM.signUp(
                   email: email.text.trim(),
                   password: password.text.trim(),
-                  name: name.text.trim(),
+                  firtstName: name.text.trim(),
                   secondName: secondName.text.trim(),
                   dob: dob!,
                 );
