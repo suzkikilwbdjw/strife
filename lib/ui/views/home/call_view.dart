@@ -316,167 +316,7 @@ class CreateRoomButton extends StatelessWidget {
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
-          builder: (context) => DraggableScrollableSheet(
-            initialChildSize: 0.65, // Откроется на 60% высоты
-            maxChildSize: 0.65,
-            minChildSize: 0.4,
-            expand: false,
-            builder: (context, scrollController) {
-              // Получаем актуальный список контактов
-              final contacts = context
-                  .watch<ContactsBloc>()
-                  .state
-                  .filteredContacts;
-
-              return Container(
-                margin: const EdgeInsets.only(top: 20),
-                child: Column(
-                  children: <Widget>[
-                    // Заголовок
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 9.0),
-                      child: Text(
-                        "Начать звонок",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-
-                    // Поиск контактов
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 16.0,
-                      ),
-                      child: TextField(
-                        onChanged: (value) {
-                          // При изменеии текста отправляем событие на поиcк
-                          context.read<ContactsBloc>().add(
-                            SearchContactsRequested(searchQuery: value),
-                          );
-                        },
-
-                        decoration: InputDecoration(
-                          hintText: 'Поиск контакта...',
-                          hintStyle: TextStyle(color: Colors.grey),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: Colors.grey,
-                          ), // Иконка поиска
-                          filled: true,
-
-                          fillColor: Color(0xFFD9D9D9),
-
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Список контактов
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: contacts.length,
-                        controller: scrollController,
-                        itemBuilder: (context, index) {
-                          final contact = contacts[index];
-
-                          // Сам участник
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundImage: contact['photoUrl'] != null
-                                  ? NetworkImage(contact['photoUrl'])
-                                  : null,
-                            ),
-                            title: Text(
-                              contact['displayName'],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          );
-                        },
-                        separatorBuilder: (context, index) => Divider(
-                          thickness: 1,
-                          color: Colors.grey,
-                          height: 24,
-                        ),
-                      ),
-                    ),
-
-                    // Кнопка начать звонок
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          fixedSize: Size(
-                            MediaQuery.widthOf(context) * 0.8,
-                            60,
-                          ),
-                          side: BorderSide(
-                            color: Colors.black,
-                            width: 1.3,
-                          ), // Обводка кнопки
-                          foregroundColor: Colors.black, // Цвет текста и иконки
-                          textStyle: TextStyle(fontSize: 18),
-                        ),
-                        child: const Text('Начать звонок'),
-
-                        onPressed: () async {
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (_) => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-
-                          // создание комнаты в БД
-                          final roomId = await context
-                              .read<VCSRepository>()
-                              .createRoom();
-
-                          if (!context.mounted) return;
-
-                          // Закрываем кружок
-                          Navigator.of(context).pop();
-
-                          if (roomId.isNotEmpty) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => BlocProvider(
-                                  create: (_) =>
-                                      VCSBloc(context.read<VCSRepository>())
-                                        ..add(
-                                          ConnectRequested(
-                                            roomName: roomId,
-                                            identity: user.uid,
-                                            name: user.displayName!,
-                                            photoUrl: user.photoURL,
-                                          ),
-                                        ),
-                                  child: const RoomView(),
-                                ),
-                              ),
-                            );
-                          } else {
-                            AppNotifications.showError(
-                              context,
-                              'Не удалось создать комнату',
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+          builder: (context) => NewCallSheet(user: user),
         );
       },
 
@@ -522,6 +362,168 @@ class CreateRoomButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class NewCallSheet extends StatelessWidget {
+  const NewCallSheet({super.key, required this.user});
+
+  final User user;
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65, // Откроется на 60% высоты
+      maxChildSize: 0.65,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (context, scrollController) {
+        // Получаем актуальный список контактов
+        final contacts = context.watch<ContactsBloc>().state.filteredContacts;
+
+        return Container(
+          margin: const EdgeInsets.only(top: 20),
+          child: Column(
+            children: <Widget>[
+              // Заголовок
+              const Padding(
+                padding: EdgeInsets.only(bottom: 9.0),
+                child: Text(
+                  "Начать звонок",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+
+              // Поиск контактов
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 16.0,
+                ),
+                child: TextField(
+                  onChanged: (value) {
+                    // При изменеии текста отправляем событие на поиcк
+                    context.read<ContactsBloc>().add(
+                      SearchContactsRequested(searchQuery: value),
+                    );
+                  },
+
+                  decoration: InputDecoration(
+                    hintText: 'Поиск контакта...',
+                    hintStyle: TextStyle(color: Colors.grey),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Colors.grey,
+                    ), // Иконка поиска
+                    filled: true,
+
+                    fillColor: Color(0xFFD9D9D9),
+
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+
+              // Список контактов
+              Expanded(
+                child: contacts.isNotEmpty
+                    ? ListView.separated(
+                        itemCount: contacts.length,
+                        controller: scrollController,
+                        itemBuilder: (context, index) {
+                          final contact = contacts[index];
+
+                          // Сам участник
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundImage: contact['photoUrl'] != null
+                                  ? NetworkImage(contact['photoUrl'])
+                                  : null,
+                            ),
+                            title: Text(
+                              contact['displayName'],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
+                        separatorBuilder: (context, index) => Divider(
+                          thickness: 1,
+                          color: Colors.grey,
+                          height: 24,
+                        ),
+                      )
+                    : const Center(child: Text('Список пуст')),
+              ),
+
+              // Кнопка начать звонок
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    fixedSize: Size(MediaQuery.widthOf(context) * 0.8, 60),
+                    side: BorderSide(
+                      color: Colors.black,
+                      width: 1.3,
+                    ), // Обводка кнопки
+                    foregroundColor: Colors.black, // Цвет текста и иконки
+                    textStyle: TextStyle(fontSize: 18),
+                  ),
+                  child: const Text('Начать звонок'),
+
+                  onPressed: () async {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) =>
+                          const Center(child: CircularProgressIndicator()),
+                    );
+
+                    // создание комнаты в БД
+                    final roomId = await context
+                        .read<VCSRepository>()
+                        .createRoom();
+
+                    if (!context.mounted) return;
+
+                    // Закрываем кружок
+                    Navigator.of(context).pop();
+
+                    if (roomId.isNotEmpty) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => BlocProvider(
+                            create: (_) =>
+                                VCSBloc(context.read<VCSRepository>())..add(
+                                  ConnectRequested(
+                                    roomName: roomId,
+                                    identity: user.uid,
+                                    name: user.displayName!,
+                                    photoUrl: user.photoURL,
+                                  ),
+                                ),
+                            child: const RoomView(),
+                          ),
+                        ),
+                      );
+                    } else {
+                      AppNotifications.showError(
+                        context,
+                        'Не удалось создать комнату',
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

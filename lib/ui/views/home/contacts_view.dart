@@ -79,156 +79,8 @@ class _ContactsViewState extends State<ContactsView> {
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
-                        builder: (context) => Padding(
-                          padding: EdgeInsets.only(
-                            bottom: MediaQuery.of(context).viewInsets.bottom,
-                          ),
-                          child: Container(
-                            height: MediaQuery.of(context).size.height * 0.45,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(30),
-                              ),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 16,
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const SizedBox(width: 24),
-                                    const Text(
-                                      'Новый контакт',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      icon: const Icon(Icons.close),
-                                    ),
-                                  ],
-                                ),
-
-                                const Text(
-                                  'Введите почту пользователя, которого хотите добавить',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 13,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-
-                                const SizedBox(height: 20),
-
-                                // Поле ввода email
-                                TextField(
-                                  controller: textEditingController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  decoration: InputDecoration(
-                                    hintText: 'Введите email...',
-                                    hintStyle: TextStyle(
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 16,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                      borderSide: BorderSide(
-                                        color: Colors.grey.shade200,
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                      borderSide: BorderSide(
-                                        color: Colors.grey.shade200,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                const Spacer(),
-
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 20),
-                                  child: OutlinedButton(
-                                    onPressed: () async {
-                                      // Адрес почты участника которого хотите добавить
-                                      final email = textEditingController.text
-                                          .trim();
-
-                                      // Находим получателя по почте
-                                      final userSnap = await FirebaseFirestore
-                                          .instance
-                                          .collection('users')
-                                          .where('email', isEqualTo: email)
-                                          .get();
-
-                                      if (!context.mounted) return;
-
-                                      if (userSnap.docs.isEmpty) {
-                                        AppNotifications.showError(
-                                          context,
-                                          'Пользователь не найден.',
-                                        );
-                                        return;
-                                      }
-
-                                      // id получателя
-                                      final recipientId =
-                                          userSnap.docs.first.id;
-
-                                      if (!context.mounted) return;
-
-                                      // Делаем запись в бд
-                                      await context
-                                          .read<UserRepository>()
-                                          .addNotifications(
-                                            'friend_request',
-                                            recipientId,
-                                            FirebaseAuth
-                                                .instance
-                                                .currentUser!
-                                                .displayName!,
-                                          );
-
-                                      if (!context.mounted) return;
-
-                                      Navigator.pop(context);
-                                      print('Запрос отправлен');
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      minimumSize: const Size(
-                                        double.infinity,
-                                        55,
-                                      ),
-                                      side: const BorderSide(
-                                        color: Colors.black,
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Отправить запрос...',
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        builder: (context) => AddContactSheet(
+                          textEditingController: textEditingController,
                         ),
                       );
                     },
@@ -390,6 +242,132 @@ class _ContactsViewState extends State<ContactsView> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class AddContactSheet extends StatelessWidget {
+  const AddContactSheet({super.key, required this.textEditingController});
+
+  final TextEditingController textEditingController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.45,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox(width: 24),
+                const Text(
+                  'Новый контакт',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+
+            const Text(
+              'Введите почту пользователя, которого хотите добавить',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 20),
+
+            // Поле ввода email
+            TextField(
+              controller: textEditingController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                hintText: 'Введите email...',
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+              ),
+            ),
+
+            const Spacer(),
+
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: OutlinedButton(
+                onPressed: () async {
+                  // Адрес почты участника которого хотите добавить
+                  final email = textEditingController.text.trim();
+
+                  // Находим получателя по почте
+                  final userSnap = await FirebaseFirestore.instance
+                      .collection('users')
+                      .where('email', isEqualTo: email)
+                      .get();
+
+                  if (!context.mounted) return;
+
+                  if (userSnap.docs.isEmpty) {
+                    AppNotifications.showError(
+                      context,
+                      'Пользователь не найден.',
+                    );
+                    return;
+                  }
+
+                  // id получателя
+                  final recipientId = userSnap.docs.first.id;
+
+                  if (!context.mounted) return;
+
+                  // Делаем запись в бд
+                  await context.read<UserRepository>().addNotifications(
+                    'friend_request',
+                    recipientId,
+                    FirebaseAuth.instance.currentUser!.displayName!,
+                  );
+
+                  if (!context.mounted) return;
+
+                  Navigator.pop(context);
+                  print('Запрос отправлен');
+                },
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 55),
+                  side: const BorderSide(color: Colors.black, width: 1),
+                ),
+                child: const Text(
+                  'Отправить запрос...',
+                  style: TextStyle(color: Colors.black, fontSize: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
