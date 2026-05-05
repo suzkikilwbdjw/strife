@@ -68,7 +68,7 @@ class MessageBubble extends StatelessWidget {
 
                     decoration: BoxDecoration(
                       color: isMe
-                          ? Colors.purpleAccent
+                          ? Colors.purple
                           : Colors.grey.shade200, // Цвет сообщения
 
                       borderRadius: BorderRadius.only(

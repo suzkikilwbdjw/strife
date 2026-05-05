@@ -1,8 +1,6 @@
-import 'dart:async';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
@@ -205,44 +203,25 @@ class JoinRoomButton extends StatelessWidget {
 
                         if (!context.mounted) return;
 
-                        final vcsBloc = context.read<VCSBloc>();
+                        Navigator.of(context).pop(); // закрыли loader
 
                         if (exists) {
-                          try {
-                            vcsBloc.add(
-                              ConnectRequested(
-                                roomName: roomId,
-                                identity: user.uid,
-                                name: user.displayName ?? 'bobik',
-                                photoUrl: user.photoURL,
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider(
+                                create: (_) =>
+                                    VCSBloc(context.read<VCSRepository>())..add(
+                                      ConnectRequested(
+                                        roomName: roomId,
+                                        identity: user.uid,
+                                        name: user.displayName ?? 'bobik',
+                                        photoUrl: user.photoURL,
+                                      ),
+                                    ),
+                                child: const RoomView(),
                               ),
-                            );
-
-                            // Ждём, пока localParticipant появится в состоянии
-                            await vcsBloc.stream
-                                .firstWhere(
-                                  (state) => state.isConnected == true,
-                                )
-                                .timeout(const Duration(seconds: 10));
-
-                            if (!context.mounted) return;
-
-                            Navigator.of(context).pop(); // закрываем индикатор
-
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const RoomView(),
-                              ),
-                            );
-                          } on TimeoutException catch (_) {
-                            if (!context.mounted) return;
-                            Navigator.of(context).pop(); // Закрываем лоадер
-
-                            AppNotifications.showError(
-                              context,
-                              'Превышено время ожидания. Проверьте интернет.',
-                            );
-                          }
+                            ),
+                          );
                         } else {
                           // Ошибка в случае неправельного id комнаты
                           if (!context.mounted) return;
@@ -456,8 +435,6 @@ class CreateRoomButton extends StatelessWidget {
                             ),
                           );
 
-                          final vcsBloc = context.read<VCSBloc>();
-
                           // создание комнаты в БД
                           final roomId = await context
                               .read<VCSRepository>()
@@ -465,45 +442,27 @@ class CreateRoomButton extends StatelessWidget {
 
                           if (!context.mounted) return;
 
+                          // Закрываем кружок
+                          Navigator.of(context).pop();
+
                           if (roomId.isNotEmpty) {
-                            try {
-                              // Отправляем событие подключения
-                              vcsBloc.add(
-                                ConnectRequested(
-                                  roomName: roomId,
-                                  identity: user.uid,
-                                  name: user.displayName ?? 'bobik',
-                                  photoUrl: user.photoURL,
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => BlocProvider(
+                                  create: (_) =>
+                                      VCSBloc(context.read<VCSRepository>())
+                                        ..add(
+                                          ConnectRequested(
+                                            roomName: roomId,
+                                            identity: user.uid,
+                                            name: user.displayName!,
+                                            photoUrl: user.photoURL,
+                                          ),
+                                        ),
+                                  child: const RoomView(),
                                 ),
-                              );
-
-                              // Ждём, пока localParticipant появится в состоянии
-                              await vcsBloc.stream
-                                  .firstWhere(
-                                    (state) => state.isConnected == true,
-                                  )
-                                  .timeout(const Duration(seconds: 10));
-
-                              if (!context.mounted) return;
-
-                              Navigator.of(
-                                context,
-                              ).pop(); // закрываем индикатор
-
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const RoomView(),
-                                ),
-                              );
-                            } on TimeoutException catch (_) {
-                              if (!context.mounted) return;
-                              Navigator.of(context).pop();
-
-                              AppNotifications.showError(
-                                context,
-                                'Превышено время ожидания. Проверьте интернет соединение.',
-                              );
-                            }
+                              ),
+                            );
                           } else {
                             AppNotifications.showError(
                               context,
