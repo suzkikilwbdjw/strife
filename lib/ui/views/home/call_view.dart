@@ -7,6 +7,7 @@ import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
+import 'package:strife/ui/views/notifications/notifications_view.dart';
 import 'package:strife/ui/views/room/room_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 
@@ -23,7 +24,7 @@ class CallView extends StatelessWidget {
         toolbarHeight: 100,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const <Widget>[
+          children: <Widget>[
             Text(
               'Strife',
               style: TextStyle(
@@ -33,7 +34,7 @@ class CallView extends StatelessWidget {
               ),
             ),
 
-            Text(
+            const Text(
               'Видеоконференции',
               style: TextStyle(
                 color: Colors.white,
@@ -45,6 +46,34 @@ class CallView extends StatelessWidget {
             SizedBox(height: 24),
           ],
         ),
+        actions: [
+          // Кнопка уведомлений
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: IconButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => NotificationsView()),
+                );
+              },
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ), // Белое кольцо
+                ),
+                child: const Icon(
+                  Icons.notifications_none_rounded, // Иконка колокольчика
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+        ],
         backgroundColor: Colors.transparent,
         flexibleSpace: Container(
           decoration: BoxDecoration(

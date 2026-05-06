@@ -322,15 +322,26 @@ class AddContactSheet extends StatelessWidget {
                   // Адрес почты участника которого хотите добавить
                   final recipientEmail = textEditingController.text.trim();
 
+                  // Айди отправителя
+                  final senderId =
+                      FirebaseAuth.instance.currentUser?.uid ?? 'бебе';
+
                   // Имя отправителя
                   final senderName =
                       FirebaseAuth.instance.currentUser?.displayName ??
                       'Пользователь';
 
+                  // Фото отправителя
+                  final senderPhotoUrl =
+                      FirebaseAuth.instance.currentUser?.photoURL ??
+                      'Пользователь';
+
                   try {
                     await context.read<UserRepository>().sendFriendRequest(
+                      senderId: senderId,
                       recipientEmail: recipientEmail,
                       senderName: senderName,
+                      senderPhotoUrl: senderPhotoUrl,
                     );
 
                     if (!context.mounted) return;
