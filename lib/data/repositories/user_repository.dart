@@ -1,7 +1,46 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class UserRepository {
   final _firestore = FirebaseFirestore.instance;
+  final String _baseUrl = 'http://62.109.2.27:4000';
+
+  // Метод для отправки запроса через бэкэнд
+  Future<void> sendFriendRequest({
+    required String recipientEmail,
+    required String senderName,
+  }) async {
+    try {
+      //  Ищем ID получателя
+      final userSnap = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: recipientEmail)
+          .get();
+
+      if (userSnap.docs.isEmpty) {
+        throw Exception('Пользователь с таким email не найден');
+      }
+
+      final recipientId = userSnap.docs.first.id;
+
+      // Делаем запрос на бэкэнд
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications/send-friend-request'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'recipientId': recipientId,
+          'senderName': senderName,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Ошибка сервера: ${response.body}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 
   // Добавление контакта
   Future<void> addContact(String currentUserId, String contactId) async {
@@ -88,20 +127,5 @@ class UserRepository {
     } catch (_) {
       rethrow;
     }
-  }
-
-  // Создание записи об уведомлении
-  Future<void> addNotifications(
-    String typeNotifications,
-    String recipientId,
-    String currentUserName,
-  ) async {
-    await _firestore.collection('notifications').add({
-      'to': recipientId,
-      'fromName': currentUserName,
-      'type': typeNotifications,
-      'status': 'pending',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
   }
 }

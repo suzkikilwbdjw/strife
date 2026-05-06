@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -321,40 +320,30 @@ class AddContactSheet extends StatelessWidget {
               child: OutlinedButton(
                 onPressed: () async {
                   // Адрес почты участника которого хотите добавить
-                  final email = textEditingController.text.trim();
+                  final recipientEmail = textEditingController.text.trim();
 
-                  // Находим получателя по почте
-                  final userSnap = await FirebaseFirestore.instance
-                      .collection('users')
-                      .where('email', isEqualTo: email)
-                      .get();
+                  // Имя отправителя
+                  final senderName =
+                      FirebaseAuth.instance.currentUser?.displayName ??
+                      'Пользователь';
 
-                  if (!context.mounted) return;
+                  try {
+                    await context.read<UserRepository>().sendFriendRequest(
+                      recipientEmail: recipientEmail,
+                      senderName: senderName,
+                    );
 
-                  if (userSnap.docs.isEmpty) {
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
+
+                    AppNotifications.showSuccess(context, 'Запрос отправлен');
+                  } catch (e) {
+                    if (!context.mounted) return;
                     AppNotifications.showError(
                       context,
-                      'Пользователь не найден.',
+                      e.toString().replaceAll('Exception: ', ''),
                     );
-                    return;
                   }
-
-                  // id получателя
-                  final recipientId = userSnap.docs.first.id;
-
-                  if (!context.mounted) return;
-
-                  // Делаем запись в бд
-                  await context.read<UserRepository>().addNotifications(
-                    'friend_request',
-                    recipientId,
-                    FirebaseAuth.instance.currentUser!.displayName!,
-                  );
-
-                  if (!context.mounted) return;
-
-                  Navigator.pop(context);
-                  print('Запрос отправлен');
                 },
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 55),
