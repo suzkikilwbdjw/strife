@@ -1,5 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
@@ -17,10 +19,29 @@ import 'package:strife/ui/view_models/auth_view_model.dart';
 // Импорты экранов
 import 'package:strife/ui/views/login/login_view.dart';
 import 'package:strife/ui/views/home/home_view.dart';
+import 'package:strife/ui/views/notifications/notifications_view.dart';
+
+// Создаем плагин
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+// Канал для Android
+const AndroidNotificationChannel channel = AndroidNotificationChannel(
+  'high_importance_channel', // id
+  'High Importance Notifications', // title
+  description: 'Этот канал используется для важных уведомлений.', // description
+  importance: Importance.max,
+);
+
+// Глобальный ключ навигации
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Настройка уведомлений
+  await setupNotifications();
 
   runApp(
     MultiProvider(
@@ -52,6 +73,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         extensions: const [
           GradientTheme(
@@ -79,4 +101,72 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> setupNotifications() async {
+  // Запрос разрешений для Android
+  await FirebaseMessaging.instance.requestPermission();
+
+  // Создаем канал на устройстве
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.createNotificationChannel(channel);
+
+  // Настройка инициализации для Android
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  await flutterLocalNotificationsPlugin.initialize(
+    settings: const InitializationSettings(
+      android: initializationSettingsAndroid,
+    ),
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      _navigateToNotifications();
+    },
+  );
+
+  // Когда приложение открыто
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    RemoteNotification? notification = message.notification;
+    AndroidNotification? android = message.notification?.android;
+
+    if (notification != null && android != null) {
+      flutterLocalNotificationsPlugin.show(
+        id: notification.hashCode,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            channel.id,
+            channel.name,
+            channelDescription: channel.description,
+            importance: Importance.max,
+            priority: Priority.high,
+            icon: android.smallIcon,
+          ),
+        ),
+      );
+    }
+  });
+
+  // Когда приложение в фоне
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    _navigateToNotifications();
+  });
+
+  // Обработка нажатия, когда приложение было полностью закрыто
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance
+      .getInitialMessage();
+  if (initialMessage != null) {
+    _navigateToNotifications();
+  }
+}
+
+// функция перехода
+void _navigateToNotifications() {
+  navigatorKey.currentState?.push(
+    MaterialPageRoute(builder: (context) => const NotificationsView()),
+  );
 }

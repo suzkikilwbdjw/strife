@@ -104,24 +104,6 @@ class ChatRepository {
     await batch.commit();
   }
 
-  // Загрукзща пользователя
-  Future<Map<String, dynamic>> getUser(String userId) async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
-
-      if (doc.exists) {
-        return doc.data()!;
-      } else {
-        return {};
-      }
-    } on FirebaseException catch (_) {
-      rethrow;
-    }
-  }
-
   Future<void> syncRoomChat(
     String liveKitRoomId,
     List<String> participantIds,
