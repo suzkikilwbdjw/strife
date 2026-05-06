@@ -19,6 +19,7 @@ import 'package:strife/ui/view_models/auth_view_model.dart';
 // Импорты экранов
 import 'package:strife/ui/views/login/login_view.dart';
 import 'package:strife/ui/views/home/home_view.dart';
+import 'package:strife/ui/views/notifications/notifications_view.dart';
 
 // Создаем плагин
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -32,9 +33,14 @@ const AndroidNotificationChannel channel = AndroidNotificationChannel(
   importance: Importance.max,
 );
 
+// Глобальный ключ навигации
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Настройка уведомлений
   await setupNotifications();
 
   runApp(
@@ -67,6 +73,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         extensions: const [
           GradientTheme(
@@ -115,8 +122,12 @@ Future<void> setupNotifications() async {
     settings: const InitializationSettings(
       android: initializationSettingsAndroid,
     ),
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      _navigateToNotifications();
+    },
   );
 
+  // Когда приложение открыто
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     RemoteNotification? notification = message.notification;
     AndroidNotification? android = message.notification?.android;
@@ -139,4 +150,23 @@ Future<void> setupNotifications() async {
       );
     }
   });
+
+  // Когда приложение в фоне
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    _navigateToNotifications();
+  });
+
+  // Обработка нажатия, когда приложение было полностью закрыто
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance
+      .getInitialMessage();
+  if (initialMessage != null) {
+    _navigateToNotifications();
+  }
+}
+
+// функция перехода
+void _navigateToNotifications() {
+  navigatorKey.currentState?.push(
+    MaterialPageRoute(builder: (context) => const NotificationsView()),
+  );
 }
