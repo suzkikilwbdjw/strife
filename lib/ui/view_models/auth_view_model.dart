@@ -5,7 +5,6 @@ import 'package:strife/data/repositories/auth_repository.dart';
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository _authRepository = AuthRepository();
 
-  // ignore: unused_field
   bool _isLoading = false;
   String? _error;
 
@@ -14,6 +13,11 @@ class AuthViewModel extends ChangeNotifier {
 
   void _setLoading(bool value) {
     _isLoading = value;
+    notifyListeners();
+  }
+
+  void _setError(String error) {
+    _error = error;
     notifyListeners();
   }
 
@@ -61,7 +65,7 @@ class AuthViewModel extends ChangeNotifier {
       _setLoading(false);
       return true;
     } catch (e) {
-      _error = e.toString();
+      _setError(e.toString());
       _setLoading(false);
       return false;
     }
@@ -121,6 +125,18 @@ class AuthViewModel extends ChangeNotifier {
       }
       _setLoading(false);
       return false;
+    }
+  }
+
+  // Логика выходa
+  Future<void> signOut() async {
+    try {
+      _setLoading(true);
+      await _authRepository.logout();
+      _setLoading(false);
+    } catch (e) {
+      _setLoading(false);
+      _setError(e.toString());
     }
   }
 }

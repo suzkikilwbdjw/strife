@@ -47,3 +47,4 @@ android/build/reports/problems/problems-report.html
 
 /lib/firebase/
 /android/google-services.json
+/android/app/google-services.json

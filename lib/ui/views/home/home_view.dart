@@ -1,9 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:strife/ui/views/home/call_view.dart';
 import 'package:strife/ui/views/home/chats_view.dart';
 import 'package:strife/ui/views/home/contacts_view.dart';
 import 'package:strife/ui/views/home/meetings_view.dart';
+import 'package:strife/ui/views/home/profile_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -18,18 +18,12 @@ class _HomeViewState extends State<HomeView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await FirebaseAuth.instance.signOut();
-        },
-        child: Icon(Icons.output),
-      ),
-
       body: IndexedStack(
         index: selectedIndex,
         children: const <Widget>[
           CallView(),
           ChatsView(),
+          ProfileView(),
           MeetingsView(),
           ContactsView(),
         ],
@@ -51,6 +45,10 @@ class _HomeViewState extends State<HomeView> {
           BottomNavigationBarItem(
             icon: Icon(Icons.messenger_outline),
             label: 'Чаты',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_3_outlined),
+            label: 'Профиль',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
