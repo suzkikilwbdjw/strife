@@ -105,9 +105,12 @@ class NotificationsView extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            type == 'friend_request'
-                                ? 'Отправил запрос на добавление в контакты'
-                                : 'Звонил вам',
+                            switch (type) {
+                              'friend_request' =>
+                                'Отправил запрос на добавление в контакты',
+                              'call_request' => 'Звонил вам',
+                              _ => 'Неизвестное уведомление',
+                            },
                             style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 13,

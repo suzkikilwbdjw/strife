@@ -78,7 +78,7 @@ class AppNotifications {
   static void showError(BuildContext context, String message) {
     _show(
       context,
-      title: "Ой, ошибка!",
+      title: 'Ой, ошибка!',
       message: message,
       icon: Icons.error_outline,
       gradient: Theme.of(context).extension<GradientTheme>()!.mainGradient,
@@ -89,11 +89,24 @@ class AppNotifications {
   static void showSuccess(BuildContext context, String message) {
     _show(
       context,
-      title: "Успешно!",
+      title: 'Успешно!',
       message: message,
       icon: Icons.check_circle_outline,
       gradient: const LinearGradient(
         colors: [Color(0xFF2E7D32), Color(0xFF43A047)],
+      ),
+    );
+  }
+
+  // Метод для нейтрального вывода
+  static void showInfo(BuildContext context, String message) {
+    _show(
+      context,
+      title: 'Четко',
+      message: message,
+      icon: Icons.info_outline,
+      gradient: const LinearGradient(
+        colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
       ),
     );
   }
