@@ -6,6 +6,36 @@ class UserRepository {
   final _firestore = FirebaseFirestore.instance;
   final String _baseUrl = 'http://62.109.2.27:4000';
 
+  // Метод для отправки запроса в звонок
+  Future<void> sendCallRequest({
+    required String senderId,
+    required String recipientId,
+    required String senderName,
+    required String senderPhotoUrl,
+    required String roomId,
+  }) async {
+    try {
+      // Делаем запрос на бэкэнд
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications/send-call-request'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'senderId': senderId,
+          'recipientId': recipientId,
+          'senderName': senderName,
+          'senderPhotoUrl': senderPhotoUrl,
+          'roomId': roomId,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Ошибка сервера: ${response.body}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Метод для отправки запроса в контакты
   Future<void> sendFriendRequest({
     required String senderId,

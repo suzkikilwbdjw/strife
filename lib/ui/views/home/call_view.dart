@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
@@ -395,11 +396,17 @@ class CreateRoomButton extends StatelessWidget {
   }
 }
 
-class NewCallSheet extends StatelessWidget {
+class NewCallSheet extends StatefulWidget {
   const NewCallSheet({super.key, required this.user});
 
   final User user;
 
+  @override
+  State<NewCallSheet> createState() => _NewCallSheetState();
+}
+
+class _NewCallSheetState extends State<NewCallSheet> {
+  final Set<String> _selectedUserIds = {};
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
@@ -479,12 +486,42 @@ class NewCallSheet extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                            // Кнопка отправики уведомления
+                            trailing: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Color(0xFFF8E9FF),
+                                shape: BoxShape.circle,
+                              ),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                child: _selectedUserIds.contains(contact['id'])
+                                    ? const Icon(Icons.check)
+                                    : const Icon(Icons.add),
+                                onTap: () {
+                                  setState(() {
+                                    if (_selectedUserIds.contains(
+                                      contact['id'],
+                                    )) {
+                                      // Убираем контакт если он уже есть
+                                      _selectedUserIds.remove(contact['id']);
+                                    } else {
+                                      // Добавляем контакт которому хотим отправить уведомление
+                                      _selectedUserIds.add(contact['id']);
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
                           );
                         },
+                        // Разделитель
                         separatorBuilder: (context, index) => Divider(
-                          thickness: 1,
+                          thickness: 0.5,
                           color: Colors.grey,
-                          height: 24,
+                          endIndent: 10,
+                          indent: 10,
                         ),
                       )
                     : const Center(child: Text('Список пуст')),
@@ -506,6 +543,15 @@ class NewCallSheet extends StatelessWidget {
                   child: const Text('Начать звонок'),
 
                   onPressed: () async {
+                    // Айди отправителя
+                    final senderId = widget.user.uid;
+
+                    // Имя отправителя
+                    final senderName = widget.user.displayName!;
+
+                    // Фото отправителя
+                    final senderPhotoUrl = widget.user.photoURL!;
+
                     showDialog(
                       context: context,
                       barrierDismissible: false,
@@ -531,15 +577,28 @@ class NewCallSheet extends StatelessWidget {
                                 VCSBloc(context.read<VCSRepository>())..add(
                                   ConnectRequested(
                                     roomName: roomId,
-                                    identity: user.uid,
-                                    name: user.displayName!,
-                                    photoUrl: user.photoURL,
+                                    identity: widget.user.uid,
+                                    name: widget.user.displayName!,
+                                    photoUrl: widget.user.photoURL,
                                   ),
                                 ),
                             child: const RoomView(),
                           ),
                         ),
                       );
+
+                      final userRepo = context.read<UserRepository>();
+
+                      // Отправляем уведомления всем кого добавили
+                      for (var id in _selectedUserIds) {
+                        userRepo.sendCallRequest(
+                          recipientId: id,
+                          roomId: roomId,
+                          senderId: senderId,
+                          senderPhotoUrl: senderPhotoUrl,
+                          senderName: senderName,
+                        );
+                      }
                     } else {
                       AppNotifications.showError(
                         context,
