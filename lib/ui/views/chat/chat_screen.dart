@@ -21,8 +21,6 @@ class ChatScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    context.read<ChatBloc>().add(InitChat(chatId));
-
     return Scaffold(
       appBar: AppBar(
         scrolledUnderElevation: 0.0,

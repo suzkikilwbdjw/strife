@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class UserRepository {
   final _firestore = FirebaseFirestore.instance;
   final String _baseUrl = 'http://62.109.2.27:4000';
+
+  Stream<User?> get userStream => FirebaseAuth.instance.userChanges();
 
   // Метод для отправки запроса в звонок
   Future<void> sendCallRequest({
@@ -77,33 +80,53 @@ class UserRepository {
   }
 
   // Обоюдное добавление контакта
-  Future<void> addContact(String currentUserId, String contactId) async {
+  Future<void> acceptFriendRequest({
+    required String currentUserId,
+    required String contactId,
+  }) async {
     try {
+      // Сначала достаем актуальные данные обоих юзеров
+      final myData = await getUserData(currentUserId);
+      final partnerData = await getUserData(contactId);
+
       final batch = _firestore.batch();
 
-      // Ссылка на контакт у меня
-      final myContactRef = _firestore
-          .collection('users')
-          .doc(currentUserId)
-          .collection('contacts')
-          .doc(contactId);
+      // Записываем данные партнера в контакты
+      batch.set(
+        _firestore
+            .collection('users')
+            .doc(currentUserId)
+            .collection('contacts')
+            .doc(contactId),
+        {
+          'email': partnerData['email'],
+          'displayName': partnerData['displayName'],
+          'photoUrl': partnerData['photoUrl'],
+          'addedAt': FieldValue.serverTimestamp(),
+          'id': contactId,
+        },
+        SetOptions(merge: true),
+      );
 
-      // Ссылка на контакт у него
-      final hisContactRef = _firestore
-          .collection('users')
-          .doc(contactId)
-          .collection('contacts')
-          .doc(currentUserId);
-
-      batch.set(myContactRef, {
-        'addedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      batch.set(hisContactRef, {
-        'addedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      // Записываем мои данные к нему в контакты
+      batch.set(
+        _firestore
+            .collection('users')
+            .doc(contactId)
+            .collection('contacts')
+            .doc(currentUserId),
+        {
+          'email': myData['email'],
+          'displayName': myData['displayName'],
+          'photoUrl': myData['photoUrl'],
+          'addedAt': FieldValue.serverTimestamp(),
+          'id': currentUserId,
+        },
+        SetOptions(merge: true),
+      );
 
       await batch.commit();
-    } catch (_) {
+    } catch (e) {
       rethrow;
     }
   }
@@ -162,8 +185,11 @@ class UserRepository {
         .map(
           (snapshot) => snapshot.docs.map((doc) {
             return {
-              'id': doc.id,
+              'id': doc.data()['id'],
               'isFavorite': doc.data()['isFavorite'] ?? false,
+              'displayName': doc.data()['displayName'],
+              'photoUrl': doc.data()['photoUrl'],
+              'email': doc.data()['email'],
             };
           }).toList(),
         );
@@ -205,24 +231,6 @@ class UserRepository {
           .doc(contactId)
           .update({'isFavorite': isFavorite});
     } catch (_) {
-      rethrow;
-    }
-  }
-
-  // Загрузка инфы о пользователи по id
-  Future<Map<String, dynamic>> getUser(String userId) async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
-
-      if (doc.exists) {
-        return doc.data()!;
-      } else {
-        return {};
-      }
-    } on FirebaseException catch (_) {
       rethrow;
     }
   }

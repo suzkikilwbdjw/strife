@@ -83,23 +83,18 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     // Подписываемся на стрим ID контактов
     _contactsSubscription = _repository
         .contactsStream(event.currentUserId)
-        .listen((contactInfos) async {
-          // Для каждого ID получаем данные пользователя
-          final List<Map<String, dynamic>> fullContacts = [];
-
-          for (var info in contactInfos) {
-            final userId = info['id'];
-
-            final isFavorite = info['isFavorite'];
-
-            final userData = await _repository.getUserData(userId);
-
-            fullContacts.add({
-              ...userData,
-              'id': userId,
-              'isFavorite': isFavorite,
-            });
-          }
+        .listen((contactInfos) {
+          final List<Map<String, dynamic>> fullContacts = contactInfos.map((
+            info,
+          ) {
+            return {
+              'id': info['id'],
+              'displayName': info['displayName'],
+              'photoUrl': info['photoUrl'],
+              'isFavorite': info['isFavorite'] ?? false,
+              'email': info['email'],
+            };
+          }).toList();
 
           add(UpdateContactsListRequested(fullContacts: fullContacts));
         });
@@ -110,7 +105,10 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     Emitter<ContactsState> emit,
   ) async {
     emit(state.copyWith(isSubmitted: true));
-    await _repository.addContact(event.currentUserId, event.contactId);
+    await _repository.acceptFriendRequest(
+      currentUserId: event.currentUserId,
+      contactId: event.contactId,
+    );
     emit(state.copyWith(isSubmitted: false));
   }
 

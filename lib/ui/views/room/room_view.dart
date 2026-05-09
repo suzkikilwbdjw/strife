@@ -5,6 +5,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:strife/data/repositories/chat_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
+import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
@@ -401,7 +402,7 @@ class NavigationBottomAppBar extends StatelessWidget {
                           create: (context) => ChatBloc(
                             chatRepository: context.read<ChatRepository>(),
                             userRepository: context.read<UserRepository>(),
-                          ),
+                          )..add(InitChat(bloc.roomId)),
                           child: DraggableScrollableSheet(
                             initialChildSize: 0.75,
                             maxChildSize: 0.75,

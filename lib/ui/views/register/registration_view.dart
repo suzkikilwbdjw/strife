@@ -43,6 +43,7 @@ class _RegistrationViewState extends State<RegistrationView> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
+          iconTheme: const IconThemeData(color: Colors.white),
           toolbarHeight: 100,
           title: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,7 +281,7 @@ class RegisterButton extends StatelessWidget {
                 final success = await authVM.signUp(
                   email: email.text.trim(),
                   password: password.text.trim(),
-                  firtstName: name.text.trim(),
+                  firstName: name.text.trim(),
                   secondName: secondName.text.trim(),
                   dob: dob!,
                 );
