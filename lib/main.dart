@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -11,10 +13,13 @@ import 'package:strife/data/repositories/vcs_repository.dart';
 
 // Импорты слоев
 import 'package:strife/firebase/firebase_options.dart';
+import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
+import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/data/repositories/auth_repository.dart';
 import 'package:strife/ui/view_models/auth_view_model.dart';
+import 'package:strife/ui/views/chat/chat_screen.dart';
 
 // Импорты экранов
 import 'package:strife/ui/views/login/login_view.dart';
@@ -118,12 +123,16 @@ Future<void> setupNotifications() async {
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
+  // Локальное уведомление
   await flutterLocalNotificationsPlugin.initialize(
     settings: const InitializationSettings(
       android: initializationSettingsAndroid,
     ),
     onDidReceiveNotificationResponse: (NotificationResponse response) {
-      _navigateToNotifications();
+      if (response.payload != null) {
+        final Map<String, dynamic> data = jsonDecode(response.payload!);
+        _handleMessageClick(data);
+      }
     },
   );
 
@@ -147,26 +156,51 @@ Future<void> setupNotifications() async {
             icon: android.smallIcon,
           ),
         ),
+        payload: jsonEncode(message.data),
       );
     }
   });
 
   // Когда приложение в фоне
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    _navigateToNotifications();
+    _handleMessageClick(message.data);
   });
 
   // Обработка нажатия, когда приложение было полностью закрыто
   RemoteMessage? initialMessage = await FirebaseMessaging.instance
       .getInitialMessage();
   if (initialMessage != null) {
-    _navigateToNotifications();
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _handleMessageClick(initialMessage.data);
+    });
   }
 }
 
-// функция перехода
-void _navigateToNotifications() {
-  navigatorKey.currentState?.push(
-    MaterialPageRoute(builder: (context) => const NotificationsView()),
-  );
+// Функция обработки клика
+void _handleMessageClick(Map<String, dynamic> data) {
+  final String? type = data['type'];
+  final String? chatId = data['chatId'];
+
+  if (type == 'call_request' && chatId != null) {
+    // Переход в конкретный чат
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (context) => BlocProvider(
+          create: (context) => ChatBloc(
+            chatRepository: context.read<ChatRepository>(),
+            userRepository: context.read<UserRepository>(),
+          )..add(InitChat(chatId)),
+          child: ChatScreen(
+            chatId: chatId,
+            currentUserId: FirebaseAuth.instance.currentUser!.uid,
+          ),
+        ),
+      ),
+    );
+  } else {
+    // Обычное уведомление — идем в список уведомлений
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (context) => const NotificationsView()),
+    );
+  }
 }
