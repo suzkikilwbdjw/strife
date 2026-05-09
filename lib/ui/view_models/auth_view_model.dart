@@ -75,7 +75,7 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> signUp({
     required String email,
     required String password,
-    required String firtstName,
+    required String firstName,
     required String secondName,
     required DateTime dob,
   }) async {
@@ -83,26 +83,35 @@ class AuthViewModel extends ChangeNotifier {
     _error = null;
     try {
       final credential = await _authRepository.register(email, password);
-
       final user = credential.user!;
 
+      // Формируем полное имя
+      final fullName = '$firstName $secondName';
+
       // Обновление отображаемого имени пользователя
-      await user.updateDisplayName('$firtstName $secondName');
+      await user.updateDisplayName(fullName);
+
+      // Используем fullName для URL
+      final encodedName = Uri.encodeComponent(fullName);
+      final avatarUrl =
+          "http://62.109.2.27:4000/avatar?name=$encodedName&size=256&background=random&length=2&rounded=true&format=png";
 
       // Обновление аватарки пользователя
-      await user.updatePhotoURL(
-        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRL5SN9kRO7M2hLQYFw-dNivpt11E-XLyIYcw&s',
-      );
+      await user.updatePhotoURL(avatarUrl);
 
-      // Перезагрузка пользователя для применения изменений
+      // Принудительно обновляем локального пользователя
       await user.reload();
 
-      final updatedUser = FirebaseAuth.instance.currentUser!;
+      // Используем текущего пользователя
+      final updatedUser = FirebaseAuth.instance.currentUser;
+      if (updatedUser == null) {
+        throw Exception('Пользователь не найден после регистрации');
+      }
 
       await _authRepository.saveUserData(
         updatedUser,
         extraData: {
-          'firstName': firtstName,
+          'firstName': firstName,
           'secondName': secondName,
           'dateOfBirth': dob.toIso8601String(),
         },

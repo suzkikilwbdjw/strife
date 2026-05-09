@@ -119,4 +119,20 @@ class ChatRepository {
       'lastUpdate': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
+
+  // Подтягивает все чаты в которых я участник
+  Stream<List<Map<String, dynamic>>> getAllMyChats(String userId) {
+    return _firestore
+        .collection('chats')
+        .where('participants', arrayContains: userId)
+        .orderBy('lastUpdate', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList(),
+        );
+  }
 }

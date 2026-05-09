@@ -25,11 +25,14 @@ class _ContactsViewState extends State<ContactsView> {
   @override
   void initState() {
     super.initState();
-    // Загружаем данные
     final userId = FirebaseAuth.instance.currentUser!.uid;
+
+    // Загружаем данные
     context.read<ContactsBloc>().add(
       LoadContactsRequested(currentUserId: userId),
     );
+
+    // Устанавливаем поиск по контактам в ноль
     context.read<ContactsBloc>().add(SearchContactsRequested(searchQuery: ''));
   }
 
@@ -381,8 +384,8 @@ class ContactWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final photoUrl = userData['photoUrl'] as String?;
-    final displayName = userData['displayName'] as String? ?? 'Без имени';
-    final email = userData['email'] as String? ?? '';
+    final displayName = userData['displayName'] as String?;
+    final email = userData['email'] as String?;
     final isFavorite = userData['isFavorite'] ?? false;
 
     return ListTile(
@@ -403,7 +406,7 @@ class ContactWidget extends StatelessWidget {
       title: Row(
         children: [
           Text(
-            displayName,
+            displayName!,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
 
@@ -492,7 +495,7 @@ class ContactWidget extends StatelessWidget {
       ),
 
       // Адрес почты
-      subtitle: email.isNotEmpty
+      subtitle: email!.isNotEmpty
           ? Row(
               children: [
                 // Иконка почты
@@ -508,7 +511,10 @@ class ContactWidget extends StatelessWidget {
                 Expanded(
                   child: Text(
                     email,
-                    style: const TextStyle(color: Colors.black54),
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12.0,
+                    ),
                   ),
                 ),
               ],
