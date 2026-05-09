@@ -1,8 +1,14 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/chats/chat_state.dart';
+import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
+import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
+import 'package:strife/ui/views/room/room_view.dart';
+import 'package:strife/ui/widgets/app_notifications.dart';
 import '../../widgets/message_bubble.dart';
 
 class ChatScreen extends StatelessWidget {
@@ -56,6 +62,103 @@ class ChatScreen extends StatelessWidget {
                   itemCount: state.messages.length,
                   itemBuilder: (context, index) {
                     final message = state.messages[index];
+                    // Получаем данные напрямую
+                    final msgData = message.toFirestore();
+                    final String? type = msgData['type'];
+                    final String? roomId = msgData['roomId'];
+
+                    if (type == 'call' && roomId != null) {
+                      // Рисуем плашку звонка для всех
+                      return Container(
+                        margin: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 20,
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurple.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.deepPurple.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              message.senderId == currentUserId
+                                  ? 'Вы создали звонок'
+                                  : 'Вас приглашают в звонок',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: () async {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                                // Проверка существует ли комната
+                                final exists = await context
+                                    .read<VCSRepository>()
+                                    .checkRoomExists(
+                                      message.toFirestore()['roomId'],
+                                    );
+                                if (!context.mounted) return;
+
+                                Navigator.of(context).pop(); // закрыли loader
+
+                                if (exists) {
+                                  final User user =
+                                      FirebaseAuth.instance.currentUser!;
+
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => BlocProvider(
+                                        create: (_) =>
+                                            VCSBloc(
+                                              context.read<VCSRepository>(),
+                                            )..add(
+                                              ConnectRequested(
+                                                roomName: message
+                                                    .toFirestore()['roomId'],
+                                                identity: user.uid,
+                                                name: user.displayName!,
+                                                photoUrl: user.photoURL!,
+                                              ),
+                                            ),
+                                        child: const RoomView(),
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  // Ошибка в случае неправельного id комнаты
+                                  if (!context.mounted) return;
+
+                                  Navigator.of(
+                                    context,
+                                  ).pop(); // закрываем лоадер
+
+                                  // Показываем ошибку пользователю
+                                  AppNotifications.showError(
+                                    context,
+                                    'Введен неверный id комнаты',
+                                  );
+
+                                  return;
+                                }
+                              },
+                              child: const Text('Присоединиться'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
                     final isMe = message.senderId == currentUserId;
 
                     bool showSenderName = false;
