@@ -11,6 +11,7 @@ import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/notifications/notifications_view.dart';
 import 'package:strife/ui/views/room/room_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
+import 'package:strife/ui/widgets/contact_widget.dart';
 
 class CallView extends StatelessWidget {
   const CallView({super.key});
@@ -474,19 +475,8 @@ class _NewCallSheetState extends State<NewCallSheet> {
                           final contact = contacts[index];
 
                           // Сам участник
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundImage: contact['photoUrl'] != null
-                                  ? NetworkImage(contact['photoUrl'])
-                                  : null,
-                            ),
-                            title: Text(
-                              contact['displayName'],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            // Кнопка отправики уведомления
+                          return ContactWidget(
+                            userData: contact,
                             trailing: Container(
                               width: 40,
                               height: 40,

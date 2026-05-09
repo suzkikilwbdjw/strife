@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
+import 'package:strife/ui/widgets/contact_widget.dart';
 
 class MeetingsView extends StatelessWidget {
   const MeetingsView({super.key});
@@ -256,25 +257,17 @@ class NewMeetingSheet extends StatelessWidget {
                   Expanded(
                     child: contacts.isNotEmpty
                         ? ListView.separated(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14.0,
+                              vertical: 4.0,
+                            ),
                             itemCount: contacts.length,
                             controller: scrollController,
                             itemBuilder: (context, index) {
                               final contact = contacts[index];
 
                               // Сам участник
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundImage: contact['photoUrl'] != null
-                                      ? NetworkImage(contact['photoUrl'])
-                                      : null,
-                                ),
-                                title: Text(
-                                  contact['displayName'],
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              );
+                              return ContactWidget(userData: contact);
                             },
                             separatorBuilder: (context, index) => Divider(
                               thickness: 1,
