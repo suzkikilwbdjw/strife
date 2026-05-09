@@ -11,6 +11,7 @@ import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/chat/chat_screen.dart';
+import 'package:strife/ui/widgets/contact_widget.dart';
 
 class ChatsView extends StatelessWidget {
   const ChatsView({super.key});
@@ -210,7 +211,7 @@ class NewChatSheet extends StatelessWidget {
         builder: (context, scrollController) {
           final contacts = context.watch<ContactsBloc>().state.filteredContacts;
           return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -228,7 +229,7 @@ class NewChatSheet extends StatelessWidget {
                     separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final contact = contacts[index];
-                      return _ContactTile(contact: contact);
+                      return ContactWidget(userData: contact);
                     },
                   ),
                 ),
@@ -280,7 +281,7 @@ class NewChatSheet extends StatelessWidget {
   }
 }
 
-class _ContactTile extends StatelessWidget {
+/*class _ContactTile extends StatelessWidget {
   final Map<String, dynamic> contact;
   const _ContactTile({required this.contact});
 
@@ -359,7 +360,7 @@ class _ContactTile extends StatelessWidget {
       ),
     );
   }
-}
+}*/
 
 void _navigateToChat(BuildContext context, String chatId, String myId) {
   Navigator.push(
