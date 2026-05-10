@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_state.dart';
@@ -230,10 +229,6 @@ class _ContactsViewState extends State<ContactsView> {
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 4.0,
-                        ),
                         itemCount: displayedContacts.length,
                         separatorBuilder: (context, index) => const Divider(
                           height: 1,
@@ -349,120 +344,124 @@ class AddContactSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.45,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+    final bool isLoading = context.select<ContactsBloc, bool>(
+      (value) => value.state.isLoading,
+    );
+
+    return BlocListener<ContactsBloc, ContactsState>(
+      // Слушаем изменения состояния
+      listener: (context, state) {
+        if (state.error != null) {
+          // Если появилась ошибка — показываем её
+          AppNotifications.showError(context, state.error!);
+        } else if (!state.isLoading) {
+          // Если загрузка завершилась и ошибки нет — значит успех
+          AppNotifications.showSuccess(context, 'Запрос отправлен');
+          Navigator.pop(context); // Закрываем шторку только при успехе
+        }
+      },
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const SizedBox(width: 24),
-                const Text(
-                  'Новый контакт',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.45,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 24),
+                  const Text(
+                    'Новый контакт',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
 
-            const Text(
-              'Введите почту пользователя, которого хотите добавить',
-              style: TextStyle(color: Colors.grey, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
+              const Text(
+                'Введите почту пользователя, которого хотите добавить',
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Поле ввода email
-            TextField(
-              controller: textEditingController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: 'Введите email...',
-                hintStyle: TextStyle(color: Colors.grey.shade400),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
+              // Поле ввода email
+              TextField(
+                controller: textEditingController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  hintText: 'Введите email...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
                 ),
               ),
-            ),
 
-            const Spacer(),
+              const Spacer(),
 
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: OutlinedButton(
-                onPressed: () async {
-                  // Адрес почты участника которого хотите добавить
-                  final recipientEmail = textEditingController.text.trim();
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: OutlinedButton(
+                  onPressed: isLoading
+                      ? null // Блокируем кнопку, пока идет загрузка
+                      : () {
+                          final recipientEmail = textEditingController.text
+                              .trim();
+                          if (recipientEmail.isEmpty) return;
 
-                  // Айди отправителя
-                  final senderId =
-                      FirebaseAuth.instance.currentUser?.uid ?? 'бебе';
-
-                  // Имя отправителя
-                  final senderName =
-                      FirebaseAuth.instance.currentUser?.displayName ??
-                      'Пользователь';
-
-                  // Фото отправителя
-                  final senderPhotoUrl =
-                      FirebaseAuth.instance.currentUser?.photoURL ??
-                      'Пользователь';
-
-                  try {
-                    await context.read<UserRepository>().sendFriendRequest(
-                      senderId: senderId,
-                      recipientEmail: recipientEmail,
-                      senderName: senderName,
-                      senderPhotoUrl: senderPhotoUrl,
-                    );
-
-                    if (!context.mounted) return;
-                    Navigator.pop(context);
-
-                    AppNotifications.showSuccess(context, 'Запрос отправлен');
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    AppNotifications.showError(
-                      context,
-                      e.toString().replaceAll('Exception: ', ''),
-                    );
-                  }
-                },
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 55),
-                  side: const BorderSide(color: Colors.black, width: 1),
-                ),
-                child: const Text(
-                  'Отправить запрос...',
-                  style: TextStyle(color: Colors.black, fontSize: 16),
+                          context.read<ContactsBloc>().add(
+                            SendFriendRequestRequested(
+                              senderId: FirebaseAuth.instance.currentUser!.uid,
+                              recipientEmail: recipientEmail,
+                              senderName:
+                                  FirebaseAuth
+                                      .instance
+                                      .currentUser
+                                      ?.displayName ??
+                                  'User',
+                              senderPhotoUrl:
+                                  FirebaseAuth.instance.currentUser?.photoURL ??
+                                  '',
+                            ),
+                          );
+                        },
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 55),
+                    side: const BorderSide(color: Colors.black, width: 1),
+                  ),
+                  child: isLoading
+                      ? const CircularProgressIndicator()
+                      : const Text(
+                          'Отправить запрос...',
+                          style: TextStyle(color: Colors.black, fontSize: 16),
+                        ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
