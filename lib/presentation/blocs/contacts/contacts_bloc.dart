@@ -20,6 +20,32 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     on<UpdateContactsListRequested>(_onUpdateContactsList);
     on<SearchContactsRequested>(_onSearchContacts);
     on<ToggleFavoriteRequested>(_toggleFavorite);
+    on<SendFriendRequestRequested>(_sendFriendRequest);
+  }
+
+  Future<void> _sendFriendRequest(
+    SendFriendRequestRequested event,
+    Emitter<ContactsState> emit,
+  ) async {
+    // Очищаем предыдущую ошибку и ставим загрузку
+    emit(state.copyWith(isLoading: true, error: null));
+
+    try {
+      await _repository.sendFriendRequest(
+        senderId: event.senderId,
+        recipientEmail: event.recipientEmail,
+        senderName: event.senderName,
+        senderPhotoUrl: event.senderPhotoUrl,
+      );
+      emit(state.copyWith(isLoading: false));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isLoading: false,
+          error: e.toString().replaceAll('Exception: ', ''),
+        ),
+      );
+    }
   }
 
   Future<void> _toggleFavorite(

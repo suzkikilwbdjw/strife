@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -152,13 +153,51 @@ class ChatsView extends StatelessWidget {
                       // Переход в чат
                       _navigateToChat(context, chat['id'], myId);
                     },
-                    leading: CircleAvatar(
-                      radius: 28,
-                      backgroundImage: photo != null
-                          ? NetworkImage(photo)
-                          : null,
-                      backgroundColor: Colors.purple.shade100,
-                      child: photo == null ? Text(name[0].toUpperCase()) : null,
+                    leading: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundImage: photo != null
+                              ? NetworkImage(photo)
+                              : null,
+                          backgroundColor: Colors.purple.shade100,
+                          child: photo == null
+                              ? Text(name[0].toUpperCase())
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 1.0,
+                          right: 1.0,
+                          child: StreamBuilder<DatabaseEvent>(
+                            stream: FirebaseDatabase.instance
+                                .ref('status/$partnerId')
+                                .onValue,
+                            builder: (context, snapshot) {
+                              bool isOnline = false;
+                              if (snapshot.hasData &&
+                                  snapshot.data!.snapshot.value != null) {
+                                final data = Map<String, dynamic>.from(
+                                  snapshot.data!.snapshot.value as Map,
+                                );
+                                isOnline = data['state'] == 'online';
+                              }
+
+                              return Container(
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: isOnline ? Colors.green : Colors.grey,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     title: Text(
                       name,
@@ -211,7 +250,7 @@ class NewChatSheet extends StatelessWidget {
         builder: (context, scrollController) {
           final contacts = context.watch<ContactsBloc>().state.filteredContacts;
           return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

@@ -1,3 +1,4 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
 class ContactWidget extends StatelessWidget {
@@ -15,15 +16,50 @@ class ContactWidget extends StatelessWidget {
 
     return ListTile(
       // Аватарка
-      leading: CircleAvatar(
-        radius: 28,
-        backgroundColor: Colors.grey.shade200,
-        backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-            ? NetworkImage(photoUrl)
-            : null,
-        child: photoUrl == null || photoUrl.isEmpty
-            ? const Icon(Icons.person, color: Colors.grey, size: 30)
-            : null,
+      leading: Stack(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.grey.shade200,
+            backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                ? NetworkImage(photoUrl)
+                : null,
+            child: photoUrl == null || photoUrl.isEmpty
+                ? const Icon(Icons.person, color: Colors.grey, size: 30)
+                : null,
+          ),
+          Positioned(
+            right: 1.0,
+            bottom: 1.0,
+            child:
+                // Статус - онлайн/офлайн
+                StreamBuilder<DatabaseEvent>(
+                  stream: FirebaseDatabase.instance
+                      .ref('status/${userData['id']}')
+                      .onValue,
+                  builder: (context, snapshot) {
+                    bool isOnline = false;
+                    if (snapshot.hasData &&
+                        snapshot.data!.snapshot.value != null) {
+                      final data = Map<String, dynamic>.from(
+                        snapshot.data!.snapshot.value as Map,
+                      );
+                      isOnline = data['state'] == 'online';
+                    }
+
+                    return Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: isOnline ? Colors.green : Colors.grey,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                    );
+                  },
+                ),
+          ),
+        ],
       ),
 
       // Отображаемое имя
@@ -36,13 +72,13 @@ class ContactWidget extends StatelessWidget {
 
           const SizedBox(width: 4),
 
-          if (isFavorite) const Icon(Icons.star, color: Colors.amberAccent),
+          if (isFavorite)
+            const Icon(Icons.star, color: Colors.amberAccent, size: 15.0),
         ],
       ),
 
       trailing: trailing,
 
-      // Адрес почты
       subtitle: email!.isNotEmpty
           ? Row(
               children: [

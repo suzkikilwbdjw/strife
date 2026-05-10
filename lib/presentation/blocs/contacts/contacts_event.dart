@@ -1,5 +1,20 @@
 abstract class ContactsEvent {}
 
+// Событие для отправки запроса в контакты
+class SendFriendRequestRequested extends ContactsEvent {
+  final String senderId;
+  final String recipientEmail;
+  final String senderName;
+  final String senderPhotoUrl;
+
+  SendFriendRequestRequested({
+    required this.senderId,
+    required this.recipientEmail,
+    required this.senderName,
+    required this.senderPhotoUrl,
+  });
+}
+
 // Событие для первичной загрузки списка
 class LoadContactsRequested extends ContactsEvent {
   final String currentUserId;
@@ -15,6 +30,7 @@ class AddContactsRequested extends ContactsEvent {
   AddContactsRequested({required this.currentUserId, required this.contactId});
 }
 
+// Событие для удаления контакта
 class RemoveContactsRequested extends ContactsEvent {
   final String currentUserId;
   final String contactId;

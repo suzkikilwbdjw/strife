@@ -420,7 +420,7 @@ class _NewCallSheetState extends State<NewCallSheet> {
         final contacts = context.watch<ContactsBloc>().state.filteredContacts;
 
         return Container(
-          margin: const EdgeInsets.only(top: 20),
+          margin: const EdgeInsets.only(top: 16),
           child: Column(
             children: <Widget>[
               // Заголовок

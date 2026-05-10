@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/data/repositories/user_repository.dart';
@@ -32,6 +33,7 @@ class ProfileView extends StatelessWidget {
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
                 children: [
+                  // Заливка сверху
                   Container(
                     height: 170,
                     width: double.infinity,
@@ -54,6 +56,7 @@ class ProfileView extends StatelessWidget {
                     bottom: -50,
                     child: Stack(
                       children: [
+                        // Аватарка
                         CircleAvatar(
                           radius: 60,
                           backgroundColor: Colors.white,
@@ -78,17 +81,37 @@ class ProfileView extends StatelessWidget {
                                 : null,
                           ),
                         ),
+                        // Индикатор статуса
                         Positioned(
                           bottom: 5,
                           right: 5,
-                          child: Container(
-                            width: 25,
-                            height: 25,
-                            decoration: BoxDecoration(
-                              color: Colors.greenAccent,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 3),
-                            ),
+                          child: StreamBuilder<DatabaseEvent>(
+                            stream: FirebaseDatabase.instance
+                                .ref('status/${user.uid}')
+                                .onValue,
+                            builder: (context, snapshot) {
+                              bool isOnline = false;
+                              if (snapshot.hasData &&
+                                  snapshot.data!.snapshot.value != null) {
+                                final data = Map<String, dynamic>.from(
+                                  snapshot.data!.snapshot.value as Map,
+                                );
+                                isOnline = data['state'] == 'online';
+                              }
+
+                              return Container(
+                                width: 25,
+                                height: 25,
+                                decoration: BoxDecoration(
+                                  color: isOnline ? Colors.green : Colors.grey,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -106,10 +129,24 @@ class ProfileView extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const Text(
-                'Online',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
+
+              // Статус пользователя
+              StreamBuilder(
+                stream: FirebaseDatabase.instance
+                    .ref('status/${user.uid}')
+                    .onValue,
+                builder: (context, snapshot) {
+                  final data = snapshot.data?.snapshot.value as Map?;
+                  final status = data?['state'] ?? 'offline';
+                  return Text(
+                    status == 'online' ? 'Online' : 'Offline',
+                    style: TextStyle(
+                      color: status == 'online' ? Colors.green : Colors.grey,
+                    ),
+                  );
+                },
               ),
+
               const SizedBox(height: 20),
 
               // Список настроек
