@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:strife/data/repositories/user_repository.dart';
+import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
@@ -407,7 +407,9 @@ class NewCallSheet extends StatefulWidget {
 }
 
 class _NewCallSheetState extends State<NewCallSheet> {
+  // Выбранные пользователя, которые будут приглашены в звонок
   final Set<String> _selectedUserIds = {};
+
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
@@ -577,11 +579,12 @@ class _NewCallSheetState extends State<NewCallSheet> {
                         ),
                       );
 
-                      final userRepo = context.read<UserRepository>();
+                      final notificationRepository = context
+                          .read<NotificationRepository>();
 
                       // Отправляем уведомления всем кого добавили
                       for (var id in _selectedUserIds) {
-                        userRepo.sendCallRequest(
+                        notificationRepository.sendCallRequest(
                           recipientId: id,
                           roomId: roomId,
                           senderId: senderId,

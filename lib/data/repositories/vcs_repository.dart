@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 
 class VCSRepository {
   // Адресс server.mjs
-  final _httpUrl = 'http://62.109.2.27:3000';
+  final _httpUrl = 'http://62.109.2.27:4000';
 
   // Запрос токена у сервера
   Future<Map<String, dynamic>> fetchToken({
@@ -15,7 +15,7 @@ class VCSRepository {
     String? photoUrl,
   }) async {
     final response = await http.post(
-      Uri.parse('$_httpUrl/getToken'),
+      Uri.parse('$_httpUrl/livekit/getToken'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'room_name': room,
@@ -38,7 +38,7 @@ class VCSRepository {
     required String participantIdentity,
   }) async {
     await http.post(
-      Uri.parse('$_httpUrl/muteParticipant'),
+      Uri.parse('$_httpUrl/livekit/muteParticipant'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'room': roomId,
@@ -53,7 +53,7 @@ class VCSRepository {
     required String participantIdentity,
   }) async {
     await http.post(
-      Uri.parse('$_httpUrl/enableMicrophone'),
+      Uri.parse('$_httpUrl/livekit/enableMicrophone'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'room': roomId,
@@ -68,7 +68,7 @@ class VCSRepository {
     required String participantIdentity,
   }) async {
     await http.post(
-      Uri.parse('$_httpUrl/disableCamera'),
+      Uri.parse('$_httpUrl/livekit/disableCamera'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'room': roomId,
@@ -83,7 +83,7 @@ class VCSRepository {
     required String participantIdentity,
   }) async {
     await http.post(
-      Uri.parse('$_httpUrl/enableCamera'),
+      Uri.parse('$_httpUrl/livekit/enableCamera'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'room': roomId,
@@ -98,7 +98,7 @@ class VCSRepository {
     required String participantIdentity,
   }) async {
     await http.post(
-      Uri.parse('$_httpUrl/kickParticipant'),
+      Uri.parse('$_httpUrl/livekit/kickParticipant'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'room': roomId,
@@ -113,7 +113,7 @@ class VCSRepository {
     required String newHostId,
   }) async {
     await http.post(
-      Uri.parse('$_httpUrl/transferHost'),
+      Uri.parse('$_httpUrl/livekit/transferHost'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'room': roomId, 'newHostId': newHostId}),
     );
