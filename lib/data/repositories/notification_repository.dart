@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -135,5 +136,17 @@ class NotificationRepository {
     } catch (e) {
       rethrow;
     }
+  }
+
+  // Обновление fcmToken
+  Future<void> updateTokenInDatabase(String token) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    // Сохраняем токен
+    await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      'fcmToken': token,
+      'lastTokenUpdate': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 }

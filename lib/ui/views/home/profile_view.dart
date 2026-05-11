@@ -176,10 +176,16 @@ class ProfileView extends StatelessWidget {
                           builder: (_) =>
                               const Center(child: CircularProgressIndicator()),
                         );
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+
+                        await context.read<UserRepository>().goOffline(uid!);
+
+                        if (!context.mounted) return;
 
                         await context.read<AuthViewModel>().signOut();
 
                         if (!context.mounted) return;
+
                         Navigator.of(context).pop();
                       },
                     ),
