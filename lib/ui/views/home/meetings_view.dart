@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
@@ -288,7 +287,7 @@ class NewMeetingSheet extends StatefulWidget {
 
 class _NewMeetingSheetState extends State<NewMeetingSheet> {
   // Выбранные пользователя, которые будут приглашены в звонок
-  final Set<String> _selectedUserIds = {};
+  final Map<String, dynamic> _selectedUserIds = {};
 
   // Выбранное время встречи
   TimeOfDay? _selectedTime;
@@ -312,117 +311,116 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Заголовок с крестиком
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const SizedBox(width: 30), // Для центровки заголовка
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Заголовок с крестиком
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 30), // Для центровки заголовка
 
-                const Text(
-                  'Новая встреча',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+                  const Text(
+                    'Новая встреча',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
 
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Поля ввода
-            _buildInputField(
-              'Название встречи',
-              'Планерка команды',
-              textEditingController: _textEditingController,
-            ),
-            _buildInputField(
-              'Участники',
-              'Выбрать контакты',
-              icon: Icons.person_outline,
-              onTap: () => _showContactsPicker(context),
-            ),
-            _buildInputField(
-              'Дата',
-              _selectedDate != null
-                  ? DateFormat('dd.MM.yyyy').format(_selectedDate!)
-                  : 'дд.мм.гггг',
-              icon: Icons.calendar_today_outlined,
-              onTap: () async {
-                await _pickDate(context);
-              },
-            ),
-            _buildInputField(
-              'Время',
-              _selectedTime != null ? _selectedTime!.format(context) : '--:--',
-              icon: Icons.access_time,
-              onTap: () async {
-                await _pickTime(context);
-              },
-            ),
-
-            const SizedBox(height: 40),
-
-            // Кнопка 'Создать встречу'
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: OutlinedButton(
-                onPressed: () async {
-                  if (_textEditingController.text.isEmpty ||
-                      _selectedDate == null ||
-                      _selectedTime == null) {
-                    return;
-                  }
-                  final user = FirebaseAuth.instance.currentUser!;
-
-                  final senderId = user.uid;
-                  final senderName = user.displayName!;
-                  final senderPhotoUrl = user.photoURL!;
-                  final String dateIso = _selectedDate!.toIso8601String().split(
-                    'T',
-                  )[0];
-                  final String timeString = _selectedTime!.format(context);
-
-                  final roomId = await context
-                      .read<VCSRepository>()
-                      .createRoom();
-
-                  if (!context.mounted) return;
-
-                  // Отправляем уведомления о том что они приглашены на встречу
-                  await context
-                      .read<NotificationRepository>()
-                      .sendMeetingRequest(
-                        senderId: senderId,
-                        participantIds: _selectedUserIds.toList(),
-                        senderName: senderName,
-                        senderPhotoUrl: senderPhotoUrl,
-                        roomId: roomId,
-                        titleMeeting: _textEditingController.text,
-                        dateMeeting: dateIso,
-                        timeMeeting: timeString,
-                      );
+              // Поля ввода
+              _buildInputField(
+                'Название встречи',
+                'Планерка команды',
+                textEditingController: _textEditingController,
+              ),
+              _buildParticipantsField(),
+              _buildInputField(
+                'Дата',
+                _selectedDate != null
+                    ? DateFormat('dd.MM.yyyy').format(_selectedDate!)
+                    : 'дд.мм.гггг',
+                icon: Icons.calendar_today_outlined,
+                onTap: () async {
+                  await _pickDate(context);
                 },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.black),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+              ),
+              _buildInputField(
+                'Время',
+                _selectedTime != null
+                    ? _selectedTime!.format(context)
+                    : '--:--',
+                icon: Icons.access_time,
+                onTap: () async {
+                  await _pickTime(context);
+                },
+              ),
+
+              const SizedBox(height: 40),
+
+              // Кнопка 'Создать встречу'
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    if (_textEditingController.text.isEmpty ||
+                        _selectedDate == null ||
+                        _selectedTime == null) {
+                      return;
+                    }
+                    final user = FirebaseAuth.instance.currentUser!;
+
+                    final senderId = user.uid;
+                    final senderName = user.displayName!;
+                    final senderPhotoUrl = user.photoURL!;
+                    final String dateIso = _selectedDate!
+                        .toIso8601String()
+                        .split('T')[0];
+                    final String timeString = _selectedTime!.format(context);
+
+                    final roomId = await context
+                        .read<VCSRepository>()
+                        .createRoom();
+
+                    if (!context.mounted) return;
+
+                    // Отправляем уведомления о том что они приглашены на встречу
+                    await context
+                        .read<NotificationRepository>()
+                        .sendMeetingRequest(
+                          senderId: senderId,
+                          participantIds: _selectedUserIds.keys.toList(),
+                          senderName: senderName,
+                          senderPhotoUrl: senderPhotoUrl,
+                          roomId: roomId,
+                          titleMeeting: _textEditingController.text,
+                          dateMeeting: dateIso,
+                          timeMeeting: timeString,
+                        );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.black),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: const Text(
+                    'Создать встречу',
+                    style: TextStyle(color: Colors.black, fontSize: 16),
                   ),
                 ),
-                child: const Text(
-                  'Создать встречу',
-                  style: TextStyle(color: Colors.black, fontSize: 16),
-                ),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -476,6 +474,62 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     }
   }
 
+  Widget _buildParticipantsField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Выбрать участников',
+            style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+          ),
+
+          const SizedBox(height: 8.0),
+
+          // Поле с выбором участников
+          GestureDetector(
+            onTap: () => _showContactsPicker(context),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 55),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.black12),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(width: 8.0),
+                  Expanded(
+                    child: _selectedUserIds.isEmpty
+                        ? Text(
+                            'Выбрать контакты',
+                            style: TextStyle(fontSize: 16.0),
+                          )
+                        : Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: _selectedUserIds.values.map((photoUrl) {
+                              // Аватар участника
+                              return CircleAvatar(
+                                radius: 16,
+                                backgroundImage: NetworkImage(photoUrl),
+                                backgroundColor: Colors.grey.shade200,
+                              );
+                            }).toList(),
+                          ),
+                  ),
+                  const Icon(Icons.person_outline, color: Colors.black54),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Вспомогательный метод для создания полей
   Widget _buildInputField(
     String label,
@@ -483,6 +537,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     IconData? icon,
     VoidCallback? onTap,
     TextEditingController? textEditingController,
+    Widget? prefix,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -500,6 +555,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
             onTap: onTap,
             readOnly: onTap != null,
             decoration: InputDecoration(
+              prefixIcon: prefix,
               hintText: hint,
               suffixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
               contentPadding: const EdgeInsets.symmetric(
@@ -633,27 +689,27 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                                       child: InkWell(
                                         customBorder: const CircleBorder(),
                                         child:
-                                            _selectedUserIds.contains(
+                                            _selectedUserIds.keys.contains(
                                               contact['id'],
                                             )
                                             ? const Icon(Icons.check)
                                             : const Icon(Icons.add),
                                         onTap: () {
                                           setModalState(() {
-                                            if (_selectedUserIds.contains(
-                                              contact['id'],
+                                            final id = contact['id'];
+                                            if (_selectedUserIds.containsKey(
+                                              id,
                                             )) {
                                               // Убираем контакт если он уже есть
-                                              _selectedUserIds.remove(
-                                                contact['id'],
-                                              );
+                                              _selectedUserIds.remove(id);
                                             } else {
                                               // Добавляем контакт которому хотим отправить уведомление
-                                              _selectedUserIds.add(
-                                                contact['id'],
-                                              );
+                                              _selectedUserIds.addAll({
+                                                id: contact['photoUrl'],
+                                              });
                                             }
                                           });
+                                          setState(() {});
                                         },
                                       ),
                                     ),
