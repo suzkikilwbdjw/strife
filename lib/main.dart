@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/data/repositories/chat_repository.dart';
+import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 
@@ -56,6 +57,7 @@ Future<void> main() async {
         Provider(create: (_) => ChatRepository()),
         Provider(create: (_) => UserRepository()),
         Provider(create: (_) => VCSRepository()),
+        Provider(create: (_) => NotificationRepository()),
 
         // ViewModels
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
@@ -63,7 +65,10 @@ Future<void> main() async {
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
-            create: (context) => ContactsBloc(context.read<UserRepository>()),
+            create: (context) => ContactsBloc(
+              context.read<UserRepository>(),
+              context.read<NotificationRepository>(),
+            ),
           ),
         ],
         child: const MyApp(),

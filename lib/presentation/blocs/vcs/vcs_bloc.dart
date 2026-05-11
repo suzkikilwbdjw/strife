@@ -188,8 +188,10 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     DisconnectRequested event,
     Emitter<VCSState> emit,
   ) async {
-    await _room!.disconnect();
-    emit(const VCSState());
+    try {
+      await _room!.disconnect();
+      emit(const VCSState());
+    } catch (_) {}
   }
 
   Future<void> _onToggleMicrophone(

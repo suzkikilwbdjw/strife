@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:strife/data/repositories/user_repository.dart';
+import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
@@ -54,7 +54,9 @@ class NotificationsView extends StatelessWidget {
         ),
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: context.read<UserRepository>().getNotificationsStream(userId),
+        stream: context.read<NotificationRepository>().getNotificationsStream(
+          userId,
+        ),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -109,6 +111,7 @@ class NotificationsView extends StatelessWidget {
                               'friend_request' =>
                                 'Отправил запрос на добавление в контакты',
                               'call_request' => 'Звонил вам',
+                              'meeting_request' => 'Приглашение на встречу',
                               _ => 'Неизвестное уведомление',
                             },
                             style: const TextStyle(
@@ -137,7 +140,7 @@ class NotificationsView extends StatelessWidget {
                                       );
 
                                       context
-                                          .read<UserRepository>()
+                                          .read<NotificationRepository>()
                                           .removeNotification(note['id']);
 
                                       if (context.mounted) {
@@ -161,7 +164,7 @@ class NotificationsView extends StatelessWidget {
                                   // Обработка нажатия отклонить
                                   onTap: () {
                                     context
-                                        .read<UserRepository>()
+                                        .read<NotificationRepository>()
                                         .removeNotification(note['id']);
                                   },
                                 ),

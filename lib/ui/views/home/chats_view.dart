@@ -268,7 +268,39 @@ class NewChatSheet extends StatelessWidget {
                     separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final contact = contacts[index];
-                      return ContactWidget(userData: contact);
+                      return ContactWidget(
+                        userData: contact,
+                        trailing: IconButton(
+                          onPressed: () async {
+                            final myId = FirebaseAuth.instance.currentUser!.uid;
+
+                            // Получаем ID чата
+                            final chatId = await context
+                                .read<ChatRepository>()
+                                .getOrCreatePrivateChatId(myId, contact['id']);
+
+                            if (!context.mounted) return;
+
+                            // Закрываем шторку
+                            Navigator.pop(context);
+
+                            // Открываем экран чата
+                            _navigateToChat(context, chatId, myId);
+                          },
+                          icon: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8E9FF),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.chat_bubble_outline,
+                              color: Colors.purple,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      );
                     },
                   ),
                 ),
@@ -319,87 +351,6 @@ class NewChatSheet extends StatelessWidget {
     );
   }
 }
-
-/*class _ContactTile extends StatelessWidget {
-  final Map<String, dynamic> contact;
-  const _ContactTile({required this.contact});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Stack(
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: Colors.purple.shade900,
-            backgroundImage: contact['photoUrl'] != null
-                ? NetworkImage(contact['photoUrl'])
-                : null,
-            child: contact['photoUrl'] == null
-                ? Text(
-                    contact['displayName'][0].toUpperCase(),
-                    style: const TextStyle(color: Colors.white),
-                  )
-                : null,
-          ),
-          // Индикатор статуса (онлайн/оффлайн)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                color: contact['isOnline'] == true ? Colors.green : Colors.grey,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-            ),
-          ),
-        ],
-      ),
-      title: Text(
-        contact['displayName'],
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Text(
-        contact['email'] ?? '',
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
-      ),
-      trailing: IconButton(
-        onPressed: () async {
-          final myId = FirebaseAuth.instance.currentUser!.uid;
-
-          // 1. Получаем ID чата
-          final chatId = await context
-              .read<ChatRepository>()
-              .getOrCreatePrivateChatId(myId, contact['id']);
-
-          if (!context.mounted) return;
-
-          // 2. Закрываем шторку
-          Navigator.pop(context);
-
-          // 3. Открываем экран чата
-          _navigateToChat(context, chatId, myId);
-        },
-        icon: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8E9FF),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(
-            Icons.chat_bubble_outline,
-            color: Colors.purple,
-            size: 20,
-          ),
-        ),
-      ),
-    );
-  }
-}*/
 
 void _navigateToChat(BuildContext context, String chatId, String myId) {
   Navigator.push(

@@ -1,15 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_state.dart';
 
 class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
-  final UserRepository _repository;
+  final UserRepository _userRepository;
+  final NotificationRepository _notificationRepository;
+
   StreamSubscription? _contactsSubscription;
 
-  ContactsBloc(this._repository) : super(const ContactsState()) {
+  ContactsBloc(this._userRepository, this._notificationRepository)
+    : super(const ContactsState()) {
     _registerEventHandlers();
   }
 
@@ -31,7 +35,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     emit(state.copyWith(isLoading: true, error: null));
 
     try {
-      await _repository.sendFriendRequest(
+      await _notificationRepository.sendFriendRequest(
         senderId: event.senderId,
         recipientEmail: event.recipientEmail,
         senderName: event.senderName,
@@ -52,7 +56,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     ToggleFavoriteRequested event,
     Emitter<ContactsState> emit,
   ) async {
-    await _repository.toggleFavorite(
+    await _userRepository.toggleFavorite(
       event.currentUserId,
       event.contactId,
       event.isFavorite,
@@ -107,8 +111,8 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     await _contactsSubscription?.cancel();
 
     // Подписываемся на стрим ID контактов
-    _contactsSubscription = _repository
-        .contactsStream(event.currentUserId)
+    _contactsSubscription = _userRepository
+        .getContactsStream(event.currentUserId)
         .listen((contactInfos) {
           final List<Map<String, dynamic>> fullContacts = contactInfos.map((
             info,
@@ -131,7 +135,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     Emitter<ContactsState> emit,
   ) async {
     emit(state.copyWith(isSubmitted: true));
-    await _repository.acceptFriendRequest(
+    await _userRepository.acceptFriendRequest(
       currentUserId: event.currentUserId,
       contactId: event.contactId,
     );
@@ -142,7 +146,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     RemoveContactsRequested event,
     Emitter<ContactsState> emit,
   ) async {
-    await _repository.removeContact(event.currentUserId, event.contactId);
+    await _userRepository.removeContact(event.currentUserId, event.contactId);
 
     final updatedList = state.allContacts
         .where((contact) => contact['id'] != event.contactId)
