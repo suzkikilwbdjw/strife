@@ -1,10 +1,50 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class UserRepository {
   final _firestore = FirebaseFirestore.instance;
 
   Stream<User?> get userStream => FirebaseAuth.instance.userChanges();
+
+  // Подписка на статус
+  StreamSubscription? _presenceSubscription;
+
+  void setupPresence(String uid) {
+    _presenceSubscription?.cancel();
+
+    final presenceRef = FirebaseDatabase.instance.ref('status/$uid');
+    final connectedRef = FirebaseDatabase.instance.ref('.info/connected');
+
+    _presenceSubscription = connectedRef.onValue.listen((event) {
+      final connected = event.snapshot.value as bool? ?? false;
+      if (connected) {
+        presenceRef
+            .onDisconnect()
+            .set({'state': 'offline', 'last_changed': ServerValue.timestamp})
+            .then((_) {
+              presenceRef.set({
+                'state': 'online',
+                'last_changed': ServerValue.timestamp,
+              });
+            });
+      }
+    });
+  }
+
+  Future<void> goOffline(String uid) async {
+    // Останавливаем прослушивание коннекта
+    await _presenceSubscription?.cancel();
+    _presenceSubscription = null;
+
+    // Ставим статус оффлайн
+    await FirebaseDatabase.instance.ref('status/$uid').set({
+      'state': 'offline',
+      'last_changed': ServerValue.timestamp,
+    });
+  }
 
   // Обоюдное добавление контакта
   Future<void> acceptFriendRequest({

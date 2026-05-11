@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -104,8 +103,13 @@ class MyApp extends StatelessWidget {
             );
           }
           if (snapshot.hasData) {
+            final uid = snapshot.data!.uid;
+
             // Обновление статуса пользователя
-            setupPresence(FirebaseAuth.instance.currentUser!.uid);
+            context.read<UserRepository>().setupPresence(uid);
+
+            // Инициализация прослушиваний изменения токена
+            _initFcmTokenHandling(context);
 
             return const HomeView(); // Пользователь залогинен
           }
@@ -117,22 +121,18 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Настройка статуса пользователя
-void setupPresence(String uid) {
-  DatabaseReference presenceRef = FirebaseDatabase.instance.ref('status/$uid');
+void _initFcmTokenHandling(BuildContext context) async {
+  final notificationRepo = context.read<NotificationRepository>();
 
-  FirebaseDatabase.instance.ref('.info/connected').onValue.listen((event) {
-    if (event.snapshot.value == false) return;
+  // Получаем текущий токен при запуске
+  String? token = await FirebaseMessaging.instance.getToken();
+  if (token != null) {
+    await notificationRepo.updateTokenInDatabase(token);
+  }
 
-    presenceRef
-        .onDisconnect()
-        .set({'state': 'offline', 'last_changed': ServerValue.timestamp})
-        .then((_) {
-          presenceRef.set({
-            'state': 'online',
-            'last_changed': ServerValue.timestamp,
-          });
-        });
+  // Подписываемся на обновление токена в будущем
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+    await notificationRepo.updateTokenInDatabase(newToken);
   });
 }
 

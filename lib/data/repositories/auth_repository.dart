@@ -27,9 +27,12 @@ class AuthRepository {
   }
 
   // Вход
-  Future<UserCredential> login(String email, String password) {
+  Future<UserCredential> login(String email, String password) async {
     try {
-      return _auth.signInWithEmailAndPassword(email: email, password: password);
+      return await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
     } on FirebaseAuthException catch (_) {
       rethrow;
     }
@@ -60,7 +63,18 @@ class AuthRepository {
   }
 
   // Выход из аккаунта
-  Future<void> logout() => _auth.signOut();
+  Future<void> logout() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid != null) {
+      // Удаляем токен перед выходом
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'fcmToken': FieldValue.delete(),
+      });
+    }
+
+    await _auth.signOut();
+  }
 
   // Вход с помощью яндекса
   Future<UserCredential?> loginWithYandex() async {
