@@ -113,6 +113,38 @@ class NotificationRepository {
     }
   }
 
+  // Метод отправки уведомления об измненение встречи
+  Future<void> sendUpdateMeetingRequest({
+    required String senderId,
+    required String senderPhotoUrl,
+    required String meetingId,
+    required String titleMeeting,
+    required String dateMeeting,
+    required String timeMeeting,
+    required List<String> participantIds,
+    required String senderName,
+  }) async {
+    final url = Uri.parse('$_baseUrl/notifications/update-meeting/$meetingId');
+
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'senderId': senderId,
+        'senderPhotoUrl': senderPhotoUrl,
+        'titleMeeting': titleMeeting,
+        'dateMeeting': dateMeeting,
+        'timeMeeting': timeMeeting,
+        'participantIds': participantIds,
+        'senderName': senderName,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update meeting: ${response.body}');
+    }
+  }
+
   // Стрим для отслеживания уведомлений
   Stream<List<Map<String, dynamic>>> getNotificationsStream(String userId) {
     return _firestore

@@ -2,11 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
+import 'package:strife/presentation/blocs/meetings/meetings_bloc.dart';
+import 'package:strife/presentation/blocs/meetings/meetings_event.dart';
+import 'package:strife/presentation/blocs/meetings/meetings_state.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
@@ -37,7 +39,7 @@ class MeetingsView extends StatelessWidget {
 
             OutlinedButton(
               onPressed: () async {
-                showModalBottomSheet(
+                await showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
@@ -95,7 +97,7 @@ class MeetingsView extends StatelessWidget {
             itemBuilder: (context, index) {
               final meeting = meetings[index];
 
-              return MettingCard(mettingInfo: meeting);
+              return MeetingCard(meetingInfo: meeting);
             },
           );
         },
@@ -104,21 +106,23 @@ class MeetingsView extends StatelessWidget {
   }
 }
 
-class MettingCard extends StatelessWidget {
-  final Map<String, dynamic> mettingInfo;
+class MeetingCard extends StatelessWidget {
+  final Map<String, dynamic> meetingInfo;
 
-  const MettingCard({super.key, required this.mettingInfo});
+  const MeetingCard({super.key, required this.meetingInfo});
 
   @override
   Widget build(BuildContext context) {
-    final title = mettingInfo['titleMeeting'];
+    final creatorId = meetingInfo['senderId'];
 
-    final date = mettingInfo['dateMeeting'];
+    final title = meetingInfo['titleMeeting'];
+
+    final date = meetingInfo['dateMeeting'];
     final DateTime tempDate = DateTime.parse(date);
     final String formattedDate = DateFormat('dd.MM.yyyy').format(tempDate);
 
-    final time = mettingInfo['timeMeeting'];
-    final participants = mettingInfo['participantIds'] as List;
+    final time = meetingInfo['timeMeeting'];
+    final participants = meetingInfo['participantIds'] as List;
 
     return Container(
       // Настройка размеров и отступов карточки
@@ -136,6 +140,7 @@ class MettingCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Название встречи
               Text(
                 title,
                 style: TextStyle(
@@ -145,10 +150,20 @@ class MettingCard extends StatelessWidget {
                 ),
               ),
 
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.mode_edit_outline_outlined),
-              ),
+              // Кнопка редактирования
+              if (creatorId == FirebaseAuth.instance.currentUser!.uid)
+                IconButton(
+                  onPressed: () async {
+                    await showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) =>
+                          NewMeetingSheet(initialMeeting: meetingInfo),
+                    );
+                  },
+                  icon: const Icon(Icons.mode_edit_outline_outlined),
+                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -180,7 +195,7 @@ class MettingCard extends StatelessWidget {
                   builder: (_) =>
                       const Center(child: CircularProgressIndicator()),
                 );
-                final roomId = mettingInfo['roomId'];
+                final roomId = meetingInfo['roomId'];
 
                 // Проверка существует ли комната
                 final exists = await context
@@ -279,7 +294,9 @@ class MettingCard extends StatelessWidget {
 }
 
 class NewMeetingSheet extends StatefulWidget {
-  const NewMeetingSheet({super.key});
+  const NewMeetingSheet({super.key, this.initialMeeting});
+
+  final Map<String, dynamic>? initialMeeting;
 
   @override
   State<NewMeetingSheet> createState() => _NewMeetingSheetState();
@@ -295,131 +312,268 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
   // Выбранная дата встречи
   DateTime? _selectedDate;
 
-  final TextEditingController _textEditingController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _timeController = TextEditingController();
+
+  // Ключ для управления формой
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialMeeting != null) {
+      final meeting = widget.initialMeeting!;
+
+      // Заголовок
+      _titleController.text = meeting['titleMeeting'] ?? '';
+
+      // Дата
+      if (meeting['dateMeeting'] != null) {
+        _selectedDate = DateTime.parse(meeting['dateMeeting']);
+        _dateController.text = DateFormat('dd.MM.yyyy').format(_selectedDate!);
+      }
+
+      //  Время
+      if (meeting['timeMeeting'] != null) {
+        final String timeStr = meeting['timeMeeting'];
+
+        try {
+          // Убираем лишние пробелы и переводим в верхний регистр
+          final cleanTime = timeStr.trim().toUpperCase();
+
+          // Определяем, есть ли там AM/PM
+          bool isPM = cleanTime.contains('PM');
+          bool isAM = cleanTime.contains('AM');
+
+          // Убираем буквы, оставляем только цифры и двоеточие
+          final parts = cleanTime
+              .replaceAll('AM', '')
+              .replaceAll('PM', '')
+              .trim()
+              .split(':');
+
+          if (parts.length == 2) {
+            int hour = int.parse(parts[0]);
+            int minute = int.parse(parts[1]);
+
+            // Корректируем часы для 12-часового формата
+            if (isPM && hour < 12) hour += 12;
+            if (isAM && hour == 12) hour = 0;
+
+            _selectedTime = TimeOfDay(hour: hour, minute: minute);
+
+            _timeController.text = timeStr;
+          }
+        } catch (e) {
+          print("Ошибка парсинга времени: $e");
+        }
+      }
+
+      // Участники
+      final List<dynamic> participantIds = meeting['participantIds'] ?? [];
+      _selectedUserIds.clear();
+
+      // Получаем текущий список всех контактов из BLoC
+      final allContacts = context.read<ContactsBloc>().state.allContacts;
+
+      for (var id in participantIds) {
+        // Ищем контакт в стейте по ID
+        final contact = allContacts.firstWhere(
+          (c) => c['id'] == id,
+          orElse: () => <String, dynamic>{},
+        );
+
+        if (contact.isNotEmpty) {
+          _selectedUserIds[id] = contact['photoUrl'];
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        // Делаем отступ сверху, чтобы модалка не прилипала к краю экрана
-        margin: const EdgeInsets.only(top: 50),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+    final bool isLoading = context.select<MeetingsBloc, bool>(
+      (value) => value.state.isLoading,
+    );
+
+    return BlocListener<MeetingsBloc, MeetingsState>(
+      listener: (context, state) {
+        if (state.error != null) {
+          // Если появилась ошибка — показываем её
+          AppNotifications.showError(context, state.error!);
+        } else if (!state.isLoading) {
+          // Если загрузка завершилась и ошибки нет — значит успех
+          widget.initialMeeting == null
+              ? AppNotifications.showSuccess(context, 'Встреча создана')
+              : AppNotifications.showSuccess(context, 'Встреча обновлена');
+          Navigator.pop(context); // Закрываем шторку только при успехе
+        }
+      },
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Заголовок с крестиком
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Container(
+          // Делаем отступ сверху, чтобы модалка не прилипала к краю экрана
+          margin: const EdgeInsets.only(top: 50),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(width: 30), // Для центровки заголовка
+                  // Заголовок с крестиком
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(width: 30), // Для центровки заголовка
 
-                  const Text(
-                    'Новая встреча',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      const Text(
+                        'Новая встреча',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
                   ),
 
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                  const SizedBox(height: 20),
+
+                  // Поля ввода
+                  _buildInputField(
+                    'Название встречи',
+                    'Планерка команды',
+                    controller: _titleController,
                   ),
-                ],
-              ),
 
-              const SizedBox(height: 20),
+                  _buildParticipantsField(),
 
-              // Поля ввода
-              _buildInputField(
-                'Название встречи',
-                'Планерка команды',
-                textEditingController: _textEditingController,
-              ),
-              _buildParticipantsField(),
-              _buildInputField(
-                'Дата',
-                _selectedDate != null
-                    ? DateFormat('dd.MM.yyyy').format(_selectedDate!)
-                    : 'дд.мм.гггг',
-                icon: Icons.calendar_today_outlined,
-                onTap: () async {
-                  await _pickDate(context);
-                },
-              ),
-              _buildInputField(
-                'Время',
-                _selectedTime != null
-                    ? _selectedTime!.format(context)
-                    : '--:--',
-                icon: Icons.access_time,
-                onTap: () async {
-                  await _pickTime(context);
-                },
-              ),
+                  _buildInputField(
+                    'Дата',
+                    _selectedDate != null
+                        ? DateFormat('dd.MM.yyyy').format(_selectedDate!)
+                        : 'дд.мм.гггг',
+                    icon: Icons.calendar_today_outlined,
+                    onTap: () async {
+                      await _pickDate(context);
+                    },
+                    controller: _dateController,
+                  ),
+                  _buildInputField(
+                    'Время',
+                    _selectedTime != null
+                        ? _selectedTime!.format(context)
+                        : '--:--',
+                    icon: Icons.access_time,
+                    onTap: () async {
+                      await _pickTime(context);
+                    },
+                    controller: _timeController,
+                  ),
 
-              const SizedBox(height: 40),
+                  const SizedBox(height: 40),
 
-              // Кнопка 'Создать встречу'
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: OutlinedButton(
-                  onPressed: () async {
-                    if (_textEditingController.text.isEmpty ||
-                        _selectedDate == null ||
-                        _selectedTime == null) {
-                      return;
-                    }
-                    final user = FirebaseAuth.instance.currentUser!;
+                  // Кнопка 'Создать встречу'
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: OutlinedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              if (_formKey.currentState!.validate()) {
+                                final user = FirebaseAuth.instance.currentUser!;
 
-                    final senderId = user.uid;
-                    final senderName = user.displayName!;
-                    final senderPhotoUrl = user.photoURL!;
-                    final String dateIso = _selectedDate!
-                        .toIso8601String()
-                        .split('T')[0];
-                    final String timeString = _selectedTime!.format(context);
+                                final senderId = user.uid;
+                                final senderName = user.displayName!;
+                                final senderPhotoUrl = user.photoURL!;
 
-                    final roomId = await context
-                        .read<VCSRepository>()
-                        .createRoom();
+                                final String dateIso = _selectedDate!
+                                    .toIso8601String()
+                                    .split('T')[0];
+                                final String timeString = _selectedTime!.format(
+                                  context,
+                                );
 
-                    if (!context.mounted) return;
+                                if (widget.initialMeeting != null) {
+                                  context.read<MeetingsBloc>().add(
+                                    SendUpdateMeetingRequested(
+                                      meetingId: widget.initialMeeting!['id'],
+                                      senderId: senderId,
+                                      participantIds: _selectedUserIds.keys
+                                          .toList(),
+                                      senderName: senderName,
+                                      senderPhotoUrl: senderPhotoUrl,
+                                      titleMeeting: _titleController.text,
+                                      dateMeeting: dateIso,
+                                      timeMeeting: timeString,
+                                    ),
+                                  );
+                                } else {
+                                  final roomId = await context
+                                      .read<VCSRepository>()
+                                      .createRoom();
 
-                    // Отправляем уведомления о том что они приглашены на встречу
-                    await context
-                        .read<NotificationRepository>()
-                        .sendMeetingRequest(
-                          senderId: senderId,
-                          participantIds: _selectedUserIds.keys.toList(),
-                          senderName: senderName,
-                          senderPhotoUrl: senderPhotoUrl,
-                          roomId: roomId,
-                          titleMeeting: _textEditingController.text,
-                          dateMeeting: dateIso,
-                          timeMeeting: timeString,
-                        );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.black),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                                  if (!context.mounted) return;
+
+                                  // Отправляем уведомления о том что они приглашены на встречу
+                                  context.read<MeetingsBloc>().add(
+                                    SendMeetingRequestRequested(
+                                      senderId: senderId,
+                                      participantIds: _selectedUserIds.keys
+                                          .toList(),
+                                      senderName: senderName,
+                                      senderPhotoUrl: senderPhotoUrl,
+                                      roomId: roomId,
+                                      titleMeeting: _titleController.text,
+                                      dateMeeting: dateIso,
+                                      timeMeeting: timeString,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.black),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: isLoading
+                          ? const CircularProgressIndicator()
+                          : widget.initialMeeting == null
+                          ? const Text(
+                              'Создать встречу',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                              ),
+                            )
+                          : const Text(
+                              'Сохранить изменения',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                              ),
+                            ),
                     ),
                   ),
-                  child: const Text(
-                    'Создать встречу',
-                    style: TextStyle(color: Colors.black, fontSize: 16),
-                  ),
-                ),
+                  const SizedBox(height: 20),
+                ],
               ),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
         ),
       ),
@@ -430,7 +584,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime.now(), // Нельзя выбрать дату в прошлом
+      firstDate: DateTime.now(),
       lastDate: DateTime(2101),
       builder: (context, child) {
         return Theme(
@@ -449,6 +603,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
+        _dateController.text = DateFormat('dd.MM.yyyy').format(picked);
       });
     }
   }
@@ -470,6 +625,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     if (timeOfDay != null && timeOfDay != _selectedTime) {
       setState(() {
         _selectedTime = timeOfDay;
+        _timeController.text = _selectedTime!.format(context);
       });
     }
   }
@@ -536,7 +692,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     String hint, {
     IconData? icon,
     VoidCallback? onTap,
-    TextEditingController? textEditingController,
+    TextEditingController? controller,
     Widget? prefix,
   }) {
     return Padding(
@@ -550,8 +706,14 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
           ),
           const SizedBox(height: 8),
 
-          TextField(
-            controller: textEditingController,
+          TextFormField(
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Поле не заполнено';
+              }
+              return null;
+            },
+            controller: controller,
             onTap: onTap,
             readOnly: onTap != null,
             decoration: InputDecoration(
@@ -667,7 +829,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                       // Отображение списка контактов
                       Expanded(
                         child: contacts.isNotEmpty
-                            ? ListView.separated(
+                            ? ListView.builder(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 4.0,
                                 ),
@@ -715,13 +877,6 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                                     ),
                                   );
                                 },
-                                separatorBuilder: (context, index) => Divider(
-                                  endIndent: 8,
-                                  indent: 8,
-                                  thickness: 0.6,
-                                  color: Colors.grey,
-                                  height: 24,
-                                ),
                               )
                             : Center(child: const Text('Список пуст')),
                       ),
