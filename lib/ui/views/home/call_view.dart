@@ -470,7 +470,7 @@ class _NewCallSheetState extends State<NewCallSheet> {
               // Список контактов
               Expanded(
                 child: contacts.isNotEmpty
-                    ? ListView.separated(
+                    ? ListView.builder(
                         itemCount: contacts.length,
                         controller: scrollController,
                         itemBuilder: (context, index) {
@@ -508,13 +508,6 @@ class _NewCallSheetState extends State<NewCallSheet> {
                             ),
                           );
                         },
-                        // Разделитель
-                        separatorBuilder: (context, index) => Divider(
-                          thickness: 0.5,
-                          color: Colors.grey,
-                          endIndent: 10,
-                          indent: 10,
-                        ),
                       )
                     : const Center(child: Text('Список пуст')),
               ),

@@ -228,15 +228,8 @@ class _ContactsViewState extends State<ContactsView> {
                               : 'Список пуст',
                         ),
                       )
-                    : ListView.separated(
+                    : ListView.builder(
                         itemCount: displayedContacts.length,
-                        separatorBuilder: (context, index) => const Divider(
-                          height: 1,
-                          thickness: 0.5,
-                          indent: 75,
-                          endIndent: 16,
-                          color: Colors.black12,
-                        ),
                         itemBuilder: (context, index) => ContactWidget(
                           userData: displayedContacts[index],
                           trailing: _buildDefaultTrailing(

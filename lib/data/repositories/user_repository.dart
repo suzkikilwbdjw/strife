@@ -201,4 +201,23 @@ class UserRepository {
           }).toList(),
         );
   }
+
+  Future<void> updateMeeting(
+    String idMeeting,
+    String titleMeeting,
+    String dateMeeting,
+    String timeMeeting,
+    List<String> participantIds,
+  ) async {
+    try {
+      return await _firestore.collection('meetings').doc(idMeeting).update({
+        titleMeeting: titleMeeting,
+        dateMeeting: dateMeeting,
+        timeMeeting: timeMeeting,
+        participantIds: participantIds,
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

@@ -74,10 +74,9 @@ class NotificationsView extends StatelessWidget {
             return const Center(child: Text('Уведомлений пока нет'));
           }
 
-          return ListView.separated(
+          return ListView.builder(
             padding: const EdgeInsets.all(8),
             itemCount: notes.length,
-            separatorBuilder: (_, _) => const Divider(),
             itemBuilder: (context, index) {
               final note = notes[index];
               final type = note['type'];
@@ -112,6 +111,7 @@ class NotificationsView extends StatelessWidget {
                                 'Отправил запрос на добавление в контакты',
                               'call_request' => 'Звонил вам',
                               'meeting_request' => 'Приглашение на встречу',
+                              'update_meeting_request' => 'Обновление встречи',
                               _ => 'Неизвестное уведомление',
                             },
                             style: const TextStyle(
