@@ -83,103 +83,120 @@ class NotificationsView extends StatelessWidget {
               final senderName = note['senderName'] ?? 'Пользователь';
               final senderId = note['senderId'] ?? 'бебеб';
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Аватарка
-                    CircleAvatar(
-                      radius: 25,
-                      backgroundImage: NetworkImage(note['senderPhotoUrl']),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            senderName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+              return Dismissible(
+                key: Key(note['id']),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  color: Colors.red,
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (direction) {
+                  context.read<NotificationRepository>().removeNotification(
+                    note['id'],
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Аватарка
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundImage: NetworkImage(note['senderPhotoUrl']),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              senderName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
-                          ),
-                          Text(
-                            switch (type) {
-                              'friend_request' =>
-                                'Отправил запрос на добавление в контакты',
-                              'call_request' => 'Звонил вам',
-                              'meeting_request' => 'Приглашение на встречу',
-                              'update_meeting_request' => 'Обновление встречи',
-                              _ => 'Неизвестное уведомление',
-                            },
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
+                            Text(
+                              switch (type) {
+                                'friend_request' =>
+                                  'Отправил запрос на добавление в контакты',
+                                'call_request' => 'Звонил вам',
+                                'meeting_request' => 'Приглашение на встречу',
+                                'update_meeting_request' =>
+                                  'Обновление встречи',
+                                _ => 'Неизвестное уведомление',
+                              },
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                              ),
                             ),
-                          ),
-                          if (type == 'friend_request') ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                _ActionButton(
-                                  label: 'Принять',
-                                  color: Colors.green,
-                                  // Обработка нажатия принять
-                                  onTap: () async {
-                                    try {
-                                      context.read<ContactsBloc>().add(
-                                        AddContactsRequested(
-                                          currentUserId: FirebaseAuth
-                                              .instance
-                                              .currentUser!
-                                              .uid,
-                                          contactId: senderId,
-                                        ),
-                                      );
+                            if (type == 'friend_request') ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  _ActionButton(
+                                    label: 'Принять',
+                                    color: Colors.green,
+                                    // Обработка нажатия принять
+                                    onTap: () async {
+                                      try {
+                                        context.read<ContactsBloc>().add(
+                                          AddContactsRequested(
+                                            currentUserId: FirebaseAuth
+                                                .instance
+                                                .currentUser!
+                                                .uid,
+                                            contactId: senderId,
+                                          ),
+                                        );
 
+                                        context
+                                            .read<NotificationRepository>()
+                                            .removeNotification(note['id']);
+
+                                        if (context.mounted) {
+                                          AppNotifications.showSuccess(
+                                            context,
+                                            'Контакт добавлен!',
+                                          );
+                                        }
+                                      } on FirebaseException catch (e) {
+                                        AppNotifications.showError(
+                                          context,
+                                          e.message!,
+                                        );
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _ActionButton(
+                                    label: 'Отклонить',
+                                    color: Colors.red,
+                                    // Обработка нажатия отклонить
+                                    onTap: () {
                                       context
                                           .read<NotificationRepository>()
                                           .removeNotification(note['id']);
-
-                                      if (context.mounted) {
-                                        AppNotifications.showSuccess(
-                                          context,
-                                          'Контакт добавлен!',
-                                        );
-                                      }
-                                    } on FirebaseException catch (e) {
-                                      AppNotifications.showError(
-                                        context,
-                                        e.message!,
-                                      );
-                                    }
-                                  },
-                                ),
-                                const SizedBox(width: 8),
-                                _ActionButton(
-                                  label: 'Отклонить',
-                                  color: Colors.red,
-                                  // Обработка нажатия отклонить
-                                  onTap: () {
-                                    context
-                                        .read<NotificationRepository>()
-                                        .removeNotification(note['id']);
-                                  },
-                                ),
-                              ],
-                            ),
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    // Дата
-                    Text(
-                      formatTimestamp(note['timestamp']),
-                      style: TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
-                  ],
+
+                      // Дата
+                      Text(
+                        formatTimestamp(note['timestamp']),
+                        style: TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
