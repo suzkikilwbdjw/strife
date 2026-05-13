@@ -9,7 +9,6 @@ import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
-import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/chat/chat_screen.dart';
 import 'package:strife/ui/views/room/participants_view.dart';
 
@@ -732,7 +731,13 @@ class ParticipantTile extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             gradient: !hasVideo
-                ? Theme.of(context).extension<GradientTheme>()!.mainGradient
+                ? LinearGradient(
+                    colors: <Color>[
+                      Color(0xFFFF4D8D),
+                      Color(0xFFBD3EC2),
+                      Color(0xFF2E0B7F),
+                    ],
+                  )
                 : LinearGradient(
                     colors: const <Color>[Colors.black, Colors.black],
                   ),
