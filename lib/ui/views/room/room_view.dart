@@ -585,7 +585,10 @@ class PinnedParticipantView extends StatelessWidget {
               itemBuilder: (context, index) {
                 return SizedBox(
                   width: 180,
-                  child: ParticipantTile(participant: others[index]!),
+                  child: ParticipantTile(
+                    participant: others[index]!,
+                    isCompact: true,
+                  ),
                 );
               },
             ),
@@ -623,7 +626,10 @@ class ActiveSpeakerView extends StatelessWidget {
               itemBuilder: (context, index) {
                 return SizedBox(
                   width: 180,
-                  child: ParticipantTile(participant: others[index]!),
+                  child: ParticipantTile(
+                    participant: others[index]!,
+                    isCompact: true,
+                  ),
                 );
               },
             ),
@@ -691,9 +697,14 @@ class OneParticipantView extends StatelessWidget {
 }
 
 class ParticipantTile extends StatelessWidget {
-  const ParticipantTile({super.key, required this.participant});
+  const ParticipantTile({
+    super.key,
+    required this.participant,
+    this.isCompact = false,
+  });
 
   final Participant participant;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
@@ -723,6 +734,7 @@ class ParticipantTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Container(
+          // Заливка
           decoration: BoxDecoration(
             gradient: !hasVideo
                 ? LinearGradient(
@@ -746,21 +758,31 @@ class ParticipantTile extends StatelessWidget {
             borderRadius: BorderRadiusGeometry.all(Radius.circular(20)),
             child: Stack(
               children: [
+                // Отображение фотки участника, если нету видео
                 if (!hasVideo)
-                  UserPhoto(participant: participant)
+                  UserPhoto(participant: participant, isCompact: isCompact)
                 else
                   VideoParticipant(participant: participant),
 
+                // Отображение закрепа при закрепе
                 if (isPinned)
                   Positioned(
-                    top: 6,
-                    right: 6,
+                    top: 4,
+                    right: 8,
                     child: Icon(Icons.push_pin, color: Colors.deepPurpleAccent),
                   ),
 
-                BottomStatusBarLeft(participant: participant),
+                // Статус бар с именем
+                BottomStatusBarName(
+                  participant: participant,
+                  isCompact: isCompact,
+                ),
 
-                BottomStatusBarRight(participant: participant),
+                // Статус бар с качеством соединения
+                BottomStatusBarQualityConnection(participant: participant),
+
+                // Статус бар со статусом вкл/выкл камеры и мирко
+                BottomStatusBarCameraAndMicrophone(participant: participant),
               ],
             ),
           ),
@@ -771,9 +793,14 @@ class ParticipantTile extends StatelessWidget {
 }
 
 class UserPhoto extends StatelessWidget {
-  const UserPhoto({super.key, required this.participant});
+  const UserPhoto({
+    super.key,
+    required this.participant,
+    this.isCompact = false,
+  });
 
   final Participant participant;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
@@ -788,7 +815,7 @@ class UserPhoto extends StatelessWidget {
     return Positioned(
       child: Center(
         child: CircleAvatar(
-          radius: 40,
+          radius: isCompact ? 25 : 40,
           backgroundImage: NetworkImage(photoUrl),
         ),
       ),
@@ -821,11 +848,49 @@ class VideoParticipant extends StatelessWidget {
   }
 }
 
-class BottomStatusBarLeft extends StatelessWidget {
-  const BottomStatusBarLeft({super.key, required this.participant});
+class BottomStatusBarName extends StatelessWidget {
+  const BottomStatusBarName({
+    super.key,
+    required this.participant,
+    this.isCompact = false,
+  });
 
   final Participant participant;
+  final bool isCompact;
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 4,
+      left: 4,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+        ),
+        padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+        child: Row(
+          spacing: 4,
+          children: [
+            Text(
+              participant.name,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isCompact ? 10.0 : 14.0,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
+class BottomStatusBarCameraAndMicrophone extends StatelessWidget {
+  const BottomStatusBarCameraAndMicrophone({
+    super.key,
+    required this.participant,
+  });
+  final Participant participant;
   @override
   Widget build(BuildContext context) {
     final hasVideo = context.select<VCSBloc, bool>(
@@ -837,27 +902,26 @@ class BottomStatusBarLeft extends StatelessWidget {
     );
 
     return Positioned(
-      bottom: 4,
-      left: 8,
+      top: 4,
+      left: 4,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.black,
           borderRadius: BorderRadius.all(Radius.circular(20)),
         ),
-        padding: EdgeInsets.only(left: 4, top: 3, bottom: 3, right: 4),
+        padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
         child: Row(
           spacing: 4,
           children: [
-            Text(participant.name, style: TextStyle(color: Colors.white)),
             Icon(
               hasVideo ? Icons.videocam_outlined : Icons.videocam_off_outlined,
               color: Colors.white,
-              size: 20,
+              size: 16,
             ),
             Icon(
               hasAudio ? Icons.mic_none_outlined : Icons.mic_off_outlined,
               color: Colors.white,
-              size: 20,
+              size: 16,
             ),
           ],
         ),
@@ -866,8 +930,11 @@ class BottomStatusBarLeft extends StatelessWidget {
   }
 }
 
-class BottomStatusBarRight extends StatelessWidget {
-  const BottomStatusBarRight({super.key, required this.participant});
+class BottomStatusBarQualityConnection extends StatelessWidget {
+  const BottomStatusBarQualityConnection({
+    super.key,
+    required this.participant,
+  });
   final Participant participant;
 
   @override
@@ -878,7 +945,7 @@ class BottomStatusBarRight extends StatelessWidget {
 
     return Positioned(
       bottom: 4,
-      right: 6,
+      right: 8,
       child: Icon(
         switch (connectionQuality) {
           ConnectionQuality.excellent => Icons.signal_cellular_alt_rounded,
