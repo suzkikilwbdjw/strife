@@ -11,7 +11,7 @@ import 'vcs_state.dart';
 class VCSBloc extends Bloc<VCSEvent, VCSState> {
   final VCSRepository _repository;
 
-  late final String roomId;
+  String? roomId;
 
   Room? _room;
   EventsListener<RoomEvent>? _listener;
@@ -38,6 +38,9 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     on<TransferHostRequested>(_onTransferHost);
     on<KickedFromRoomRequested>(_onKickedFromRoom);
     on<SyncHardwareStatus>(_onSyncHardwareStatus);
+    on<ToggleMinimizeRoomRequested>((event, emit) {
+      emit(state.copyWith(isMinimized: event.minimize));
+    });
 
     // Внутренние
     on<RoomDataChanged>((event, emit) {
@@ -157,6 +160,12 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     try {
+      if (_room != null) {
+        await _listener?.dispose();
+        await _room!.disconnect();
+        await _room!.dispose();
+      }
+
       // Создаем экземпляр комнаты
       _room = Room(
         roomOptions: const RoomOptions(adaptiveStream: true, dynacast: true),
@@ -178,7 +187,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
       add(RoomDataChanged());
       emit(state.copyWith(isConnected: true));
 
-      roomId = _room!.name!;
+      roomId = _room!.name;
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -189,9 +198,20 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     try {
-      await _room!.disconnect();
+      await _listener?.dispose();
+      _listener = null;
+
+      if (_room != null) {
+        await _room!.disconnect();
+        await _room!.dispose();
+        _room = null;
+      }
+    } catch (_) {
+    } finally {
+      roomId = null;
+
       emit(const VCSState());
-    } catch (_) {}
+    }
   }
 
   Future<void> _onToggleMicrophone(
@@ -441,8 +461,8 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
 
   @override
   Future<void> close() async {
-    await _listener!.dispose();
-    await _room!.dispose();
+    await _listener?.dispose();
+    await _room?.dispose();
     return super.close();
   }
 }

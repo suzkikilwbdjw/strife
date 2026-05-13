@@ -1,6 +1,8 @@
+enum ContactStatus { initial, loading, inviteSuccess, failure }
+
 class ContactsState {
   final bool isSubmitted;
-  final bool isLoading;
+  final ContactStatus status;
   final String? error;
 
   // Контакты
@@ -11,7 +13,7 @@ class ContactsState {
   final String searchQuery;
 
   const ContactsState({
-    this.isLoading = false,
+    this.status = ContactStatus.initial,
     this.isSubmitted = false,
     this.allContacts = const [],
     this.filteredContacts = const [],
@@ -20,7 +22,7 @@ class ContactsState {
   });
 
   ContactsState copyWith({
-    bool? isLoading,
+    ContactStatus? status,
     bool? isSubmitted,
     List<Map<String, dynamic>>? allContacts,
     List<Map<String, dynamic>>? filteredContacts,
@@ -28,7 +30,7 @@ class ContactsState {
     String? error,
   }) {
     return ContactsState(
-      isLoading: isLoading ?? this.isLoading,
+      status: status ?? this.status,
       isSubmitted: isSubmitted ?? this.isSubmitted,
       allContacts: allContacts ?? this.allContacts,
       filteredContacts: filteredContacts ?? this.filteredContacts,

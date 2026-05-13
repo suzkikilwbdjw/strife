@@ -18,6 +18,7 @@ import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/meetings/meetings_bloc.dart';
+import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/data/repositories/auth_repository.dart';
 import 'package:strife/ui/view_models/auth_view_model.dart';
@@ -74,6 +75,9 @@ Future<void> main() async {
           BlocProvider(
             create: (context) =>
                 MeetingsBloc(context.read<NotificationRepository>()),
+          ),
+          BlocProvider(
+            create: (context) => VCSBloc(context.read<VCSRepository>()),
           ),
         ],
         child: const MyApp(),

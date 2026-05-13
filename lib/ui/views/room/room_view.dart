@@ -9,9 +9,9 @@ import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
-import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/chat/chat_screen.dart';
 import 'package:strife/ui/views/room/participants_view.dart';
+import 'package:strife/ui/widgets/app_notifications.dart';
 
 class RoomView extends StatelessWidget {
   const RoomView({super.key});
@@ -22,21 +22,19 @@ class RoomView extends StatelessWidget {
 
     return MultiBlocListener(
       listeners: [
-        // СЛУШАТЕЛЬ ПОДКЛЮЧЕНИЯ
+        // Слушатель подключения
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) =>
               p.isConnected != c.isConnected || p.error != c.error,
           listener: (context, state) {
             if (state.error != null) {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.error!)));
+              AppNotifications.showError(context, state.error!);
             }
           },
         ),
 
-        // СЛУШАТЕЛЬ ПЕРЕПОДКЛЮЧЕНИЯ
+        // Слушатель переподключения
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) => p.isReconnecting != c.isReconnecting,
           listener: (context, state) {
@@ -67,27 +65,28 @@ class RoomView extends StatelessWidget {
           },
         ),
 
-        // СЛУШАТЕЛЬ КИКА
+        // Слушатель кика
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) => p.wasKicked != c.wasKicked,
           listener: (context, state) {
             if (state.wasKicked) {
               Navigator.of(context).popUntil((route) => route.isFirst);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Вы были удалены из комнаты')),
-              );
+              AppNotifications.showInfo(context, 'Вы были удалены из комнаты');
             }
           },
         ),
 
-        // СЛУШАТЕЛЬ МИКРОФОНА
+        // Слушатель микрофона
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) {
+            if (c.isReconnecting || p.isReconnecting) return false;
+
             final sid = _getSid(c, uid);
-
             if (sid == null) return false;
-
             if (!_hasParticipant(p, uid)) return false;
+
+            final hadOldValue = p.mutedMicrophoneByHostSids.containsKey(sid);
+            if (!hadOldValue) return false;
 
             return p.mutedMicrophoneByHostSids[sid] !=
                 c.mutedMicrophoneByHostSids[sid];
@@ -97,14 +96,11 @@ class RoomView extends StatelessWidget {
             final isMuted = state.mutedMicrophoneByHostSids[sid];
             if (isMuted == null) return;
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  isMuted
-                      ? 'Модератор отключил ваш микрофон'
-                      : 'Модератор разрешил доступ к микрофону',
-                ),
-              ),
+            AppNotifications.showInfo(
+              context,
+              isMuted
+                  ? 'Модератор отключил ваш микрофон'
+                  : 'Модератор разрешил доступ к микрофону',
             );
 
             context.read<VCSBloc>().add(
@@ -116,9 +112,14 @@ class RoomView extends StatelessWidget {
         // СЛУШАТЕЛЬ КАМЕРЫ
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) {
+            if (c.isReconnecting || p.isReconnecting) return false;
+
             final sid = _getSid(c, uid);
             if (sid == null) return false;
             if (!_hasParticipant(p, uid)) return false;
+
+            final hadOldValue = p.mutedCameraByHostSids.containsKey(sid);
+            if (!hadOldValue) return false;
 
             return p.mutedCameraByHostSids[sid] != c.mutedCameraByHostSids[sid];
           },
@@ -128,17 +129,12 @@ class RoomView extends StatelessWidget {
             final isMuted = state.mutedCameraByHostSids[sid];
 
             if (isMuted == null) return;
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  isMuted
-                      ? 'Модератор отключил вашу камеру'
-                      : 'Модератор разрешил доступ к камере',
-                ),
-              ),
+            AppNotifications.showInfo(
+              context,
+              isMuted
+                  ? 'Модератор отключил вашу камеру'
+                  : 'Модератор разрешил доступ к камере',
             );
-
             context.read<VCSBloc>().add(
               SyncHardwareStatus(isCamEnabled: false),
             );
@@ -146,53 +142,45 @@ class RoomView extends StatelessWidget {
         ),
       ],
 
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.black,
-          automaticallyImplyLeading: false,
-        ),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          // При попытке выйти назад
+          if (didPop) return;
 
-        bottomNavigationBar: BlocBuilder<VCSBloc, VCSState>(
-          builder: (context, state) {
-            if (!state.isConnected) return const SizedBox.shrink();
-            return const NavigationBottomAppBar();
-          },
-        ),
+          context.read<VCSBloc>().add(
+            ToggleMinimizeRoomRequested(minimize: true),
+          );
 
-        body: Stack(
-          children: [
-            // Основной контент
-            Container(
-              decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 20, 40, 153),
-              ),
-              child: const SafeArea(child: ParticipantLayout()),
-            ),
+          // Закрываем страницу звонка
+          Navigator.of(context).pop();
+        },
 
-            // Overlay загрузки
-            BlocBuilder<VCSBloc, VCSState>(
-              builder: (context, state) {
-                if (state.isConnected) return const SizedBox.shrink();
-
-                return Container(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  child: const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(color: Colors.white),
-                        SizedBox(height: 16),
-                        Text(
-                          'Подключение...',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
+        child: Scaffold(
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            automaticallyImplyLeading: false,
+            leading: IconButton(
+              onPressed: () {
+                context.read<VCSBloc>().add(
+                  ToggleMinimizeRoomRequested(minimize: true),
                 );
+
+                // Закрываем страницу звонка
+                Navigator.of(context).pop();
               },
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
             ),
-          ],
+          ),
+
+          bottomNavigationBar: BlocBuilder<VCSBloc, VCSState>(
+            builder: (context, state) {
+              if (!state.isConnected) return const SizedBox.shrink();
+              return const NavigationBottomAppBar();
+            },
+          ),
+
+          body: const FullVideoCallView(),
         ),
       ),
     );
@@ -210,6 +198,49 @@ class RoomView extends StatelessWidget {
   // Вспомогательный медот для проверки был ли участник
   bool _hasParticipant(VCSState state, String? uid) {
     return state.participants.any((p) => p.identity == uid);
+  }
+}
+
+class FullVideoCallView extends StatelessWidget {
+  const FullVideoCallView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Основной контент
+        Container(
+          decoration: const BoxDecoration(
+            color: Color.fromARGB(255, 20, 40, 153),
+          ),
+          child: const SafeArea(child: ParticipantLayout()),
+        ),
+
+        // Overlay загрузки
+        BlocBuilder<VCSBloc, VCSState>(
+          builder: (context, state) {
+            if (state.isConnected) return const SizedBox.shrink();
+
+            return Container(
+              color: Colors.black.withValues(alpha: 0.7),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text(
+                      'Подключение...',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
   }
 }
 
@@ -402,7 +433,7 @@ class NavigationBottomAppBar extends StatelessWidget {
                           create: (context) => ChatBloc(
                             chatRepository: context.read<ChatRepository>(),
                             userRepository: context.read<UserRepository>(),
-                          )..add(InitChat(bloc.roomId)),
+                          )..add(InitChat(bloc.roomId!)),
                           child: DraggableScrollableSheet(
                             initialChildSize: 0.75,
                             maxChildSize: 0.75,
@@ -412,18 +443,14 @@ class NavigationBottomAppBar extends StatelessWidget {
                               decoration: const BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(20),
+                                  top: Radius.circular(30),
                                 ),
                               ),
                               child: ChatScreen(
                                 controller: scrollController,
-                                chatId: bloc.roomId,
-                                currentUserId: bloc.state.participants
-                                    .firstWhere(
-                                      (participant) =>
-                                          participant is LocalParticipant,
-                                    )
-                                    .identity,
+                                chatId: bloc.roomId!,
+                                currentUserId:
+                                    FirebaseAuth.instance.currentUser!.uid,
                               ),
                             ),
                           ),
@@ -447,15 +474,16 @@ class NavigationBottomAppBar extends StatelessWidget {
                         builder: (context) => BlocProvider.value(
                           value: bloc,
                           child: DraggableScrollableSheet(
-                            initialChildSize: 0.75,
+                            initialChildSize: 0.6,
                             maxChildSize: 0.75,
+                            minChildSize: 0.4,
                             expand: false,
                             builder: (context, controller) => Container(
                               clipBehavior: Clip.antiAlias,
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(20),
+                                  top: Radius.circular(30),
                                 ),
                               ),
                               child: ParticipantsView(
@@ -592,7 +620,10 @@ class PinnedParticipantView extends StatelessWidget {
               itemBuilder: (context, index) {
                 return SizedBox(
                   width: 180,
-                  child: ParticipantTile(participant: others[index]!),
+                  child: ParticipantTile(
+                    participant: others[index]!,
+                    isCompact: true,
+                  ),
                 );
               },
             ),
@@ -630,7 +661,10 @@ class ActiveSpeakerView extends StatelessWidget {
               itemBuilder: (context, index) {
                 return SizedBox(
                   width: 180,
-                  child: ParticipantTile(participant: others[index]!),
+                  child: ParticipantTile(
+                    participant: others[index]!,
+                    isCompact: true,
+                  ),
                 );
               },
             ),
@@ -698,9 +732,14 @@ class OneParticipantView extends StatelessWidget {
 }
 
 class ParticipantTile extends StatelessWidget {
-  const ParticipantTile({super.key, required this.participant});
+  const ParticipantTile({
+    super.key,
+    required this.participant,
+    this.isCompact = false,
+  });
 
   final Participant participant;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
@@ -730,9 +769,17 @@ class ParticipantTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Container(
+          // Заливка
           decoration: BoxDecoration(
             gradient: !hasVideo
-                ? Theme.of(context).extension<GradientTheme>()!.mainGradient
+                ? LinearGradient(
+                    colors: <Color>[
+                      Color(0xFFFF4D8D),
+                      Color(0xFFBD3EC2),
+                      Color(0xFF2E0B7F),
+                    ],
+                    transform: GradientRotation(0.7),
+                  )
                 : LinearGradient(
                     colors: const <Color>[Colors.black, Colors.black],
                   ),
@@ -747,21 +794,31 @@ class ParticipantTile extends StatelessWidget {
             borderRadius: BorderRadiusGeometry.all(Radius.circular(20)),
             child: Stack(
               children: [
+                // Отображение фотки участника, если нету видео
                 if (!hasVideo)
-                  UserPhoto(participant: participant)
+                  UserPhoto(participant: participant, isCompact: isCompact)
                 else
                   VideoParticipant(participant: participant),
 
+                // Отображение закрепа при закрепе
                 if (isPinned)
-                  Positioned(
-                    top: 6,
-                    right: 6,
+                  const Positioned(
+                    top: 4,
+                    right: 8,
                     child: Icon(Icons.push_pin, color: Colors.deepPurpleAccent),
                   ),
 
-                BottomStatusBarLeft(participant: participant),
+                // Статус бар с именем
+                BottomStatusBarName(
+                  participant: participant,
+                  isCompact: isCompact,
+                ),
 
-                BottomStatusBarRight(participant: participant),
+                // Статус бар с качеством соединения
+                BottomStatusBarQualityConnection(participant: participant),
+
+                // Статус бар со статусом вкл/выкл камеры и мирко
+                BottomStatusBarCameraAndMicrophone(participant: participant),
               ],
             ),
           ),
@@ -772,9 +829,14 @@ class ParticipantTile extends StatelessWidget {
 }
 
 class UserPhoto extends StatelessWidget {
-  const UserPhoto({super.key, required this.participant});
+  const UserPhoto({
+    super.key,
+    required this.participant,
+    this.isCompact = false,
+  });
 
   final Participant participant;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
@@ -789,7 +851,7 @@ class UserPhoto extends StatelessWidget {
     return Positioned(
       child: Center(
         child: CircleAvatar(
-          radius: 40,
+          radius: isCompact ? 25 : 40,
           backgroundImage: NetworkImage(photoUrl),
         ),
       ),
@@ -812,7 +874,6 @@ class VideoParticipant extends StatelessWidget {
     }
 
     return AbsorbPointer(
-      absorbing: true,
       child: VideoTrackRenderer(
         track,
         mirrorMode: VideoViewMirrorMode.auto,
@@ -822,11 +883,49 @@ class VideoParticipant extends StatelessWidget {
   }
 }
 
-class BottomStatusBarLeft extends StatelessWidget {
-  const BottomStatusBarLeft({super.key, required this.participant});
+class BottomStatusBarName extends StatelessWidget {
+  const BottomStatusBarName({
+    super.key,
+    required this.participant,
+    this.isCompact = false,
+  });
 
   final Participant participant;
+  final bool isCompact;
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 4,
+      left: 4,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+        ),
+        padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+        child: Row(
+          spacing: 4,
+          children: [
+            Text(
+              participant.name,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isCompact ? 10.0 : 14.0,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
+class BottomStatusBarCameraAndMicrophone extends StatelessWidget {
+  const BottomStatusBarCameraAndMicrophone({
+    super.key,
+    required this.participant,
+  });
+  final Participant participant;
   @override
   Widget build(BuildContext context) {
     final hasVideo = context.select<VCSBloc, bool>(
@@ -838,27 +937,26 @@ class BottomStatusBarLeft extends StatelessWidget {
     );
 
     return Positioned(
-      bottom: 4,
-      left: 8,
+      top: 4,
+      left: 4,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.black,
           borderRadius: BorderRadius.all(Radius.circular(20)),
         ),
-        padding: EdgeInsets.only(left: 4, top: 3, bottom: 3, right: 4),
+        padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
         child: Row(
           spacing: 4,
           children: [
-            Text(participant.name, style: TextStyle(color: Colors.white)),
             Icon(
               hasVideo ? Icons.videocam_outlined : Icons.videocam_off_outlined,
               color: Colors.white,
-              size: 20,
+              size: 16,
             ),
             Icon(
               hasAudio ? Icons.mic_none_outlined : Icons.mic_off_outlined,
               color: Colors.white,
-              size: 20,
+              size: 16,
             ),
           ],
         ),
@@ -867,8 +965,11 @@ class BottomStatusBarLeft extends StatelessWidget {
   }
 }
 
-class BottomStatusBarRight extends StatelessWidget {
-  const BottomStatusBarRight({super.key, required this.participant});
+class BottomStatusBarQualityConnection extends StatelessWidget {
+  const BottomStatusBarQualityConnection({
+    super.key,
+    required this.participant,
+  });
   final Participant participant;
 
   @override
@@ -879,7 +980,7 @@ class BottomStatusBarRight extends StatelessWidget {
 
     return Positioned(
       bottom: 4,
-      right: 6,
+      right: 8,
       child: Icon(
         switch (connectionQuality) {
           ConnectionQuality.excellent => Icons.signal_cellular_alt_rounded,
