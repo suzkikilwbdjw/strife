@@ -25,6 +25,33 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     on<SearchContactsRequested>(_onSearchContacts);
     on<ToggleFavoriteRequested>(_toggleFavorite);
     on<SendFriendRequestRequested>(_sendFriendRequest);
+    on<SendCallRequestRequested>(_sendCallRequest);
+    on<ResetContactsStatusRequested>((event, emit) {
+      emit(state.copyWith(status: ContactStatus.initial, error: null));
+    });
+  }
+
+  Future<void> _sendCallRequest(
+    SendCallRequestRequested event,
+    Emitter<ContactsState> emit,
+  ) async {
+    // Очищаем предыдущую ошибку и ставим загрузку
+    emit(state.copyWith(status: ContactStatus.loading, error: null));
+
+    try {
+      await _notificationRepository.sendCallRequest(
+        senderId: event.senderId,
+        recipientId: event.recipientId,
+        senderName: event.senderName,
+        senderPhotoUrl: event.senderPhotoUrl,
+        roomId: event.roomId,
+      );
+
+      // Эмитим успех
+      emit(state.copyWith(status: ContactStatus.inviteSuccess));
+    } catch (e) {
+      emit(state.copyWith(status: ContactStatus.failure, error: e.toString()));
+    }
   }
 
   Future<void> _sendFriendRequest(
@@ -32,7 +59,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     Emitter<ContactsState> emit,
   ) async {
     // Очищаем предыдущую ошибку и ставим загрузку
-    emit(state.copyWith(isLoading: true, error: null));
+    emit(state.copyWith(status: ContactStatus.loading, error: null));
 
     try {
       await _notificationRepository.sendFriendRequest(
@@ -41,11 +68,12 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
         senderName: event.senderName,
         senderPhotoUrl: event.senderPhotoUrl,
       );
-      emit(state.copyWith(isLoading: false));
+      // Эмитим успех
+      emit(state.copyWith(status: ContactStatus.inviteSuccess));
     } catch (e) {
       emit(
         state.copyWith(
-          isLoading: false,
+          status: ContactStatus.failure,
           error: e.toString().replaceAll('Exception: ', ''),
         ),
       );

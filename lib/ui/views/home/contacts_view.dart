@@ -338,19 +338,20 @@ class AddContactSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isLoading = context.select<ContactsBloc, bool>(
-      (value) => value.state.isLoading,
+      (bloc) => bloc.state.status == ContactStatus.loading,
     );
 
     return BlocListener<ContactsBloc, ContactsState>(
       // Слушаем изменения состояния
       listener: (context, state) {
-        if (state.error != null) {
-          // Если появилась ошибка — показываем её
-          AppNotifications.showError(context, state.error!);
-        } else if (!state.isLoading) {
-          // Если загрузка завершилась и ошибки нет — значит успех
+        if (state.status == ContactStatus.failure) {
+          AppNotifications.showError(context, state.error ?? 'Ошибка');
+        } else if (state.status == ContactStatus.inviteSuccess) {
           AppNotifications.showSuccess(context, 'Запрос отправлен');
-          Navigator.pop(context); // Закрываем шторку только при успехе
+
+          context.read<ContactsBloc>().add(ResetContactsStatusRequested());
+
+          Navigator.pop(context);
         }
       },
       child: Padding(

@@ -1,5 +1,7 @@
 abstract class ContactsEvent {}
 
+class ResetContactsStatusRequested extends ContactsEvent {}
+
 // Событие для отправки запроса в контакты
 class SendFriendRequestRequested extends ContactsEvent {
   final String senderId;
@@ -12,6 +14,23 @@ class SendFriendRequestRequested extends ContactsEvent {
     required this.recipientEmail,
     required this.senderName,
     required this.senderPhotoUrl,
+  });
+}
+
+// Событие для отправки уведомления контаку о приглашении его в звонок
+class SendCallRequestRequested extends ContactsEvent {
+  final String senderId;
+  final String recipientId;
+  final String senderName;
+  final String senderPhotoUrl;
+  final String roomId;
+
+  SendCallRequestRequested({
+    required this.senderId,
+    required this.recipientId,
+    required this.senderName,
+    required this.senderPhotoUrl,
+    required this.roomId,
   });
 }
 

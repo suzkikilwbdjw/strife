@@ -11,6 +11,7 @@ import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
 import 'package:strife/ui/views/chat/chat_screen.dart';
 import 'package:strife/ui/views/room/participants_view.dart';
+import 'package:strife/ui/widgets/app_notifications.dart';
 
 class RoomView extends StatelessWidget {
   const RoomView({super.key});
@@ -21,21 +22,19 @@ class RoomView extends StatelessWidget {
 
     return MultiBlocListener(
       listeners: [
-        // СЛУШАТЕЛЬ ПОДКЛЮЧЕНИЯ
+        // Слушатель подключения
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) =>
               p.isConnected != c.isConnected || p.error != c.error,
           listener: (context, state) {
             if (state.error != null) {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.error!)));
+              AppNotifications.showError(context, state.error!);
             }
           },
         ),
 
-        // СЛУШАТЕЛЬ ПЕРЕПОДКЛЮЧЕНИЯ
+        // Слушатель переподключения
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) => p.isReconnecting != c.isReconnecting,
           listener: (context, state) {
@@ -66,20 +65,18 @@ class RoomView extends StatelessWidget {
           },
         ),
 
-        // СЛУШАТЕЛЬ КИКА
+        // Слушатель кика
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) => p.wasKicked != c.wasKicked,
           listener: (context, state) {
             if (state.wasKicked) {
               Navigator.of(context).popUntil((route) => route.isFirst);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Вы были удалены из комнаты')),
-              );
+              AppNotifications.showInfo(context, 'Вы были удалены из комнаты');
             }
           },
         ),
 
-        // СЛУШАТЕЛЬ МИКРОФОНА
+        // Слушатель микрофона
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) {
             final sid = _getSid(c, uid);
@@ -96,14 +93,11 @@ class RoomView extends StatelessWidget {
             final isMuted = state.mutedMicrophoneByHostSids[sid];
             if (isMuted == null) return;
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  isMuted
-                      ? 'Модератор отключил ваш микрофон'
-                      : 'Модератор разрешил доступ к микрофону',
-                ),
-              ),
+            AppNotifications.showInfo(
+              context,
+              isMuted
+                  ? 'Модератор отключил ваш микрофон'
+                  : 'Модератор разрешил доступ к микрофону',
             );
 
             context.read<VCSBloc>().add(
@@ -127,17 +121,12 @@ class RoomView extends StatelessWidget {
             final isMuted = state.mutedCameraByHostSids[sid];
 
             if (isMuted == null) return;
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  isMuted
-                      ? 'Модератор отключил вашу камеру'
-                      : 'Модератор разрешил доступ к камере',
-                ),
-              ),
+            AppNotifications.showInfo(
+              context,
+              isMuted
+                  ? 'Модератор отключил вашу камеру'
+                  : 'Модератор разрешил доступ к камере',
             );
-
             context.read<VCSBloc>().add(
               SyncHardwareStatus(isCamEnabled: false),
             );
@@ -411,18 +400,14 @@ class NavigationBottomAppBar extends StatelessWidget {
                               decoration: const BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(20),
+                                  top: Radius.circular(30),
                                 ),
                               ),
                               child: ChatScreen(
                                 controller: scrollController,
                                 chatId: bloc.roomId,
-                                currentUserId: bloc.state.participants
-                                    .firstWhere(
-                                      (participant) =>
-                                          participant is LocalParticipant,
-                                    )
-                                    .identity,
+                                currentUserId:
+                                    FirebaseAuth.instance.currentUser!.uid,
                               ),
                             ),
                           ),
@@ -446,15 +431,16 @@ class NavigationBottomAppBar extends StatelessWidget {
                         builder: (context) => BlocProvider.value(
                           value: bloc,
                           child: DraggableScrollableSheet(
-                            initialChildSize: 0.75,
+                            initialChildSize: 0.6,
                             maxChildSize: 0.75,
+                            minChildSize: 0.4,
                             expand: false,
                             builder: (context, controller) => Container(
                               clipBehavior: Clip.antiAlias,
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(20),
+                                  top: Radius.circular(30),
                                 ),
                               ),
                               child: ParticipantsView(
