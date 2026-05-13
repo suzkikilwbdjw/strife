@@ -261,10 +261,9 @@ class NewChatSheet extends StatelessWidget {
 
                 // Список контактов
                 Expanded(
-                  child: ListView.separated(
+                  child: ListView.builder(
                     controller: scrollController,
                     itemCount: contacts.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final contact = contacts[index];
                       return ContactWidget(
