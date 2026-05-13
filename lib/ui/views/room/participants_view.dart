@@ -84,7 +84,7 @@ class ParticipantsView extends StatelessWidget {
                   isScrollControlled: true,
                   builder: (context) => InviteContactSheet(
                     user: FirebaseAuth.instance.currentUser!,
-                    roomId: roomId,
+                    roomId: roomId!,
                   ),
                 );
               },

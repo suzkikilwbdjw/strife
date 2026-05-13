@@ -555,18 +555,26 @@ class _NewCallSheetState extends State<NewCallSheet> {
                     Navigator.of(context).pop();
 
                     if (roomId.isNotEmpty) {
+                      //  Получаем Блок
+                      final vcsBloc = context.read<VCSBloc>();
+
+                      // Запускаем подключение к LiveKit
+                      vcsBloc.add(
+                        ConnectRequested(
+                          roomName: roomId,
+                          identity: widget.user.uid,
+                          name: widget.user.displayName!,
+                          photoUrl: widget.user.photoURL,
+                        ),
+                      );
+
+                      Navigator.pop(context);
+
+                      // Открываем экран комнаты
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => BlocProvider(
-                            create: (_) =>
-                                VCSBloc(context.read<VCSRepository>())..add(
-                                  ConnectRequested(
-                                    roomName: roomId,
-                                    identity: widget.user.uid,
-                                    name: widget.user.displayName!,
-                                    photoUrl: widget.user.photoURL,
-                                  ),
-                                ),
+                          builder: (_) => BlocProvider.value(
+                            value: vcsBloc, // Передаем готовый Блок
                             child: const RoomView(),
                           ),
                         ),

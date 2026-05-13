@@ -85,6 +85,11 @@ class SyncHardwareStatus extends VCSEvent {
   SyncHardwareStatus({this.isMicEnabled, this.isCamEnabled});
 }
 
+class ToggleMinimizeRoomRequested extends VCSEvent {
+  final bool minimize;
+
+  ToggleMinimizeRoomRequested({required this.minimize});
+}
 /*===========================================================*/
 
 /*=========================Внутренние события================*/

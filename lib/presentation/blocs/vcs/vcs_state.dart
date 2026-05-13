@@ -3,6 +3,8 @@ import 'package:livekit_client/livekit_client.dart';
 const _undefined = Object();
 
 class VCSState {
+  final bool isMinimized;
+
   final bool isConnected;
 
   final List<Participant> participants;
@@ -30,6 +32,7 @@ class VCSState {
   final String? error;
 
   const VCSState({
+    this.isMinimized = false,
     this.isConnected = false,
     this.participants = const [],
     this.pinnedParticipantSid,
@@ -50,6 +53,7 @@ class VCSState {
   });
 
   VCSState copyWith({
+    bool? isMinimized,
     bool? isConnected,
     List<Participant>? participants,
     Object? pinnedParticipantSid = _undefined,
@@ -69,6 +73,7 @@ class VCSState {
     String? error,
   }) {
     return VCSState(
+      isMinimized: isMinimized ?? this.isMinimized,
       isConnected: isConnected ?? this.isConnected,
       participants: participants ?? this.participants,
       pinnedParticipantSid: pinnedParticipantSid == _undefined

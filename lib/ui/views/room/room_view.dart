@@ -142,53 +142,45 @@ class RoomView extends StatelessWidget {
         ),
       ],
 
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.black,
-          automaticallyImplyLeading: false,
-        ),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          // При попытке выйти назад
+          if (didPop) return;
 
-        bottomNavigationBar: BlocBuilder<VCSBloc, VCSState>(
-          builder: (context, state) {
-            if (!state.isConnected) return const SizedBox.shrink();
-            return const NavigationBottomAppBar();
-          },
-        ),
+          context.read<VCSBloc>().add(
+            ToggleMinimizeRoomRequested(minimize: true),
+          );
 
-        body: Stack(
-          children: [
-            // Основной контент
-            Container(
-              decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 20, 40, 153),
-              ),
-              child: const SafeArea(child: ParticipantLayout()),
-            ),
+          // Закрываем страницу звонка
+          Navigator.of(context).pop();
+        },
 
-            // Overlay загрузки
-            BlocBuilder<VCSBloc, VCSState>(
-              builder: (context, state) {
-                if (state.isConnected) return const SizedBox.shrink();
-
-                return Container(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  child: const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(color: Colors.white),
-                        SizedBox(height: 16),
-                        Text(
-                          'Подключение...',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
+        child: Scaffold(
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            automaticallyImplyLeading: false,
+            leading: IconButton(
+              onPressed: () {
+                context.read<VCSBloc>().add(
+                  ToggleMinimizeRoomRequested(minimize: true),
                 );
+
+                // Закрываем страницу звонка
+                Navigator.of(context).pop();
               },
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
             ),
-          ],
+          ),
+
+          bottomNavigationBar: BlocBuilder<VCSBloc, VCSState>(
+            builder: (context, state) {
+              if (!state.isConnected) return const SizedBox.shrink();
+              return const NavigationBottomAppBar();
+            },
+          ),
+
+          body: const FullVideoCallView(),
         ),
       ),
     );
@@ -206,6 +198,49 @@ class RoomView extends StatelessWidget {
   // Вспомогательный медот для проверки был ли участник
   bool _hasParticipant(VCSState state, String? uid) {
     return state.participants.any((p) => p.identity == uid);
+  }
+}
+
+class FullVideoCallView extends StatelessWidget {
+  const FullVideoCallView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Основной контент
+        Container(
+          decoration: const BoxDecoration(
+            color: Color.fromARGB(255, 20, 40, 153),
+          ),
+          child: const SafeArea(child: ParticipantLayout()),
+        ),
+
+        // Overlay загрузки
+        BlocBuilder<VCSBloc, VCSState>(
+          builder: (context, state) {
+            if (state.isConnected) return const SizedBox.shrink();
+
+            return Container(
+              color: Colors.black.withValues(alpha: 0.7),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text(
+                      'Подключение...',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
   }
 }
 
@@ -398,7 +433,7 @@ class NavigationBottomAppBar extends StatelessWidget {
                           create: (context) => ChatBloc(
                             chatRepository: context.read<ChatRepository>(),
                             userRepository: context.read<UserRepository>(),
-                          )..add(InitChat(bloc.roomId)),
+                          )..add(InitChat(bloc.roomId!)),
                           child: DraggableScrollableSheet(
                             initialChildSize: 0.75,
                             maxChildSize: 0.75,
@@ -413,7 +448,7 @@ class NavigationBottomAppBar extends StatelessWidget {
                               ),
                               child: ChatScreen(
                                 controller: scrollController,
-                                chatId: bloc.roomId,
+                                chatId: bloc.roomId!,
                                 currentUserId:
                                     FirebaseAuth.instance.currentUser!.uid,
                               ),
@@ -743,6 +778,7 @@ class ParticipantTile extends StatelessWidget {
                       Color(0xFFBD3EC2),
                       Color(0xFF2E0B7F),
                     ],
+                    transform: GradientRotation(0.7),
                   )
                 : LinearGradient(
                     colors: const <Color>[Colors.black, Colors.black],
@@ -766,7 +802,7 @@ class ParticipantTile extends StatelessWidget {
 
                 // Отображение закрепа при закрепе
                 if (isPinned)
-                  Positioned(
+                  const Positioned(
                     top: 4,
                     right: 8,
                     child: Icon(Icons.push_pin, color: Colors.deepPurpleAccent),
@@ -838,7 +874,6 @@ class VideoParticipant extends StatelessWidget {
     }
 
     return AbsorbPointer(
-      absorbing: true,
       child: VideoTrackRenderer(
         track,
         mirrorMode: VideoViewMirrorMode.auto,
