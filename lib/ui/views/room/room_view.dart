@@ -79,11 +79,14 @@ class RoomView extends StatelessWidget {
         // Слушатель микрофона
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) {
+            if (c.isReconnecting || p.isReconnecting) return false;
+
             final sid = _getSid(c, uid);
-
             if (sid == null) return false;
-
             if (!_hasParticipant(p, uid)) return false;
+
+            final hadOldValue = p.mutedMicrophoneByHostSids.containsKey(sid);
+            if (!hadOldValue) return false;
 
             return p.mutedMicrophoneByHostSids[sid] !=
                 c.mutedMicrophoneByHostSids[sid];
@@ -109,9 +112,14 @@ class RoomView extends StatelessWidget {
         // СЛУШАТЕЛЬ КАМЕРЫ
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) {
+            if (c.isReconnecting || p.isReconnecting) return false;
+
             final sid = _getSid(c, uid);
             if (sid == null) return false;
             if (!_hasParticipant(p, uid)) return false;
+
+            final hadOldValue = p.mutedCameraByHostSids.containsKey(sid);
+            if (!hadOldValue) return false;
 
             return p.mutedCameraByHostSids[sid] != c.mutedCameraByHostSids[sid];
           },
