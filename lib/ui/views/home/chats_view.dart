@@ -117,10 +117,9 @@ class ChatsView extends StatelessWidget {
             return const Center(child: Text('У вас пока нет активных чатов'));
           }
 
-          return ListView.separated(
+          return ListView.builder(
             padding: const EdgeInsets.all(4),
             itemCount: chats.length,
-            separatorBuilder: (_, _) => const Divider(thickness: 0.5),
             itemBuilder: (context, index) {
               final chat = chats[index];
               final myId = FirebaseAuth.instance.currentUser!.uid;
