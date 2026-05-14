@@ -23,60 +23,9 @@ class CallView extends StatelessWidget {
     return Scaffold(
       // Заголовок в верху страницы
       appBar: AppBar(
-        toolbarHeight: 100,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'Strife',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 36,
-              ),
-            ),
-
-            const Text(
-              'Видеоконференции',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-
-            SizedBox(height: 24),
-          ],
-        ),
-        actions: [
-          // Кнопка уведомлений
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: IconButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => NotificationsView()),
-                );
-              },
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 2,
-                  ), // Белое кольцо
-                ),
-                child: const Icon(
-                  Icons.notifications_none_rounded, // Иконка колокольчика
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-            ),
-          ),
-        ],
+        toolbarHeight: 110,
         backgroundColor: Colors.transparent,
+        elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: Theme.of(
@@ -84,6 +33,51 @@ class CallView extends StatelessWidget {
             ).extension<GradientTheme>()!.mainGradient,
           ),
         ),
+
+        // Основной заголовок и подзаголовок
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              'Strife',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 32,
+              ),
+            ),
+            Text(
+              'Видеоконференции',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 15,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+
+        // Правая часть с кнопками действий
+        actions: [
+          // Иконка уведомлений
+          IconButton(
+            icon: const Icon(
+              Icons.notifications_none_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+            tooltip: 'Уведомления',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const NotificationsView(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
 
       // Основной контент
@@ -398,214 +392,270 @@ class CreateRoomButton extends StatelessWidget {
 }
 
 class NewCallSheet extends StatefulWidget {
-  const NewCallSheet({super.key, required this.user});
-
   final User user;
+
+  const NewCallSheet({super.key, required this.user});
 
   @override
   State<NewCallSheet> createState() => _NewCallSheetState();
 }
 
 class _NewCallSheetState extends State<NewCallSheet> {
-  // Выбранные пользователя, которые будут приглашены в звонок
   final Set<String> _selectedUserIds = {};
+  final _searchController = TextEditingController();
+
+  late ContactsBloc _contactsBloc;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _contactsBloc = context.read<ContactsBloc>();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    // При закрытии шторки сбрасываем строку поиска, чтобы вернуть полный список контактов
+    _contactsBloc.add(SearchContactsRequested(searchQuery: ''));
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.65, // Откроется на 60% высоты
-      maxChildSize: 0.65,
-      minChildSize: 0.4,
-      expand: false,
-      builder: (context, scrollController) {
-        // Получаем актуальный список контактов
-        final contacts = context.watch<ContactsBloc>().state.filteredContacts;
+    final contacts = context.watch<ContactsBloc>().state.filteredContacts;
 
-        return Container(
-          margin: const EdgeInsets.only(top: 16),
-          child: Column(
-            children: <Widget>[
-              // Заголовок
-              const Padding(
-                padding: EdgeInsets.only(bottom: 9.0),
-                child: Text(
-                  "Начать звонок",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Полоска-индикатор сверху шторки
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(2),
               ),
+            ),
+          ),
+          const SizedBox(height: 24),
 
-              // Поиск контактов
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 16.0,
-                ),
-                child: TextField(
-                  onChanged: (value) {
-                    // При изменеии текста отправляем событие на поиcк
-                    context.read<ContactsBloc>().add(
-                      SearchContactsRequested(searchQuery: value),
-                    );
-                  },
+          // Левосторонний заголовок
+          const Text(
+            'Начать звонок',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.start,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Выберите контакты из списка ниже, чтобы пригласить их в новую комнату звонка.',
+            style: TextStyle(fontSize: 14, color: Colors.black54),
+          ),
+          const SizedBox(height: 20),
 
-                  decoration: InputDecoration(
-                    hintText: 'Поиск контакта...',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: Colors.grey,
-                    ), // Иконка поиска
-                    filled: true,
+          // Поле поиска
+          TextField(
+            controller: _searchController,
+            onChanged: (value) {
+              context.read<ContactsBloc>().add(
+                SearchContactsRequested(searchQuery: value),
+              );
+            },
+            decoration: const InputDecoration(
+              labelText: 'Поиск контактов',
+              hintText: 'Введите имя...',
+              prefixIcon: Icon(Icons.search_rounded),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
-                    fillColor: Color(0xFFD9D9D9),
-
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
+          // Список контактов
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.35,
+            ),
+            child: contacts.isEmpty
+                ? const SizedBox(
+                    height: 100,
+                    child: Center(
+                      child: Text(
+                        'Контакты не найдены',
+                        style: TextStyle(color: Colors.black45, fontSize: 15),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-
-              // Список контактов
-              Expanded(
-                child: contacts.isNotEmpty
-                    ? ListView.builder(
-                        itemCount: contacts.length,
-                        controller: scrollController,
-                        itemBuilder: (context, index) {
-                          final contact = contacts[index];
-
-                          // Сам участник
-                          return ContactWidget(
-                            userData: contact,
-                            trailing: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Color(0xFFF8E9FF),
-                                shape: BoxShape.circle,
-                              ),
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                child: _selectedUserIds.contains(contact['id'])
-                                    ? const Icon(Icons.check)
-                                    : const Icon(Icons.add),
-                                onTap: () {
-                                  setState(() {
-                                    if (_selectedUserIds.contains(
-                                      contact['id'],
-                                    )) {
-                                      // Убираем контакт если он уже есть
-                                      _selectedUserIds.remove(contact['id']);
-                                    } else {
-                                      // Добавляем контакт которому хотим отправить уведомление
-                                      _selectedUserIds.add(contact['id']);
-                                    }
-                                  });
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                      )
-                    : const Center(child: Text('Список пуст')),
-              ),
-
-              // Кнопка начать звонок
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    fixedSize: Size(MediaQuery.widthOf(context) * 0.8, 60),
-                    side: BorderSide(
-                      color: Colors.black,
-                      width: 1.3,
-                    ), // Обводка кнопки
-                    foregroundColor: Colors.black, // Цвет текста и иконки
-                    textStyle: TextStyle(fontSize: 18),
-                  ),
-                  child: const Text('Начать звонок'),
-
-                  onPressed: () async {
-                    // Айди отправителя
-                    final senderId = widget.user.uid;
-
-                    // Имя отправителя
-                    final senderName = widget.user.displayName!;
-
-                    // Фото отправителя
-                    final senderPhotoUrl = widget.user.photoURL!;
-
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) =>
-                          const Center(child: CircularProgressIndicator()),
-                    );
-
-                    // создание комнаты в БД
-                    final roomId = await context
-                        .read<VCSRepository>()
-                        .createRoom();
-
-                    if (!context.mounted) return;
-
-                    // Закрываем кружок
-                    Navigator.of(context).pop();
-
-                    if (roomId.isNotEmpty) {
-                      //  Получаем Блок
-                      final vcsBloc = context.read<VCSBloc>();
-
-                      // Запускаем подключение к LiveKit
-                      vcsBloc.add(
-                        ConnectRequested(
-                          roomName: roomId,
-                          identity: widget.user.uid,
-                          name: widget.user.displayName!,
-                          photoUrl: widget.user.photoURL,
-                        ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: contacts.length,
+                    itemBuilder: (context, index) {
+                      final contact = contacts[index];
+                      final isSelected = _selectedUserIds.contains(
+                        contact['id'],
                       );
 
-                      Navigator.pop(context);
-
-                      // Открываем экран комнаты
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => BlocProvider.value(
-                            value: vcsBloc, // Передаем готовый Блок
-                            child: const RoomView(),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Ink(
+                          decoration: BoxDecoration(
+                            // Если контакт выбран, плашка становится чуть насыщеннее
+                            color: isSelected
+                                ? const Color(
+                                    0xFFB91ED0,
+                                  ).withValues(alpha: 0.08)
+                                : const Color(
+                                    0xFFB91ED0,
+                                  ).withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(
+                                      0xFFB91ED0,
+                                    ).withValues(alpha: 0.2)
+                                  : const Color(
+                                      0xFFB91ED0,
+                                    ).withValues(alpha: 0.06),
+                              width: 1,
+                            ),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () {
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedUserIds.remove(contact['id']);
+                                } else {
+                                  _selectedUserIds.add(contact['id']);
+                                }
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: 6.0,
+                              ),
+                              child: ContactWidget(
+                                userData: contact,
+                                // Кнопка выбора
+                                trailing: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? const Color(0xFFB91ED0)
+                                        : const Color(
+                                            0xFFB91ED0,
+                                          ).withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    isSelected
+                                        ? Icons.check_rounded
+                                        : Icons.add_rounded,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : const Color(0xFFB91ED0),
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       );
-
-                      final notificationRepository = context
-                          .read<NotificationRepository>();
-
-                      // Отправляем уведомления всем кого добавили
-                      for (var id in _selectedUserIds) {
-                        notificationRepository.sendCallRequest(
-                          recipientId: id,
-                          roomId: roomId,
-                          senderId: senderId,
-                          senderPhotoUrl: senderPhotoUrl,
-                          senderName: senderName,
-                        );
-                      }
-                    } else {
-                      AppNotifications.showError(
-                        context,
-                        'Не удалось создать комнату',
-                      );
-                    }
-                  },
-                ),
-              ),
-            ],
+                    },
+                  ),
           ),
-        );
-      },
+          const SizedBox(height: 24),
+
+          // Фирменная залитая кнопка действия
+          ElevatedButton(
+            onPressed: () async {
+              final senderId = widget.user.uid;
+              final senderName = widget.user.displayName!;
+              final senderPhotoUrl = widget.user.photoURL!;
+
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) =>
+                    const Center(child: CircularProgressIndicator()),
+              );
+
+              final roomId = await context.read<VCSRepository>().createRoom();
+
+              if (!context.mounted) return;
+              Navigator.of(context).pop(); // Закрываем крутилку лоадера
+
+              if (roomId.isNotEmpty) {
+                final vcsBloc = context.read<VCSBloc>();
+
+                vcsBloc.add(
+                  ConnectRequested(
+                    roomName: roomId,
+                    identity: widget.user.uid,
+                    name: widget.user.displayName!,
+                    photoUrl: widget.user.photoURL,
+                  ),
+                );
+
+                Navigator.pop(context); // Закрываем саму шторку
+
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider.value(
+                      value: vcsBloc,
+                      child: const RoomView(),
+                    ),
+                  ),
+                );
+
+                final notificationRepository = context
+                    .read<NotificationRepository>();
+
+                for (var id in _selectedUserIds) {
+                  notificationRepository.sendCallRequest(
+                    recipientId: id,
+                    roomId: roomId,
+                    senderId: senderId,
+                    senderPhotoUrl: senderPhotoUrl,
+                    senderName: senderName,
+                  );
+                }
+              } else {
+                AppNotifications.showError(
+                  context,
+                  'Не удалось создать комнату',
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Начать звонок',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: 32),
+        ],
+      ),
     );
   }
 }

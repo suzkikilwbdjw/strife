@@ -75,26 +75,22 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> signUp({
     required String email,
     required String password,
-    required String firstName,
-    required String secondName,
-    required DateTime dob,
+    required String displayName,
   }) async {
     _setLoading(true);
     _error = null;
     try {
       final credential = await _authRepository.register(email, password);
+
       final user = credential.user!;
 
-      // Формируем полное имя
-      final fullName = '$firstName $secondName';
-
       // Обновление отображаемого имени пользователя
-      await user.updateDisplayName(fullName);
+      await user.updateDisplayName(displayName);
 
       // Используем fullName для URL
-      final encodedName = Uri.encodeComponent(fullName);
+      final encodedName = Uri.encodeComponent(displayName);
       final avatarUrl =
-          "http://62.109.2.27:4000/avatar?name=$encodedName&size=256&background=random&length=2&rounded=true&format=png";
+          'http://62.109.2.27:4000/avatar/get-avatar?name=$encodedName&size=256&background=random&length=2&rounded=true&format=png';
 
       // Обновление аватарки пользователя
       await user.updatePhotoURL(avatarUrl);
@@ -110,11 +106,7 @@ class AuthViewModel extends ChangeNotifier {
 
       await _authRepository.saveUserData(
         updatedUser,
-        extraData: {
-          'firstName': firstName,
-          'secondName': secondName,
-          'dateOfBirth': dob.toIso8601String(),
-        },
+        extraData: {'displayName': displayName},
       );
 
       _setLoading(false);

@@ -89,15 +89,13 @@ class AuthRepository {
     final completer = Completer<UserCredential?>();
 
     try {
-      // 1. Начинаем слушать входящие ссылки
+      // Начинаем слушать входящие ссылки
       linkSubscription = appLinks.uriLinkStream.listen((uri) async {
-        // Проверяем, что ссылка наша и в ней есть код
         if (uri.scheme == 'com.example.strife' &&
             uri.queryParameters.containsKey('code')) {
           final code = uri.queryParameters['code'];
 
           try {
-            // 2. Обмен кода на токен
             final response = await http.post(
               Uri.parse('$backendUrl:4000/auth/yandex'),
               headers: {'Content-Type': 'application/json'},
@@ -111,7 +109,6 @@ class AuthRepository {
             final data = jsonDecode(response.body);
             final String firebaseToken = data['firebaseToken'];
 
-            // 3. Вход в Firebase
             final userCredential = await FirebaseAuth.instance
                 .signInWithCustomToken(firebaseToken);
 
@@ -122,14 +119,14 @@ class AuthRepository {
         }
       });
 
-      // 2. Формируем URL для авторизации
+      // Формируем URL для авторизации
       final authUrl = Uri.https('oauth.yandex.ru', '/authorize', {
         'response_type': 'code',
         'client_id': clientId,
         'redirect_uri': redirectUri,
       });
 
-      // 3. Открываем браузер.
+      // Открываем браузер.
       await launchUrl(authUrl, mode: LaunchMode.externalApplication);
 
       return await completer.future.timeout(

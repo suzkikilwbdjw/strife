@@ -15,6 +15,8 @@ class ContactWidget extends StatelessWidget {
     final isFavorite = userData['isFavorite'] ?? false;
 
     return ListTile(
+      contentPadding: EdgeInsets.zero,
+      tileColor: Colors.transparent,
       // Аватарка
       leading: Stack(
         children: [
