@@ -77,36 +77,91 @@ class _HomeViewState extends State<HomeView> {
         ],
       ),
 
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: selectedIndex,
-        onTap: (value) {
-          setState(() {
-            selectedIndex = value;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.phone_outlined),
-            label: 'Звонки',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.messenger_outline),
-            label: 'Чаты',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_3_outlined),
-            label: 'Профиль',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            label: 'Встречи',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.contacts_outlined),
-            label: 'Контакты',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(0, Icons.phone_outlined, Icons.phone, 'Звонки'),
+            _buildNavItem(1, Icons.messenger_outline, Icons.messenger, 'Чаты'),
+            _buildNavItem(
+              2,
+              Icons.person_3_outlined,
+              Icons.person_3,
+              'Профиль',
+            ),
+            _buildNavItem(
+              3,
+              Icons.calendar_today_outlined,
+              Icons.calendar_today,
+              'Встречи',
+            ),
+            _buildNavItem(
+              4,
+              Icons.contacts_outlined,
+              Icons.contacts,
+              'Контакты',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    IconData activeIcon,
+    String label,
+  ) {
+    final isSelected = selectedIndex == index;
+    const brandColor = Color(0xFFB91ED0);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedIndex = index;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? brandColor.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: isSelected ? brandColor : Colors.black45,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? brandColor : Colors.black45,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
+import 'package:strife/presentation/blocs/contacts/contacts_state.dart';
 import 'package:strife/presentation/blocs/meetings/meetings_bloc.dart';
 import 'package:strife/presentation/blocs/meetings/meetings_event.dart';
 import 'package:strife/presentation/blocs/meetings/meetings_state.dart';
@@ -23,45 +24,9 @@ class MeetingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 90,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Встречи',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 32,
-              ),
-              textAlign: TextAlign.right,
-            ),
-
-            OutlinedButton(
-              onPressed: () async {
-                await showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => NewMeetingSheet(),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                backgroundColor: Colors.white,
-                side: const BorderSide(color: Colors.black, width: 1),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-              ),
-              child: const Text(
-                'Новая встреча',
-                style: TextStyle(color: Colors.black, fontSize: 16),
-              ),
-            ),
-          ],
-        ),
+        toolbarHeight: 140,
         backgroundColor: Colors.transparent,
+        elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: Theme.of(
@@ -69,7 +34,10 @@ class MeetingsView extends StatelessWidget {
             ).extension<GradientTheme>()!.mainGradient,
           ),
         ),
+
+        title: MeetingsAppBar(),
       ),
+
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: context.read<UserRepository>().getMettingsStream(
           FirebaseAuth.instance.currentUser!.uid,
@@ -102,6 +70,90 @@ class MeetingsView extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class MeetingsAppBar extends StatelessWidget {
+  const MeetingsAppBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Встречи',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 26,
+              ),
+            ),
+
+            // Кнопка добавить встречу
+            IconButton(
+              icon: const Icon(
+                Icons.add_rounded,
+                color: Colors.white,
+                size: 28.0,
+              ),
+              tooltip: 'Новая встреча',
+              onPressed: () async {
+                await showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                  ),
+                  builder: (context) => const NewMeetingSheet(),
+                );
+              },
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        // Строка поиска встреч
+        TextField(
+          style: const TextStyle(color: Colors.white),
+          cursorColor: Colors.white, // Белый курсор
+          onChanged: (value) {
+            // context.read<MeetingsBloc>().add(SearchMeetingsRequested(query: value));
+          },
+          decoration: InputDecoration(
+            labelText: 'Поиск встреч',
+            labelStyle: const TextStyle(color: Colors.white70),
+            hintText: 'Введите название...',
+            hintStyle: const TextStyle(color: Colors.white38),
+            prefixIcon: const Icon(Icons.search_rounded, color: Colors.white70),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.15),
+
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -157,7 +209,6 @@ class MeetingCard extends StatelessWidget {
                     await showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
                       builder: (context) =>
                           NewMeetingSheet(initialMeeting: meetingInfo),
                     );
@@ -277,7 +328,6 @@ class MeetingCard extends StatelessWidget {
       meetingTime.minute,
     );
 
-    // Разрешаем вход за 10 минут до
     return now.isAfter(start.subtract(const Duration(minutes: 10)));
   }
 
@@ -396,179 +446,193 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     return BlocListener<MeetingsBloc, MeetingsState>(
       listener: (context, state) {
         if (state.error != null) {
-          // Если появилась ошибка — показываем её
           AppNotifications.showError(context, state.error!);
         } else if (!state.isLoading) {
-          // Если загрузка завершилась и ошибки нет — значит успех
           widget.initialMeeting == null
               ? AppNotifications.showSuccess(context, 'Встреча создана')
               : AppNotifications.showSuccess(context, 'Встреча обновлена');
-          Navigator.pop(context); // Закрываем шторку только при успехе
+
+          Navigator.pop(context);
         }
       },
       child: Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 24,
+          right: 24,
+          top: 16,
         ),
-        child: Container(
-          // Делаем отступ сверху, чтобы модалка не прилипала к краю экрана
-          margin: const EdgeInsets.only(top: 50),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+        child: Form(
+          key: _formKey,
           child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Заголовок с крестиком
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const SizedBox(width: 30), // Для центровки заголовка
-
-                      const Text(
-                        'Новая встреча',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Поля ввода
-                  _buildInputField(
-                    'Название встречи',
-                    'Планерка команды',
-                    controller: _titleController,
-                  ),
-
-                  _buildParticipantsField(),
-
-                  _buildInputField(
-                    'Дата',
-                    _selectedDate != null
-                        ? DateFormat('dd.MM.yyyy').format(_selectedDate!)
-                        : 'дд.мм.гггг',
-                    icon: Icons.calendar_today_outlined,
-                    onTap: () async {
-                      await _pickDate(context);
-                    },
-                    controller: _dateController,
-                  ),
-                  _buildInputField(
-                    'Время',
-                    _selectedTime != null
-                        ? _selectedTime!.format(context)
-                        : '--:--',
-                    icon: Icons.access_time,
-                    onTap: () async {
-                      await _pickTime(context);
-                    },
-                    controller: _timeController,
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // Кнопка 'Создать встречу'
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: OutlinedButton(
-                      onPressed: isLoading
-                          ? null
-                          : () async {
-                              if (_formKey.currentState!.validate()) {
-                                final user = FirebaseAuth.instance.currentUser!;
-
-                                final senderId = user.uid;
-                                final senderName = user.displayName!;
-                                final senderPhotoUrl = user.photoURL!;
-
-                                final String dateIso = _selectedDate!
-                                    .toIso8601String()
-                                    .split('T')[0];
-                                final String timeString = _selectedTime!.format(
-                                  context,
-                                );
-
-                                if (widget.initialMeeting != null) {
-                                  context.read<MeetingsBloc>().add(
-                                    SendUpdateMeetingRequested(
-                                      meetingId: widget.initialMeeting!['id'],
-                                      senderId: senderId,
-                                      participantIds: _selectedUserIds.keys
-                                          .toList(),
-                                      senderName: senderName,
-                                      senderPhotoUrl: senderPhotoUrl,
-                                      titleMeeting: _titleController.text,
-                                      dateMeeting: dateIso,
-                                      timeMeeting: timeString,
-                                    ),
-                                  );
-                                } else {
-                                  final roomId = await context
-                                      .read<VCSRepository>()
-                                      .createRoom();
-
-                                  if (!context.mounted) return;
-
-                                  // Отправляем уведомления о том что они приглашены на встречу
-                                  context.read<MeetingsBloc>().add(
-                                    SendMeetingRequestRequested(
-                                      senderId: senderId,
-                                      participantIds: _selectedUserIds.keys
-                                          .toList(),
-                                      senderName: senderName,
-                                      senderPhotoUrl: senderPhotoUrl,
-                                      roomId: roomId,
-                                      titleMeeting: _titleController.text,
-                                      dateMeeting: dateIso,
-                                      timeMeeting: timeString,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.black),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child: isLoading
-                          ? const CircularProgressIndicator()
-                          : widget.initialMeeting == null
-                          ? const Text(
-                              'Создать встречу',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 16,
-                              ),
-                            )
-                          : const Text(
-                              'Сохранить изменения',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 16,
-                              ),
-                            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Верхний индикатор
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black12,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                ],
-              ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Заголовок
+                Text(
+                  widget.initialMeeting == null
+                      ? 'Новая встреча'
+                      : 'Редактирование встречи',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  widget.initialMeeting == null
+                      ? 'Создайте новую встречу и пригласите участников.'
+                      : 'Измените информацию о встрече.',
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Название встречи
+                _buildInputField(
+                  'Название встречи',
+                  'Планерка команды',
+                  controller: _titleController,
+                  prefix: const Icon(Icons.edit_outlined),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Участники
+                _buildParticipantsField(),
+
+                const SizedBox(height: 16),
+
+                // Дата
+                _buildInputField(
+                  'Дата',
+                  'дд.мм.гггг',
+                  controller: _dateController,
+                  prefix: const Icon(Icons.calendar_today_outlined),
+                  onTap: () async {
+                    await _pickDate(context);
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // Время
+                _buildInputField(
+                  'Время',
+                  '--:--',
+                  controller: _timeController,
+                  prefix: const Icon(Icons.access_time),
+                  onTap: () async {
+                    await _pickTime(context);
+                  },
+                ),
+
+                const SizedBox(height: 32),
+
+                // Кнопка
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate()) {
+                            final user = FirebaseAuth.instance.currentUser!;
+
+                            final senderId = user.uid;
+                            final senderName = user.displayName!;
+                            final senderPhotoUrl = user.photoURL!;
+
+                            final String dateIso = _selectedDate!
+                                .toIso8601String()
+                                .split('T')[0];
+
+                            final String timeString = _selectedTime!.format(
+                              context,
+                            );
+
+                            if (widget.initialMeeting != null) {
+                              context.read<MeetingsBloc>().add(
+                                SendUpdateMeetingRequested(
+                                  meetingId: widget.initialMeeting!['id'],
+                                  senderId: senderId,
+                                  participantIds: _selectedUserIds.keys
+                                      .toList(),
+                                  senderName: senderName,
+                                  senderPhotoUrl: senderPhotoUrl,
+                                  titleMeeting: _titleController.text.trim(),
+                                  dateMeeting: dateIso,
+                                  timeMeeting: timeString,
+                                ),
+                              );
+                            } else {
+                              final roomId = await context
+                                  .read<VCSRepository>()
+                                  .createRoom();
+
+                              if (!context.mounted) return;
+
+                              context.read<MeetingsBloc>().add(
+                                SendMeetingRequestRequested(
+                                  senderId: senderId,
+                                  participantIds: _selectedUserIds.keys
+                                      .toList(),
+                                  senderName: senderName,
+                                  senderPhotoUrl: senderPhotoUrl,
+                                  roomId: roomId,
+                                  titleMeeting: _titleController.text.trim(),
+                                  dateMeeting: dateIso,
+                                  timeMeeting: timeString,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          widget.initialMeeting == null
+                              ? 'Создать встречу'
+                              : 'Сохранить изменения',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+
+                const SizedBox(height: 32),
+              ],
             ),
           ),
         ),
@@ -627,58 +691,63 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
   }
 
   Widget _buildParticipantsField() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Выбрать участников',
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
-          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Участники',
+          style: TextStyle(color: Colors.black54, fontSize: 14),
+        ),
 
-          const SizedBox(height: 8.0),
+        const SizedBox(height: 8),
 
-          // Поле с выбором участников
-          GestureDetector(
-            onTap: () => _showContactsPicker(context),
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 55),
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black12),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  SizedBox(width: 8.0),
-                  Expanded(
-                    child: _selectedUserIds.isEmpty
-                        ? Text(
-                            'Выбрать контакты',
-                            style: TextStyle(fontSize: 16.0),
-                          )
-                        : Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: _selectedUserIds.values.map((photoUrl) {
-                              // Аватар участника
-                              return CircleAvatar(
-                                radius: 16,
-                                backgroundImage: NetworkImage(photoUrl),
-                                backgroundColor: Colors.grey.shade200,
-                              );
-                            }).toList(),
-                          ),
-                  ),
-                  const Icon(Icons.person_outline, color: Colors.black54),
-                ],
-              ),
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showContactsPicker(context),
+          child: Ink(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Icon(Icons.people_alt_outlined, color: Colors.black54),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: _selectedUserIds.isEmpty
+                      ? const Text(
+                          'Выбрать участников',
+                          style: TextStyle(fontSize: 15, color: Colors.black54),
+                        )
+                      : Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _selectedUserIds.values.map((photoUrl) {
+                            return CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Colors.grey.shade200,
+                              backgroundImage: NetworkImage(photoUrl),
+                            );
+                          }).toList(),
+                        ),
+                ),
+
+                const SizedBox(width: 8),
+
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: Colors.black26,
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -686,55 +755,65 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
   Widget _buildInputField(
     String label,
     String hint, {
-    IconData? icon,
     VoidCallback? onTap,
     TextEditingController? controller,
     Widget? prefix,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(color: Colors.black54, fontSize: 14),
+        ),
 
-          TextFormField(
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Поле не заполнено';
-              }
-              return null;
-            },
-            controller: controller,
-            onTap: onTap,
-            readOnly: onTap != null,
-            decoration: InputDecoration(
-              prefixIcon: prefix,
-              hintText: hint,
-              suffixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-              hintStyle: TextStyle(
-                color: onTap != null ? Colors.black : Colors.grey.shade400,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide(color: Colors.grey.shade200),
+        const SizedBox(height: 8),
+
+        TextFormField(
+          controller: controller,
+          onTap: onTap,
+          readOnly: onTap != null,
+
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Поле не заполнено';
+            }
+            return null;
+          },
+
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: prefix,
+
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: Color(0xFFB91ED0),
+                width: 1.5,
               ),
             ),
+
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 1.5),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -742,148 +821,223 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       useSafeArea: true,
-      builder: (context) => StatefulBuilder(
-        builder: (BuildContext context, StateSetter setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: DraggableScrollableSheet(
-              initialChildSize: 0.6,
-              maxChildSize: 0.6,
-              minChildSize: 0.6,
-              builder: (_, scrollController) {
-                // Получаем актуальный список контактов
-                final contacts = context
-                    .watch<ContactsBloc>()
-                    .state
-                    .filteredContacts;
-
-                return Container(
-                  padding: EdgeInsets.symmetric(vertical: 12.0),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(30),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24,
+                right: 24,
+                top: 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Верхний индикатор
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.black12,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  child: Column(
-                    children: <Widget>[
-                      // Заголовок с крестиком
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const SizedBox(width: 30), // Для центровки заголовка
-                          const Text(
-                            'Выбрать участников',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
+
+                  const SizedBox(height: 24),
+
+                  // Заголовок
+                  const Text(
+                    'Выбор участников',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'Выберите пользователей, которых хотите пригласить во встречу.',
+                    style: TextStyle(fontSize: 14, color: Colors.black54),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Поиск
+                  TextField(
+                    onChanged: (value) {
+                      context.read<ContactsBloc>().add(
+                        SearchContactsRequested(searchQuery: value),
+                      );
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Поиск контактов',
+                      hintText: 'Введите имя...',
+                      prefixIcon: Icon(Icons.search_rounded),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
                       ),
-                      // Поиск контактов
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 12.0,
-                        ),
-                        child: TextField(
-                          onChanged: (value) {
-                            // При изменеии текста отправляем событие на поиcк
-                            context.read<ContactsBloc>().add(
-                              SearchContactsRequested(searchQuery: value),
-                            );
-                          },
+                    ),
+                  ),
 
-                          decoration: InputDecoration(
-                            hintText: 'Поиск контакта...',
-                            hintStyle: TextStyle(color: Colors.grey),
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: Colors.grey,
-                            ), // Иконка поиска
-                            filled: true,
+                  const SizedBox(height: 16),
 
-                            fillColor: Color(0xFFD9D9D9),
+                  // Список контактов
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+                    ),
+                    child: BlocBuilder<ContactsBloc, ContactsState>(
+                      builder: (context, state) {
+                        final contacts = state.filteredContacts;
 
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Отображение списка контактов
-                      Expanded(
-                        child: contacts.isNotEmpty
-                            ? ListView.builder(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 4.0,
+                        if (contacts.isEmpty) {
+                          return const SizedBox(
+                            height: 120,
+                            child: Center(
+                              child: Text(
+                                'Контакты не найдены',
+                                style: TextStyle(
+                                  color: Colors.black45,
+                                  fontSize: 15,
                                 ),
-                                itemCount: contacts.length,
-                                controller: scrollController,
-                                itemBuilder: (context, index) {
-                                  final contact = contacts[index];
+                              ),
+                            ),
+                          );
+                        }
 
-                                  // Сам участник
-                                  return ContactWidget(
-                                    userData: contact,
-                                    trailing: Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: Color(0xFFF8E9FF),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: InkWell(
-                                        customBorder: const CircleBorder(),
-                                        child:
-                                            _selectedUserIds.keys.contains(
-                                              contact['id'],
-                                            )
-                                            ? const Icon(Icons.check)
-                                            : const Icon(Icons.add),
-                                        onTap: () {
-                                          setModalState(() {
-                                            final id = contact['id'];
-                                            if (_selectedUserIds.containsKey(
-                                              id,
-                                            )) {
-                                              // Убираем контакт если он уже есть
-                                              _selectedUserIds.remove(id);
-                                            } else {
-                                              // Добавляем контакт которому хотим отправить уведомление
-                                              _selectedUserIds.addAll({
-                                                id: contact['photoUrl'],
-                                              });
-                                            }
-                                          });
-                                          setState(() {});
-                                        },
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: contacts.length,
+                          itemBuilder: (context, index) {
+                            final contact = contacts[index];
+
+                            final isSelected = _selectedUserIds.containsKey(
+                              contact['id'],
+                            );
+
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Ink(
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? const Color(
+                                          0xFFB91ED0,
+                                        ).withValues(alpha: 0.08)
+                                      : const Color(
+                                          0xFFB91ED0,
+                                        ).withValues(alpha: 0.04),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? const Color(
+                                            0xFFB91ED0,
+                                          ).withValues(alpha: 0.25)
+                                        : const Color(
+                                            0xFFB91ED0,
+                                          ).withValues(alpha: 0.06),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  splashColor: const Color(
+                                    0xFFB91ED0,
+                                  ).withValues(alpha: 0.1),
+                                  highlightColor: const Color(
+                                    0xFFB91ED0,
+                                  ).withValues(alpha: 0.04),
+                                  onTap: () {
+                                    setModalState(() {
+                                      final id = contact['id'];
+
+                                      if (_selectedUserIds.containsKey(id)) {
+                                        _selectedUserIds.remove(id);
+                                      } else {
+                                        _selectedUserIds[id] =
+                                            contact['photoUrl'];
+                                      }
+                                    });
+
+                                    setState(() {});
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    child: ContactWidget(
+                                      userData: contact,
+                                      trailing: AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 200,
+                                        ),
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? const Color(0xFFB91ED0)
+                                              : const Color(
+                                                  0xFFB91ED0,
+                                                ).withValues(alpha: 0.1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          isSelected
+                                              ? Icons.check_rounded
+                                              : Icons.add_rounded,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : const Color(0xFFB91ED0),
+                                          size: 20,
+                                        ),
                                       ),
                                     ),
-                                  );
-                                },
-                              )
-                            : Center(child: const Text('Список пуст')),
-                      ),
-                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
-                );
-              },
-            ),
-          );
-        },
-      ),
+
+                  const SizedBox(height: 24),
+
+                  // Кнопка подтверждения
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      _selectedUserIds.isEmpty
+                          ? 'Закрыть'
+                          : 'Готово (${_selectedUserIds.length})',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

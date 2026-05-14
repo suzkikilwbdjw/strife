@@ -43,77 +43,11 @@ class _ContactsViewState extends State<ContactsView> {
     ).extension<GradientTheme>()!.mainGradient;
 
     return Scaffold(
-      // AppBar
+      // Загловок
       appBar: AppBar(
-        toolbarHeight: 130,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Контакты',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 24,
-                  ),
-                  textAlign: TextAlign.right,
-                ),
-
-                // Плюсик добавления контакта
-                Container(
-                  padding: const EdgeInsets.all(4.0),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFFBDBDBD).withValues(alpha: 0.4),
-                  ),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    child: const Icon(
-                      Icons.add,
-                      color: Colors.white,
-                      size: 24.0,
-                    ),
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => AddContactSheet(
-                          textEditingController: textEditingController,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            TextField(
-              onChanged: (value) {
-                context.read<ContactsBloc>().add(
-                  SearchContactsRequested(searchQuery: value),
-                );
-              },
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: const Color(0xFFD9D9D9).withValues(alpha: 0.4),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                  borderRadius: BorderRadius.all(Radius.circular(25)),
-                ),
-                hintText: 'Поиск контактов...',
-                hintStyle: TextStyle(color: Color(0xFFD3C9C9)),
-              ),
-            ),
-          ],
-        ),
-
+        toolbarHeight: 140,
         backgroundColor: Colors.transparent,
+        elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: Theme.of(
@@ -121,6 +55,8 @@ class _ContactsViewState extends State<ContactsView> {
             ).extension<GradientTheme>()!.mainGradient,
           ),
         ),
+
+        title: ContactAppBar(textEditingController: textEditingController),
       ),
 
       body: BlocBuilder<ContactsBloc, ContactsState>(
@@ -309,7 +245,6 @@ class _ContactsViewState extends State<ContactsView> {
     );
   }
 
-  // Вспомогательный метод для круглых кнопок, чтобы не дублировать BoxDecoration
   Widget _buildCircleButton({
     IconData? icon,
     VoidCallback? onPressed,
@@ -330,10 +265,103 @@ class _ContactsViewState extends State<ContactsView> {
   }
 }
 
-class AddContactSheet extends StatelessWidget {
-  const AddContactSheet({super.key, required this.textEditingController});
+class ContactAppBar extends StatelessWidget {
+  const ContactAppBar({super.key, required this.textEditingController});
 
   final TextEditingController textEditingController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Контакты',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 26,
+              ),
+            ),
+
+            IconButton(
+              icon: const Icon(
+                Icons.add_rounded,
+                color: Colors.white,
+                size: 28.0,
+              ),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                  ),
+                  builder: (context) => AddContactSheet(
+                    textEditingController: textEditingController,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        // Поле поиска контактов
+        TextField(
+          style: const TextStyle(color: Colors.white),
+          onChanged: (value) {
+            context.read<ContactsBloc>().add(
+              SearchContactsRequested(searchQuery: value),
+            );
+          },
+          decoration: InputDecoration(
+            labelText: 'Поиск контактов',
+            labelStyle: const TextStyle(color: Colors.white70),
+            hintText: 'Введите имя или email...',
+            hintStyle: const TextStyle(color: Colors.white38),
+            prefixIcon: const Icon(Icons.search_rounded, color: Colors.white70),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.15),
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class AddContactSheet extends StatefulWidget {
+  final TextEditingController textEditingController;
+
+  const AddContactSheet({super.key, required this.textEditingController});
+
+  @override
+  State<AddContactSheet> createState() => _AddContactSheetState();
+}
+
+class _AddContactSheetState extends State<AddContactSheet> {
+  final _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
@@ -342,119 +370,135 @@ class AddContactSheet extends StatelessWidget {
     );
 
     return BlocListener<ContactsBloc, ContactsState>(
-      // Слушаем изменения состояния
       listener: (context, state) {
         if (state.status == ContactStatus.failure) {
           AppNotifications.showError(context, state.error ?? 'Ошибка');
         } else if (state.status == ContactStatus.inviteSuccess) {
           AppNotifications.showSuccess(context, 'Запрос отправлен');
-
           context.read<ContactsBloc>().add(ResetContactsStatusRequested());
-
           Navigator.pop(context);
         }
       },
       child: Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 24,
+          right: 24,
+          top: 16,
         ),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.45,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 24),
-                  const Text(
-                    'Новый контакт',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-
-              const Text(
-                'Введите почту пользователя, которого хотите добавить',
-                style: TextStyle(color: Colors.grey, fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 20),
-
-              // Поле ввода email
-              TextField(
-                controller: textEditingController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  hintText: 'Введите email...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Полоска-индикатор сверху шторки
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black12,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 24),
 
-              const Spacer(),
+                // Заголовок
+                const Text(
+                  'Новый контакт',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.start,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Введите почту пользователя, которого хотите добавить в список контактов.',
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+                const SizedBox(height: 24),
 
-              Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: OutlinedButton(
+                // Поле ввода email
+                TextFormField(
+                  controller: widget.textEditingController,
+                  keyboardType: TextInputType.emailAddress,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Электронная почта',
+                    hintText: 'example@email.com',
+                    prefixIcon: Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Введите email';
+                    }
+                    final emailRegex = RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    );
+                    if (!emailRegex.hasMatch(val.trim())) {
+                      return 'Введите корректный email адрес';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Kнопка отправки
+                ElevatedButton(
                   onPressed: isLoading
-                      ? null // Блокируем кнопку, пока идет загрузка
+                      ? null
                       : () {
-                          final recipientEmail = textEditingController.text
+                          if (!_formKey.currentState!.validate()) return;
+
+                          final recipientEmail = widget
+                              .textEditingController
+                              .text
                               .trim();
-                          if (recipientEmail.isEmpty) return;
+                          final currentUser = FirebaseAuth.instance.currentUser;
+
+                          if (currentUser == null) return;
 
                           context.read<ContactsBloc>().add(
                             SendFriendRequestRequested(
-                              senderId: FirebaseAuth.instance.currentUser!.uid,
+                              senderId: currentUser.uid,
                               recipientEmail: recipientEmail,
-                              senderName:
-                                  FirebaseAuth
-                                      .instance
-                                      .currentUser
-                                      ?.displayName ??
-                                  'User',
-                              senderPhotoUrl:
-                                  FirebaseAuth.instance.currentUser?.photoURL ??
-                                  '',
+                              senderName: currentUser.displayName ?? 'User',
+                              senderPhotoUrl: currentUser.photoURL ?? '',
                             ),
                           );
                         },
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 55),
-                    side: const BorderSide(color: Colors.black, width: 1),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: isLoading
-                      ? const CircularProgressIndicator()
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Text(
                           'Отправить запрос',
-                          style: TextStyle(color: Colors.black, fontSize: 16),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
       ),
