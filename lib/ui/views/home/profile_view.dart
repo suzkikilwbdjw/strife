@@ -363,7 +363,7 @@ class _ChangeNameBottomSheetState extends State<ChangeNameBottomSheet> {
               ),
               const SizedBox(height: 24),
               const Text(
-                'Ваше имя',
+                'Ваше отображаемое имя',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.start,
               ),
@@ -393,15 +393,11 @@ class _ChangeNameBottomSheetState extends State<ChangeNameBottomSheet> {
               const SizedBox(height: 16),
 
               // Кнопка отправки
-              ElevatedButton(
+              OutlinedButton(
                 onPressed: _isLoading ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 55),
+                  side: const BorderSide(color: Colors.black, width: 1),
                 ),
                 child: _isLoading
                     ? const SizedBox(
@@ -414,10 +410,7 @@ class _ChangeNameBottomSheetState extends State<ChangeNameBottomSheet> {
                       )
                     : const Text(
                         'Сохранить',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: TextStyle(fontSize: 16, color: Colors.black),
                       ),
               ),
               const SizedBox(height: 32),
