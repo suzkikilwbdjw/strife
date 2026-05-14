@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/view_models/auth_view_model.dart';
+import 'package:strife/ui/widgets/app_notifications.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -123,7 +124,7 @@ class ProfileView extends StatelessWidget {
 
               // Имя пользователя
               Text(
-                user.displayName ?? 'Anonymous',
+                user.displayName ?? '',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -155,19 +156,45 @@ class ProfileView extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   children: [
                     _buildSectionTitle('Security & Settings'),
-                    _buildMenuItem('Изменить имя пользователя'),
+                    _buildMenuItem(
+                      'Изменить имя пользователя',
+                      icon: Icons.person_outlined,
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(24),
+                            ),
+                          ),
+                          builder: (context) => ChangeNameBottomSheet(
+                            currentName: user.displayName ?? '',
+                            onNameUpdated: (newName) async {
+                              // Отправляем запрос
+                              await context
+                                  .read<UserRepository>()
+                                  .updateUserDisplayName(user.uid, newName);
+
+                              // Обновляем локальную сессию во Flutter
+                              await FirebaseAuth.instance.currentUser?.reload();
+
+                              if (!context.mounted) return;
+
+                              // Показываем уведомление об успехе
+                              AppNotifications.showSuccess(
+                                context,
+                                'Имя обновлено',
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
                     _buildMenuItem('Сменить пароль', icon: Icons.lock_outline),
                     _buildMenuItem(
-                      'Уведомления',
-                      icon: Icons.notifications_none,
-                      trailing: Switch(
-                        value: false,
-                        onChanged: (_) {},
-                        activeThumbColor: Colors.purple,
-                      ),
-                    ),
-                    _buildMenuItem(
                       'Выйти из аккаунта...',
+                      icon: Icons.logout_outlined,
                       isLast: true,
                       onTap: () async {
                         showDialog(
@@ -246,6 +273,158 @@ class ProfileView extends StatelessWidget {
         ),
         if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16),
       ],
+    );
+  }
+}
+
+class ChangeNameBottomSheet extends StatefulWidget {
+  final String currentName;
+  final Function(String) onNameUpdated;
+
+  const ChangeNameBottomSheet({
+    super.key,
+    required this.currentName,
+    required this.onNameUpdated,
+  });
+
+  @override
+  State<ChangeNameBottomSheet> createState() => _ChangeNameBottomSheetState();
+}
+
+class _ChangeNameBottomSheetState extends State<ChangeNameBottomSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.currentName);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final newName = _nameController.text.trim();
+
+    // Если имя не изменилось, просто закрываем шторку
+    if (newName == widget.currentName) {
+      Navigator.pop(context);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Вызываем переданную функцию обновления
+      await widget.onNameUpdated(newName);
+
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (e) {
+      AppNotifications.showError(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 16,
+      ),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Полоска-индикатор сверху шторки
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Ваше имя',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.start,
+              ),
+              const SizedBox(height: 24),
+
+              // Поле ввода имени
+              TextFormField(
+                controller: _nameController,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                maxLength: 30,
+                decoration: const InputDecoration(
+                  labelText: 'Имя',
+                  prefixIcon: Icon(Icons.person_outline_rounded),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Имя не может быть пустым';
+                  }
+                  if (val.trim().length < 2) return 'Имя слишком короткое';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Кнопка отправки
+              ElevatedButton(
+                onPressed: _isLoading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Сохранить',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -449,7 +449,7 @@ class AddContactSheet extends StatelessWidget {
                   child: isLoading
                       ? const CircularProgressIndicator()
                       : const Text(
-                          'Отправить запрос...',
+                          'Отправить запрос',
                           style: TextStyle(color: Colors.black, fontSize: 16),
                         ),
                 ),

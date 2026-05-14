@@ -4,8 +4,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 class UserRepository {
   final _firestore = FirebaseFirestore.instance;
+
+  final String _baseUrl = 'http://62.109.2.27:4000';
 
   Stream<User?> get userStream => FirebaseAuth.instance.userChanges();
 
@@ -202,6 +207,7 @@ class UserRepository {
         );
   }
 
+  // Обновление данных встречи
   Future<void> updateMeeting(
     String idMeeting,
     String titleMeeting,
@@ -210,12 +216,29 @@ class UserRepository {
     List<String> participantIds,
   ) async {
     try {
-      return await _firestore.collection('meetings').doc(idMeeting).update({
+      await _firestore.collection('meetings').doc(idMeeting).update({
         titleMeeting: titleMeeting,
         dateMeeting: dateMeeting,
         timeMeeting: timeMeeting,
         participantIds: participantIds,
       });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Обновление отображаемого имени пользователя
+  Future<void> updateUserDisplayName(String userId, String newName) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/user/update-name'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'userId': userId, 'newName': newName}),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Ошибка сервера: ${response.body}');
+      }
     } catch (e) {
       rethrow;
     }
