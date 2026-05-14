@@ -338,35 +338,31 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
       if (meeting['timeMeeting'] != null) {
         final String timeStr = meeting['timeMeeting'];
 
-        try {
-          // Убираем лишние пробелы и переводим в верхний регистр
-          final cleanTime = timeStr.trim().toUpperCase();
+        // Убираем лишние пробелы и переводим в верхний регистр
+        final cleanTime = timeStr.trim().toUpperCase();
 
-          // Определяем, есть ли там AM/PM
-          bool isPM = cleanTime.contains('PM');
-          bool isAM = cleanTime.contains('AM');
+        // Определяем, есть ли там AM/PM
+        bool isPM = cleanTime.contains('PM');
+        bool isAM = cleanTime.contains('AM');
 
-          // Убираем буквы, оставляем только цифры и двоеточие
-          final parts = cleanTime
-              .replaceAll('AM', '')
-              .replaceAll('PM', '')
-              .trim()
-              .split(':');
+        // Убираем буквы, оставляем только цифры и двоеточие
+        final parts = cleanTime
+            .replaceAll('AM', '')
+            .replaceAll('PM', '')
+            .trim()
+            .split(':');
 
-          if (parts.length == 2) {
-            int hour = int.parse(parts[0]);
-            int minute = int.parse(parts[1]);
+        if (parts.length == 2) {
+          int hour = int.parse(parts[0]);
+          int minute = int.parse(parts[1]);
 
-            // Корректируем часы для 12-часового формата
-            if (isPM && hour < 12) hour += 12;
-            if (isAM && hour == 12) hour = 0;
+          // Корректируем часы для 12-часового формата
+          if (isPM && hour < 12) hour += 12;
+          if (isAM && hour == 12) hour = 0;
 
-            _selectedTime = TimeOfDay(hour: hour, minute: minute);
+          _selectedTime = TimeOfDay(hour: hour, minute: minute);
 
-            _timeController.text = timeStr;
-          }
-        } catch (e) {
-          print("Ошибка парсинга времени: $e");
+          _timeController.text = timeStr;
         }
       }
 

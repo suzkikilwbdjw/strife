@@ -243,4 +243,29 @@ class UserRepository {
       rethrow;
     }
   }
+
+  // Обновление пароля пользователя
+  Future<void> updateUserPassword(
+    String oldPassword,
+    String newPassword,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null || user.email == null) return;
+
+    final cred = EmailAuthProvider.credential(
+      email: user.email!,
+      password: oldPassword,
+    );
+
+    try {
+      //  Подтверждаем, что старый пароль введен верно
+      await user.reauthenticateWithCredential(cred);
+
+      // Устанавливаем новый пароль
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (_) {
+      rethrow;
+    }
+  }
 }

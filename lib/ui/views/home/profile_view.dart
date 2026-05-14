@@ -191,7 +191,46 @@ class ProfileView extends StatelessWidget {
                         );
                       },
                     ),
-                    _buildMenuItem('Сменить пароль', icon: Icons.lock_outline),
+
+                    _buildMenuItem(
+                      'Сменить пароль',
+                      icon: Icons.lock_outline,
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(24),
+                            ),
+                          ),
+                          builder: (context) => ChangePasswordBottomSheet(
+                            onPasswordUpdated:
+                                (oldPassword, newPassword) async {
+                                  try {
+                                    await context
+                                        .read<UserRepository>()
+                                        .updateUserPassword(
+                                          oldPassword,
+                                          newPassword,
+                                        );
+                                  } on FirebaseException catch (_) {
+                                    rethrow;
+                                  }
+
+                                  if (!context.mounted) return;
+
+                                  // Показываем уведомление об успехе
+                                  AppNotifications.showSuccess(
+                                    context,
+                                    'Пароль обновлен',
+                                  );
+                                },
+                          ),
+                        );
+                      },
+                    ),
+
                     _buildMenuItem(
                       'Выйти из аккаунта...',
                       icon: Icons.logout_outlined,
@@ -350,7 +389,6 @@ class _ChangeNameBottomSheetState extends State<ChangeNameBottomSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Полоска-индикатор сверху шторки
               Center(
                 child: Container(
                   width: 36,
@@ -393,11 +431,15 @@ class _ChangeNameBottomSheetState extends State<ChangeNameBottomSheet> {
               const SizedBox(height: 16),
 
               // Кнопка отправки
-              OutlinedButton(
+              ElevatedButton(
                 onPressed: _isLoading ? null : _submit,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 55),
-                  side: const BorderSide(color: Colors.black, width: 1),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _isLoading
                     ? const SizedBox(
@@ -410,7 +452,235 @@ class _ChangeNameBottomSheetState extends State<ChangeNameBottomSheet> {
                       )
                     : const Text(
                         'Сохранить',
-                        style: TextStyle(fontSize: 16, color: Colors.black),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ChangePasswordBottomSheet extends StatefulWidget {
+  final Future<void> Function(String oldPassword, String newPassword)
+  onPasswordUpdated;
+
+  const ChangePasswordBottomSheet({super.key, required this.onPasswordUpdated});
+
+  @override
+  State<ChangePasswordBottomSheet> createState() =>
+      _ChangePasswordBottomSheetState();
+}
+
+class _ChangePasswordBottomSheetState extends State<ChangePasswordBottomSheet> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _oldPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  bool _isOldObscured = true;
+  bool _isNewObscured = true;
+  bool _isConfirmObscured = true;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await widget.onPasswordUpdated(
+        _oldPasswordController.text.trim(),
+        _newPasswordController.text.trim(),
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context);
+    } on FirebaseAuthException catch (e) {
+      final String error;
+      switch (e.code) {
+        case 'invalid-credential':
+          error = 'Введен неверный пароль';
+        default:
+          error = 'Ошибка входа: ${e.message}';
+      }
+      AppNotifications.showError(context, error);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 16,
+      ),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Индикатор шторки
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Безопасность',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Пароль должен содержать не менее 6 символов.',
+                style: TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              const SizedBox(height: 24),
+
+              // Поле 1: Старый пароль
+              TextFormField(
+                controller: _oldPasswordController,
+                obscureText: _isOldObscured,
+                decoration: InputDecoration(
+                  labelText: 'Текущий пароль',
+                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isOldObscured
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                    onPressed: () =>
+                        setState(() => _isOldObscured = !_isOldObscured),
+                  ),
+                ),
+                validator: (val) => val == null || val.isEmpty
+                    ? 'Введите текущий пароль'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+
+              TextFormField(
+                controller: _newPasswordController,
+                obscureText: _isNewObscured,
+                decoration: InputDecoration(
+                  labelText: 'Новый пароль',
+                  prefixIcon: const Icon(Icons.lock_open_rounded),
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isNewObscured
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                    onPressed: () =>
+                        setState(() => _isNewObscured = !_isNewObscured),
+                  ),
+                ),
+                validator: (val) {
+                  if (val == null || val.isEmpty) return 'Введите новый пароль';
+                  if (val.length < 6) {
+                    return 'Пароль слишком короткий (мин. 6 знаков)';
+                  }
+                  if (val == _oldPasswordController.text) {
+                    return 'Новый пароль совпадает со старым';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Подтверждение пароля
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: _isConfirmObscured,
+                decoration: InputDecoration(
+                  labelText: 'Повторите новый пароль',
+                  prefixIcon: const Icon(Icons.gpp_good_outlined),
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isConfirmObscured
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                    onPressed: () => setState(
+                      () => _isConfirmObscured = !_isConfirmObscured,
+                    ),
+                  ),
+                ),
+                validator: (val) {
+                  if (val == null || val.isEmpty) {
+                    return 'Повторите новый пароль';
+                  }
+                  if (val != _newPasswordController.text) {
+                    return 'Пароли не совпадают';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Кнопка сохранения
+              ElevatedButton(
+                onPressed: _isLoading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Обновить пароль',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
               ),
               const SizedBox(height: 32),
