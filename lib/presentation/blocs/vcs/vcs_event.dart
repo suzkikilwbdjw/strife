@@ -5,13 +5,13 @@ abstract class VCSEvent {}
 /*=========================Внешние события================*/
 // Событие для подключение
 class ConnectRequested extends VCSEvent {
-  final String roomName;
+  final String roomId;
   final String identity;
   final String name;
   final String? photoUrl;
 
   ConnectRequested({
-    required this.roomName,
+    required this.roomId,
     required this.identity,
     required this.name,
     this.photoUrl,
@@ -90,6 +90,26 @@ class ToggleMinimizeRoomRequested extends VCSEvent {
 
   ToggleMinimizeRoomRequested({required this.minimize});
 }
+
+// Событие при завершении комнаты хостом
+class RoomTerminatedByHostRequested extends VCSEvent {
+  RoomTerminatedByHostRequested();
+}
+
+// Событие для завершения комнаты хостом
+class RoomTerminateRequested extends VCSEvent {
+  final String roomId;
+
+  RoomTerminateRequested({required this.roomId});
+}
+
+class AddParticipantRequested extends VCSEvent {
+  final String roomId;
+  final String participantId;
+
+  AddParticipantRequested({required this.roomId, required this.participantId});
+}
+
 /*===========================================================*/
 
 /*=========================Внутренние события================*/

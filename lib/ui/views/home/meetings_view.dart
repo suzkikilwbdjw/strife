@@ -43,21 +43,22 @@ class MeetingsView extends StatelessWidget {
           FirebaseAuth.instance.currentUser!.uid,
         ),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          // Обработка ошибки
           if (snapshot.hasError) {
             return Center(child: Text('Ошибка: ${snapshot.error}'));
           }
 
+          // Затем состояние ожидания
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final meetings = snapshot.data!;
 
-          if (meetings.isEmpty) {
+          // Проверяем наличие данных
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('У вас пока нет активных встреч'));
           }
+
+          final meetings = snapshot.data!;
 
           return ListView.builder(
             padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 12.0),
@@ -265,7 +266,7 @@ class MeetingCard extends StatelessWidget {
                         create: (_) =>
                             VCSBloc(context.read<VCSRepository>())..add(
                               ConnectRequested(
-                                roomName: roomId,
+                                roomId: roomId,
                                 identity: user.uid,
                                 name: user.displayName!,
                                 photoUrl: user.photoURL!,
@@ -583,7 +584,10 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                             } else {
                               final roomId = await context
                                   .read<VCSRepository>()
-                                  .createRoom();
+                                  .createRoom(
+                                    roomName: 'test',
+                                    creatorId: senderId,
+                                  );
 
                               if (!context.mounted) return;
 

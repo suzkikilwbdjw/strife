@@ -207,6 +207,22 @@ class UserRepository {
         );
   }
 
+  // Стрим для отслеживания звонков
+  Stream<List<Map<String, dynamic>>> getCallsStream(String userId) {
+    return _firestore
+        .collection('rooms')
+        .where('participantIds', arrayContains: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList(),
+        );
+  }
+
   // Обновление данных встречи
   Future<void> updateMeeting(
     String idMeeting,

@@ -2,6 +2,8 @@ import 'package:livekit_client/livekit_client.dart';
 
 const _undefined = Object();
 
+enum RoomLeaveReason { none, kicked, terminatedByHost }
+
 class VCSState {
   final bool isMinimized;
 
@@ -12,12 +14,12 @@ class VCSState {
   final String? pinnedParticipantSid;
   final String? activeSpeakerSid;
 
-  final Map<String, bool> hostSids;
+  final List<String> hostSids;
 
   final Map<String, bool> mutedMicrophoneByHostSids;
   final Map<String, bool> mutedCameraByHostSids;
 
-  final bool wasKicked;
+  final RoomLeaveReason leaveReason;
 
   final bool isReconnecting;
   final bool isRemoteAudioEnabled;
@@ -37,10 +39,10 @@ class VCSState {
     this.participants = const [],
     this.pinnedParticipantSid,
     this.activeSpeakerSid,
-    this.hostSids = const {},
+    this.hostSids = const [],
     this.mutedMicrophoneByHostSids = const {},
     this.mutedCameraByHostSids = const {},
-    this.wasKicked = false,
+    this.leaveReason = RoomLeaveReason.none,
     this.isReconnecting = false,
     this.isRemoteAudioEnabled = true,
     this.isCameraEnabled = false,
@@ -58,10 +60,10 @@ class VCSState {
     List<Participant>? participants,
     Object? pinnedParticipantSid = _undefined,
     String? activeSpeakerSid,
-    Map<String, bool>? hostSids,
+    List<String>? hostSids,
     Map<String, bool>? mutedMicrophoneByHostSids,
     Map<String, bool>? mutedCameraByHostSids,
-    bool? wasKicked,
+    RoomLeaveReason? leaveReason,
     bool? isReconnecting,
     bool? isRemoteAudioEnabled,
     bool? isCameraEnabled,
@@ -80,7 +82,7 @@ class VCSState {
           ? this.pinnedParticipantSid
           : (pinnedParticipantSid as String?),
       activeSpeakerSid: activeSpeakerSid ?? this.activeSpeakerSid,
-      wasKicked: wasKicked ?? this.wasKicked,
+      leaveReason: leaveReason ?? this.leaveReason,
       hostSids: hostSids ?? this.hostSids,
       mutedMicrophoneByHostSids:
           mutedMicrophoneByHostSids ?? this.mutedMicrophoneByHostSids,

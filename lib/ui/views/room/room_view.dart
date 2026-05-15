@@ -65,13 +65,38 @@ class RoomView extends StatelessWidget {
           },
         ),
 
-        // Слушатель кика
+        // Слушатель обычного отключения / ошибок
         BlocListener<VCSBloc, VCSState>(
-          listenWhen: (p, c) => p.wasKicked != c.wasKicked,
+          listenWhen: (p, c) =>
+              p.isConnected != c.isConnected || p.error != c.error,
           listener: (context, state) {
-            if (state.wasKicked) {
+            if (state.error != null) {
               Navigator.of(context).popUntil((route) => route.isFirst);
-              AppNotifications.showInfo(context, 'Вы были удалены из комнаты');
+              AppNotifications.showError(context, state.error!);
+            } else if (!state.isConnected &&
+                state.leaveReason == RoomLeaveReason.none) {
+              // Если пользователь просто сам нажал "Выйти" и успешно отключился
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            }
+          },
+        ),
+
+        // Слушатель модерации (Кик или Завершение хостом)
+        BlocListener<VCSBloc, VCSState>(
+          listenWhen: (p, c) => p.leaveReason != c.leaveReason,
+          listener: (context, state) {
+            if (state.leaveReason == RoomLeaveReason.kicked) {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              AppNotifications.showInfo(
+                context,
+                'Вы были удалены из комнаты модератором',
+              );
+            } else if (state.leaveReason == RoomLeaveReason.terminatedByHost) {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              AppNotifications.showInfo(
+                context,
+                'Организатор завершил встречу для всех участников',
+              );
             }
           },
         ),
@@ -210,9 +235,7 @@ class FullVideoCallView extends StatelessWidget {
       children: [
         // Основной контент
         Container(
-          decoration: const BoxDecoration(
-            color: Color.fromARGB(255, 20, 40, 153),
-          ),
+          decoration: const BoxDecoration(color: Colors.black),
           child: const SafeArea(child: ParticipantLayout()),
         ),
 
@@ -344,30 +367,165 @@ class NavigationBottomAppBar extends StatelessWidget {
                       iconSize: 34,
                       color: Colors.white,
                       onPressed: () async {
+                        final currentUser = FirebaseAuth.instance.currentUser;
+
+                        if (currentUser == null) return;
+
+                        // Проверяем, является ли текущий участник хостом
+                        final bool isHost = bloc.state.hostSids.contains(
+                          currentUser.uid,
+                        );
+
                         showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
-                            content: const Text(
-                              'Вы действительно хотите покинуть комнату?',
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                            actions: [
-                              TextButton(
-                                child: const Text('Нет'),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                              TextButton(
-                                child: const Text('Да'),
-                                onPressed: () {
-                                  bloc.add(DisconnectRequested());
-                                  // Закрываем диалог
-                                  Navigator.of(context).pop();
-                                  //Закрываем страницу
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                            ],
+                            contentPadding: const EdgeInsets.only(
+                              top: 20,
+                              left: 24,
+                              right: 24,
+                              bottom: 12,
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const Icon(
+                                  Icons.logout_rounded,
+                                  color: Color(0xFFB91ED0),
+                                  size: 36,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  isHost
+                                      ? 'Управление звонком'
+                                      : 'Выход из комнаты',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  isHost
+                                      ? 'Вы можете просто покинуть звонок или завершить конференцию для всех участников.'
+                                      : 'Вы действительно хотите покинуть комнату звонка?',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black54,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Пользователь хост
+                                if (isHost) ...[
+                                  // Кнопка завершить для всех
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.redAccent,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    onPressed: () async {
+                                      final String roomIdToTerminate =
+                                          bloc.roomId!;
+
+                                      // Локально отключаем хоста и сбрасываем VCSState в дефолт
+                                      bloc.add(DisconnectRequested());
+
+                                      // Отправляем запрос чтобы уничтожить комнату для всех остальных
+                                      bloc.add(
+                                        RoomTerminateRequested(
+                                          roomId: roomIdToTerminate,
+                                        ),
+                                      );
+                                    },
+                                    child: const Text(
+                                      'Завершить для всех',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  // Кнопка просто выйти (оставив других говорить)
+                                  OutlinedButton(
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      side: const BorderSide(
+                                        color: Colors.black12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      bloc.add(DisconnectRequested());
+                                    },
+                                    child: const Text(
+                                      'Выйти самому',
+                                      style: TextStyle(
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+
+                                // Пользователь обычный участник
+                                if (!isHost) ...[
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.black,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    onPressed: () {
+                                      bloc.add(DisconnectRequested());
+                                    },
+                                    child: const Text(
+                                      'Выйти',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 6),
+
+                                // Кнопка oтмена
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text(
+                                    'Отмена',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -467,29 +625,25 @@ class NavigationBottomAppBar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 30),
                     ),
                     onPressed: () async {
-                      await showModalBottomSheet<void>(
+                      await showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
+                        ),
                         builder: (context) => BlocProvider.value(
                           value: bloc,
                           child: DraggableScrollableSheet(
                             initialChildSize: 0.6,
-                            maxChildSize: 0.75,
+                            maxChildSize: 0.8,
                             minChildSize: 0.4,
                             expand: false,
-                            builder: (context, controller) => Container(
-                              clipBehavior: Clip.antiAlias,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(30),
+                            builder: (context, scrollController) =>
+                                ParticipantsView(
+                                  scrollController: scrollController,
                                 ),
-                              ),
-                              child: ParticipantsView(
-                                scrollController: controller,
-                              ),
-                            ),
                           ),
                         ),
                       );
@@ -698,7 +852,7 @@ class GridParticipantsView extends StatelessWidget {
         ),
         itemCount: participants.length,
         itemBuilder: (context, index) =>
-            ParticipantTile(participant: participants[index]!),
+            ParticipantTile(participant: participants[index]!, isCompact: true),
       ),
     );
   }
@@ -986,11 +1140,9 @@ class BottomStatusBarQualityConnection extends StatelessWidget {
           ConnectionQuality.excellent => Icons.signal_cellular_alt_rounded,
           ConnectionQuality.good => Icons.signal_cellular_alt_2_bar_rounded,
           ConnectionQuality.poor => Icons.signal_cellular_alt_1_bar_rounded,
-          ConnectionQuality.lost =>
-            Icons.signal_cellular_connected_no_internet_0_bar_rounded,
-          ConnectionQuality.unknown =>
-            Icons.signal_cellular_connected_no_internet_4_bar_rounded,
-          null => Icons.signal_cellular_connected_no_internet_4_bar_rounded,
+          ConnectionQuality.lost => Icons.signal_cellular_nodata_rounded,
+          ConnectionQuality.unknown => Icons.signal_cellular_nodata_rounded,
+          null => Icons.signal_cellular_alt_rounded,
         },
         color: switch (connectionQuality) {
           ConnectionQuality.excellent => Colors.green,
@@ -998,7 +1150,7 @@ class BottomStatusBarQualityConnection extends StatelessWidget {
           ConnectionQuality.poor => Colors.red,
           ConnectionQuality.lost => Colors.red,
           ConnectionQuality.unknown => Colors.red,
-          null => Colors.red,
+          null => Colors.green,
         },
         semanticLabel: 'Качество сети',
       ),
