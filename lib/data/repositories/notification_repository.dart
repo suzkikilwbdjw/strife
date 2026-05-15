@@ -150,6 +150,7 @@ class NotificationRepository {
     return _firestore
         .collection('notifications')
         .where('recipientId', isEqualTo: userId)
+        .where('status', isNotEqualTo: 'hidden')
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map(
@@ -161,10 +162,26 @@ class NotificationRepository {
         );
   }
 
-  // Удаление уведомления
-  Future<void> removeNotification(String notificationId) async {
+  // Стрим для получения количества непрочитанных уведомлений
+  Stream<int> getUnreadCountNotificationStream(String userId) {
     try {
-      await _firestore.collection('notifications').doc(notificationId).delete();
+      return _firestore
+          .collection('notifications')
+          .where('status', isEqualTo: 'unread')
+          .where('recipientId', isEqualTo: userId)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.length);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Удаление уведомления
+  Future<void> hiddenNotification(String notificationId) async {
+    try {
+      await _firestore.collection('notifications').doc(notificationId).update({
+        'status': 'hidden',
+      });
     } catch (e) {
       rethrow;
     }
@@ -180,5 +197,24 @@ class NotificationRepository {
       'fcmToken': token,
       'lastTokenUpdate': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  }
+
+  // Запрос для пометки непрочитанных уведомлений
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications/mark-notifications-read'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'userId': userId}),
+      );
+      if (response.statusCode != 200) {
+        final errorData = jsonDecode(response.body);
+        throw Exception(
+          errorData['error'] ?? 'Не удалось обновить статус уведомлений',
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
   }
 }
