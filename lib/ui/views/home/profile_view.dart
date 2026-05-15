@@ -7,11 +7,22 @@ import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/view_models/auth_view_model.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 
-class ProfileView extends StatelessWidget {
+class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
 
   @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     return Scaffold(
       body: StreamBuilder<User?>(
         stream: context.read<UserRepository>().userStream,

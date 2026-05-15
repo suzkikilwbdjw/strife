@@ -14,28 +14,21 @@ import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/chat/chat_screen.dart';
 import 'package:strife/ui/widgets/contact_widget.dart';
 
-class ChatsView extends StatelessWidget {
+class ChatsView extends StatefulWidget {
   const ChatsView({super.key});
 
-  String formatTimestamp(dynamic timestamp) {
-    if (timestamp == null) return '';
+  @override
+  State<ChatsView> createState() => _ChatsViewState();
+}
 
-    // Преобразуем Firestore Timestamp в DateTime
-    DateTime date = (timestamp as Timestamp).toDate();
-    DateTime now = DateTime.now();
-
-    // Если сегодня — показываем только время, если нет — дату
-    if (date.day == now.day &&
-        date.month == now.month &&
-        date.year == now.year) {
-      return DateFormat('HH:mm').format(date);
-    } else {
-      return DateFormat('dd.MM.yyyy').format(date);
-    }
-  }
+class _ChatsViewState extends State<ChatsView>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       // Загловок страницы
       appBar: AppBar(
@@ -182,6 +175,23 @@ class ChatsView extends StatelessWidget {
         },
       ),
     );
+  }
+
+  String formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return '';
+
+    // Преобразуем Firestore Timestamp в DateTime
+    DateTime date = (timestamp as Timestamp).toDate();
+    DateTime now = DateTime.now();
+
+    // Если сегодня — показываем только время, если нет — дату
+    if (date.day == now.day &&
+        date.month == now.month &&
+        date.year == now.year) {
+      return DateFormat('HH:mm').format(date);
+    } else {
+      return DateFormat('dd.MM.yyyy').format(date);
+    }
   }
 }
 

@@ -4,7 +4,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
-import 'package:strife/ui/views/home/call_view.dart';
+import 'package:strife/ui/views/home/calls_view.dart';
 import 'package:strife/ui/views/home/chats_view.dart';
 import 'package:strife/ui/views/home/contacts_view.dart';
 import 'package:strife/ui/views/home/meetings_view.dart';
@@ -20,11 +20,25 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   int selectedIndex = 0;
+  late final PageController _pageController;
+
   double _pipTop = 80.0;
   double _pipLeft = 200.0;
   bool _isPipInitialized = false;
 
   bool _animatePipIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: selectedIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,14 +52,19 @@ class _HomeViewState extends State<HomeView> {
     return Scaffold(
       body: Stack(
         children: [
-          IndexedStack(
-            index: selectedIndex,
-            children: const <Widget>[
-              CallView(),
-              ChatsView(),
-              ProfileView(),
-              MeetingsView(),
-              ContactsView(),
+          PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                selectedIndex = index;
+              });
+            },
+            children: const [
+              CallsView(key: ValueKey('calls')),
+              ChatsView(key: ValueKey('chats')),
+              ProfileView(key: ValueKey('profile')),
+              MeetingsView(key: ValueKey('meetings')),
+              ContactsView(key: ValueKey('contacts')),
             ],
           ),
 
@@ -129,6 +148,12 @@ class _HomeViewState extends State<HomeView> {
 
     return GestureDetector(
       onTap: () {
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
+        );
+
         setState(() {
           selectedIndex = index;
         });
@@ -274,7 +299,9 @@ class _HomeViewState extends State<HomeView> {
 
     if (trackToRender != null) {
       return AbsorbPointer(
-        child: VideoTrackRenderer(trackToRender, fit: VideoViewFit.cover),
+        child: RepaintBoundary(
+          child: VideoTrackRenderer(trackToRender, fit: VideoViewFit.cover),
+        ),
       );
     }
 

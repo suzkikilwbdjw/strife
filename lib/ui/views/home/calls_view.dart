@@ -17,14 +17,14 @@ import 'package:strife/ui/views/room/room_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 import 'package:strife/ui/widgets/contact_widget.dart';
 
-class CallView extends StatefulWidget {
-  const CallView({super.key});
+class CallsView extends StatefulWidget {
+  const CallsView({super.key});
 
   @override
-  State<CallView> createState() => _CallViewState();
+  State<CallsView> createState() => _CallsViewState();
 }
 
-class _CallViewState extends State<CallView> {
+class _CallsViewState extends State<CallsView> {
   late final TextEditingController _textEditingController;
   late final User _user;
 
@@ -208,7 +208,7 @@ class _CallViewState extends State<CallView> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: CallHistory(user: _user),
+              child: CallsHistory(user: _user),
             ),
           ),
         ],
@@ -217,8 +217,8 @@ class _CallViewState extends State<CallView> {
   }
 }
 
-class CallHistory extends StatelessWidget {
-  const CallHistory({super.key, required this.user});
+class CallsHistory extends StatelessWidget {
+  const CallsHistory({super.key, required this.user});
 
   final User user;
 

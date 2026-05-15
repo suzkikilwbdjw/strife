@@ -1028,10 +1028,12 @@ class VideoParticipant extends StatelessWidget {
     }
 
     return AbsorbPointer(
-      child: VideoTrackRenderer(
-        track,
-        mirrorMode: VideoViewMirrorMode.auto,
-        fit: VideoViewFit.cover,
+      child: RepaintBoundary(
+        child: VideoTrackRenderer(
+          track,
+          mirrorMode: VideoViewMirrorMode.auto,
+          fit: VideoViewFit.cover,
+        ),
       ),
     );
   }

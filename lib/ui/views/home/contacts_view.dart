@@ -15,12 +15,16 @@ class ContactsView extends StatefulWidget {
   State<ContactsView> createState() => _ContactsViewState();
 }
 
-class _ContactsViewState extends State<ContactsView> {
+class _ContactsViewState extends State<ContactsView>
+    with AutomaticKeepAliveClientMixin {
   // Флаг для показа только избранных контактов
   bool _showFavorites = false;
 
   // Для получения адреса почты
   final TextEditingController textEditingController = TextEditingController();
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -38,6 +42,8 @@ class _ContactsViewState extends State<ContactsView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     final mainGradient = Theme.of(
       context,
     ).extension<GradientTheme>()!.mainGradient;
