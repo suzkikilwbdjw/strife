@@ -41,6 +41,9 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     on<ToggleMinimizeRoomRequested>((event, emit) {
       emit(state.copyWith(isMinimized: event.minimize));
     });
+    on<RoomTerminatedByHostRequested>(_onRoomTerminatedByHost);
+    on<RoomTerminateRequested>(_onRoomTerminate);
+    on<AddParticipantRequested>(_onAddParticipantInRoomToDB);
 
     // Внутренние
     on<RoomDataChanged>((event, emit) {
@@ -50,6 +53,22 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     on<ActiveSpeakerChanged>(_onActiveSpeakerChanged);
     on<ReconnectingStarted>(_onReconnectingStarted);
     on<ReconnectingFinished>(_onReconnectingFinished);
+  }
+
+  Future<void> _onAddParticipantInRoomToDB(
+    AddParticipantRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(error: null));
+
+      _repository.addParticipant(
+        roomId: event.roomId,
+        participantId: event.participantId,
+      );
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
   }
 
   Future<void> _onSyncHardwareStatus(
@@ -68,7 +87,27 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     KickedFromRoomRequested event,
     Emitter<VCSState> emit,
   ) async {
-    emit(state.copyWith(wasKicked: true));
+    emit(state.copyWith(leaveReason: RoomLeaveReason.kicked));
+  }
+
+  Future<void> _onRoomTerminatedByHost(
+    RoomTerminatedByHostRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    emit(state.copyWith(leaveReason: RoomLeaveReason.terminatedByHost));
+  }
+
+  Future<void> _onRoomTerminate(
+    RoomTerminateRequested event,
+    Emitter<VCSState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(error: null));
+
+      await _repository.terminateRoom(event.roomId);
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
   }
 
   Future<void> _onMuteParticipant(
@@ -166,6 +205,8 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
         await _room!.dispose();
       }
 
+      emit(state.copyWith(error: null));
+
       // Создаем экземпляр комнаты
       _room = Room(
         roomOptions: const RoomOptions(adaptiveStream: true, dynacast: true),
@@ -175,7 +216,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
       _setupRoomListeners(); // Настраиваем подписки LiveKit
 
       final data = await _repository.fetchToken(
-        room: event.roomName,
+        roomId: event.roomId,
         identity: event.identity,
         name: event.name,
         photoUrl: event.photoUrl,
@@ -306,15 +347,31 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
       ..on<ParticipantMetadataUpdatedEvent>((event) {
         add(RoomDataChanged());
       })
-      ..on<RoomDisconnectedEvent>((event) {
+      ..on<RoomDisconnectedEvent>((event) async {
         // Если участника выгнали
         if (event.reason == DisconnectReason.participantRemoved) {
           add(KickedFromRoomRequested());
+          return;
         }
+
+        // Во всех остальных случаях проверяем базу данных
+        try {
+          // Запрашиваем актуальный статус комнаты из вашего VCSRepository
+          final isCompleted = await _repository.isRoomCompleted(roomId!);
+          if (isCompleted) {
+            add(RoomTerminatedByHostRequested());
+          }
+        } catch (_) {}
       })
       // Участник подключился
       ..on<ParticipantConnectedEvent>((event) {
         add(RoomDataChanged());
+        add(
+          AddParticipantRequested(
+            roomId: roomId!,
+            participantId: event.participant.identity,
+          ),
+        );
       })
       // Участник вышел
       ..on<ParticipantDisconnectedEvent>((event) {
@@ -369,7 +426,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     final videoTracks = <String, VideoTrack>{};
     final audioTracks = <String, AudioTrack>{};
     final photoUrls = <String, String>{};
-    final hostSids = <String, bool>{};
+    final hostSids = <String>[];
     final mutedMicrophoneByHostSids = <String, bool>{};
     final mutedCameraByHostSids = <String, bool>{};
 
@@ -383,7 +440,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
 
       // фото / host / mute
       photoUrls[participant.sid] = decoded['photoUrl'] ?? '';
-      hostSids[participant.sid] = decoded['isHost'] == true;
+      if (decoded['isHost'] == true) hostSids.add(participant.identity);
       mutedMicrophoneByHostSids[participant.sid] =
           decoded['mutedByHost'] == true;
       mutedCameraByHostSids[participant.sid] =

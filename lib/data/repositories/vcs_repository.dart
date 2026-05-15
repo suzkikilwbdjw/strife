@@ -1,15 +1,17 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
 class VCSRepository {
   // Адресс server.mjs
   final _httpUrl = 'http://62.109.2.27:4000';
 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   // Запрос токена у сервера
   Future<Map<String, dynamic>> fetchToken({
-    required String room,
+    required String roomId,
     required String identity,
     required String name,
     String? photoUrl,
@@ -18,7 +20,7 @@ class VCSRepository {
       Uri.parse('$_httpUrl/livekit/getToken'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'room_name': room,
+        'room_name': roomId,
         'participant_identity': identity,
         'participant_name': name,
         'photo_url': photoUrl,
@@ -115,30 +117,91 @@ class VCSRepository {
     await http.post(
       Uri.parse('$_httpUrl/livekit/transferHost'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'room': roomId, 'newHostId': newHostId}),
+      body: jsonEncode({
+        'room': roomId,
+        'currentHostId': FirebaseAuth.instance.currentUser!.uid,
+        'newHostId': newHostId,
+        'action': 'add',
+      }),
     );
   }
 
   // Создать запись комнаты в БД
-  Future<String> createRoom() async {
-    final roomRef = FirebaseFirestore.instance.collection('rooms').doc();
+  Future<String> createRoom({
+    required String roomName,
+    required String creatorId,
+  }) async {
+    try {
+      final roomRef = _firestore.collection('rooms').doc();
 
-    await roomRef.set({
-      'createdAt': FieldValue.serverTimestamp(),
-      'status': 'active',
-    });
+      await roomRef.set({
+        'roomName': roomName,
+        'creatorId': creatorId,
+        'participantIds': [creatorId],
+        'hostIds': [creatorId],
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'status': 'active',
+      });
 
-    return roomRef.id;
+      return roomRef.id;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Добавить участника в БД
+  Future<String> addParticipant({
+    required String roomId,
+    required String participantId,
+  }) async {
+    try {
+      final roomRef = _firestore.collection('rooms').doc(roomId);
+
+      await roomRef.update({
+        'updatedAt': FieldValue.serverTimestamp(),
+        'participantIds': FieldValue.arrayUnion([participantId]),
+      });
+
+      return roomRef.id;
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // Проверить существует ли комната
   Future<bool> checkRoomExists(String roomId) async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('rooms')
-          .doc(roomId)
-          .get();
+      final doc = await _firestore.collection('rooms').doc(roomId).get();
       return doc.exists;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Запрос на заверешение комнаты для всех
+  Future<void> terminateRoom(String roomId) async {
+    final res = await http.post(
+      Uri.parse('$_httpUrl/livekit/terminateRoom'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'roomId': roomId}),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception('Ошибка завершения комнаты: ${res.statusCode}');
+    }
+  }
+
+  // Проверка на существовавние комнаты
+  Future<bool> isRoomCompleted(String roomId) async {
+    try {
+      final doc = await _firestore.collection('rooms').doc(roomId).get();
+
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['status'] == 'completed';
+      } else {
+        return false;
+      }
     } catch (e) {
       return false;
     }

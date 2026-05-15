@@ -1,7 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
+import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
@@ -13,13 +17,32 @@ import 'package:strife/ui/views/room/room_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 import 'package:strife/ui/widgets/contact_widget.dart';
 
-class CallView extends StatelessWidget {
+class CallView extends StatefulWidget {
   const CallView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final TextEditingController textEditingController = TextEditingController();
+  State<CallView> createState() => _CallViewState();
+}
 
+class _CallViewState extends State<CallView> {
+  late final TextEditingController _textEditingController;
+  late final User _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _textEditingController = TextEditingController();
+    _user = FirebaseAuth.instance.currentUser!;
+  }
+
+  @override
+  void dispose() {
+    _textEditingController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       // Заголовок в верху страницы
       appBar: AppBar(
@@ -81,67 +104,319 @@ class CallView extends StatelessWidget {
       ),
 
       // Основной контент
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                // Кнопка создания комнаты
-                CreateRoomButton(user: FirebaseAuth.instance.currentUser!),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              // Кнопка создания комнаты
+              CreateRoomButton(user: FirebaseAuth.instance.currentUser!),
 
-                const SizedBox(width: 8),
+              const SizedBox(width: 8),
 
-                // Кнопка присоединения к звонку
-                JoinRoomButton(
-                  user: FirebaseAuth.instance.currentUser!,
-                  textEditingController: textEditingController,
-                ),
+              // Кнопка присоединения к звонку
+              JoinRoomButton(
+                user: FirebaseAuth.instance.currentUser!,
+                textEditingController: _textEditingController,
+              ),
 
-                const SizedBox(width: 8),
-              ],
-            ),
+              const SizedBox(width: 8),
+            ],
+          ),
 
-            const Divider(
-              height: 24, // Пространство над и под линией
-              thickness: 1, // Толщина самой линии
-              color: Colors.grey, // Цвет
-            ),
+          const Divider(
+            height: 24, // Пространство над и под линией
+            thickness: 1, // Толщина самой линии
+            color: Colors.grey, // Цвет
+          ),
 
-            const Text(
-              'Недавние',
-              style: TextStyle(color: Colors.purple, fontSize: 18),
-            ),
+          const Text(
+            'Недавние',
+            style: TextStyle(color: Colors.purple, fontSize: 18),
+          ),
 
-            const Divider(
-              height: 24, // Пространство над и под линией
-              thickness: 1, // Толщина самой линии
-              color: Colors.grey, // Цвет
-            ),
+          const Divider(
+            height: 24, // Пространство над и под линией
+            thickness: 1, // Толщина самой линии
+            color: Colors.grey, // Цвет
+          ),
 
-            Expanded(
-              child: ListView.separated(
-                itemCount: 20,
+          CallHistory(user: _user),
+        ],
+      ),
+    );
+  }
+}
 
-                // Разделительная полоса
-                separatorBuilder: (context, index) =>
-                    Divider(height: 24, thickness: 1, color: Colors.grey),
+class CallHistory extends StatelessWidget {
+  const CallHistory({super.key, required this.user});
 
-                // Само создание списка элементов
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text('Элемент $index'),
+  final User user;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: context.read<UserRepository>().getCallsStream(user.uid),
+        builder: (context, snapshot) {
+          // Обработка ошибки
+          if (snapshot.hasError) {
+            return Center(child: Text('Ошибка: ${snapshot.error}'));
+          }
+
+          // Затем состояние ожидания
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          // Проверяем наличие данных
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('У вас пока нет истории звонков'));
+          }
+
+          final calls = snapshot.data!;
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: calls.length,
+            itemBuilder: (context, index) {
+              final call = calls[index];
+
+              return CallCardWidget(
+                callData: call,
+                onJoinPressed: () async {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) =>
+                        const Center(child: CircularProgressIndicator()),
+                  );
+
+                  final vcsBloc = context.read<VCSBloc>();
+
+                  vcsBloc.add(
+                    ConnectRequested(
+                      roomId: call['id'],
+                      identity: user.uid,
+                      name: user.displayName!,
+                      photoUrl: user.photoURL,
+                    ),
+                  );
+
+                  Navigator.pop(context); // Закрываем саму шторку
+
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: vcsBloc,
+                        child: const RoomView(),
+                      ),
+                    ),
                   );
                 },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class CallCardWidget extends StatelessWidget {
+  final Map<String, dynamic> callData;
+  final VoidCallback onJoinPressed;
+
+  const CallCardWidget({
+    super.key,
+    required this.callData,
+    required this.onJoinPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String roomName = callData['roomName'] ?? 'Без названия';
+    final List<dynamic> participants = callData['participantIds'] ?? [];
+    final String status = callData['status'] ?? 'active';
+    final bool isActive = status == 'active';
+
+    const brandColor = Color(0xFFB91ED0);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isActive
+              ? brandColor.withValues(alpha: 0.06)
+              : const Color(0xFFF5F5F7),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive
+                ? brandColor.withValues(alpha: 0.15)
+                : Colors.black12,
+            width: 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              // Иконка звонка в цвет статуса
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? brandColor.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.05),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isActive
+                      ? Icons.video_call_rounded
+                      : Icons.videocam_off_outlined,
+                  color: isActive ? brandColor : Colors.black45,
+                  size: 28,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 16),
+
+              // Информация о звонке
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Название комнаты
+                    Text(
+                      roomName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: isActive ? Colors.black : Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Количество участников и дата
+                    Row(
+                      children: [
+                        // Иконка людей
+                        Icon(
+                          Icons.people_alt_outlined,
+                          size: 14,
+                          color: isActive
+                              ? brandColor.withValues(alpha: 0.7)
+                              : Colors.black45,
+                        ),
+                        const SizedBox(width: 4),
+                        // Цифра участников
+                        Text(
+                          '${participants.length}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isActive ? brandColor : Colors.black54,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Разделитель-точка
+                        const Icon(
+                          Icons.circle,
+                          size: 4,
+                          color: Colors.black26,
+                        ),
+                        const SizedBox(width: 12),
+                        // Дата создания
+                        Expanded(
+                          child: Text(
+                            _formatCallDate(callData['createdAt']),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black45,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Динамическая кнопка
+              isActive
+                  ? ElevatedButton(
+                      onPressed: onJoinPressed,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            brandColor, // Фиолетовая кнопка "Войти"
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Войти',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Завершен',
+                        style: TextStyle(
+                          color: Colors.black38,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  // Форматирование даты из Firestore Timestamp
+  String _formatCallDate(dynamic createdAt) {
+    if (createdAt == null) return 'Только что';
+    if (createdAt is! Timestamp) return 'Неизвестно';
+
+    final DateTime dateTime = createdAt.toDate();
+    final DateTime now = DateTime.now();
+
+    if (dateTime.year == now.year &&
+        dateTime.month == now.month &&
+        dateTime.day == now.day) {
+      return 'Сегодня в ${DateFormat('HH:mm').format(dateTime)}';
+    } else if (dateTime.year == now.year &&
+        dateTime.month == now.month &&
+        dateTime.day == now.day - 1) {
+      return 'Вчера в ${DateFormat('HH:mm').format(dateTime)}';
+    } else {
+      return DateFormat('dd MMM, HH:mm', 'ru').format(dateTime);
+    }
   }
 }
 
@@ -228,21 +503,24 @@ class JoinRoomButton extends StatelessWidget {
 
                         if (!context.mounted) return;
 
-                        Navigator.of(context).pop(); // закрыли loader
-
                         if (exists) {
+                          final vcsBloc = context.read<VCSBloc>();
+
+                          vcsBloc.add(
+                            ConnectRequested(
+                              roomId: roomId,
+                              identity: user.uid,
+                              name: user.displayName!,
+                              photoUrl: user.photoURL,
+                            ),
+                          );
+
+                          Navigator.pop(context); // Закрываем саму шторку
+
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => BlocProvider(
-                                create: (_) =>
-                                    VCSBloc(context.read<VCSRepository>())..add(
-                                      ConnectRequested(
-                                        roomName: roomId,
-                                        identity: user.uid,
-                                        name: user.displayName ?? 'bobik',
-                                        photoUrl: user.photoURL,
-                                      ),
-                                    ),
+                              builder: (_) => BlocProvider.value(
+                                value: vcsBloc,
                                 child: const RoomView(),
                               ),
                             ),
@@ -341,7 +619,8 @@ class CreateRoomButton extends StatelessWidget {
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
-          builder: (context) => NewCallSheet(user: user),
+          builder: (context) =>
+              SingleChildScrollView(child: NewCallSheet(user: user)),
         );
       },
 
@@ -403,6 +682,7 @@ class NewCallSheet extends StatefulWidget {
 class _NewCallSheetState extends State<NewCallSheet> {
   final Set<String> _selectedUserIds = {};
   final _searchController = TextEditingController();
+  final _roomNameController = TextEditingController();
 
   late ContactsBloc _contactsBloc;
 
@@ -415,6 +695,7 @@ class _NewCallSheetState extends State<NewCallSheet> {
   @override
   void dispose() {
     _searchController.dispose();
+    _roomNameController.dispose();
     // При закрытии шторки сбрасываем строку поиска, чтобы вернуть полный список контактов
     _contactsBloc.add(SearchContactsRequested(searchQuery: ''));
     super.dispose();
@@ -460,6 +741,22 @@ class _NewCallSheetState extends State<NewCallSheet> {
             style: TextStyle(fontSize: 14, color: Colors.black54),
           ),
           const SizedBox(height: 20),
+
+          // Поле названия звонка
+          TextField(
+            controller: _roomNameController,
+            textCapitalization: TextCapitalization.sentences,
+            inputFormatters: [LengthLimitingTextInputFormatter(40)],
+            decoration: const InputDecoration(
+              labelText: 'Название звонка',
+              hintText: 'Обсуждение проекта...',
+              prefixIcon: Icon(Icons.label_outline_rounded),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // Поле поиска
           TextField(
@@ -579,9 +876,14 @@ class _NewCallSheetState extends State<NewCallSheet> {
           ),
           const SizedBox(height: 24),
 
-          // Фирменная залитая кнопка действия
+          // Кнопка создать звонок
           ElevatedButton(
             onPressed: () async {
+              final rawRoomName = _roomNameController.text.trim();
+              final displayRoomName = rawRoomName.isNotEmpty
+                  ? rawRoomName
+                  : 'Групповой звонок';
+
               final senderId = widget.user.uid;
               final senderName = widget.user.displayName!;
               final senderPhotoUrl = widget.user.photoURL!;
@@ -593,7 +895,10 @@ class _NewCallSheetState extends State<NewCallSheet> {
                     const Center(child: CircularProgressIndicator()),
               );
 
-              final roomId = await context.read<VCSRepository>().createRoom();
+              final roomId = await context.read<VCSRepository>().createRoom(
+                roomName: displayRoomName,
+                creatorId: senderId,
+              );
 
               if (!context.mounted) return;
               Navigator.of(context).pop(); // Закрываем крутилку лоадера
@@ -603,7 +908,7 @@ class _NewCallSheetState extends State<NewCallSheet> {
 
                 vcsBloc.add(
                   ConnectRequested(
-                    roomName: roomId,
+                    roomId: roomId,
                     identity: widget.user.uid,
                     name: widget.user.displayName!,
                     photoUrl: widget.user.photoURL,

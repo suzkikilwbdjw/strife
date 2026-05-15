@@ -8,125 +8,167 @@ import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 
 class ParticipantWidget extends StatelessWidget {
-  const ParticipantWidget({super.key, required this.participant});
   final Participant participant;
+
+  const ParticipantWidget({super.key, required this.participant});
+
   @override
   Widget build(BuildContext context) {
     final myUid = FirebaseAuth.instance.currentUser?.uid;
-    if (myUid != null) {
-      context.read<ContactsBloc>().add(
-        LoadContactsRequested(currentUserId: myUid),
-      );
-    }
+    const brandColor = Color(0xFFB91ED0);
 
     final photoUrl = context.select<VCSBloc, String?>(
       (bloc) => bloc.state.photoUrls[participant.sid],
     );
 
-    // Являеся ли участник хостом (пометка звездой)
     final isHost = context.select<VCSBloc, bool>(
-      (bloc) => bloc.state.hostSids[participant.sid] ?? false,
+      (bloc) => bloc.state.hostSids.contains(participant.identity),
     );
 
-    // Является ли локальный участник хостом (То есть "я")
     final currentUserIsHost = context.select<VCSBloc, bool>(
-      (bloc) =>
-          bloc.state.hostSids[bloc.state.participants
-              .firstWhere(
-                (p) => p.identity == FirebaseAuth.instance.currentUser!.uid,
-              )
-              .sid] ??
-          false,
+      (bloc) => bloc.state.hostSids.contains(myUid),
     );
 
-    // Отключени ли доступ yчастникa k микрофон админом
     final userIsMutedMicrophone = context.select<VCSBloc, bool>(
       (bloc) => bloc.state.mutedMicrophoneByHostSids[participant.sid] ?? false,
     );
 
-    // Отключени ли доступ yчастника k камере админом
     final userIsMutedCamera = context.select<VCSBloc, bool>(
       (bloc) => bloc.state.mutedCameraByHostSids[participant.sid] ?? false,
     );
 
-    // Находится ли участник уже в контактах
     final isAlreadyContact = context.select<ContactsBloc, bool>(
       (bloc) => bloc.state.allContacts.any(
         (contact) => contact['id'] == participant.identity,
       ),
     );
 
-    if (photoUrl == null) {
-      return const SizedBox.shrink();
-    }
+    if (photoUrl == null) return const SizedBox.shrink();
+
+    final isMe = participant.identity == myUid;
+
     return Container(
-      padding: EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.grey.shade400,
-        borderRadius: BorderRadius.circular(16),
+        color: isHost
+            ? brandColor.withValues(alpha: 0.08)
+            : brandColor.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isHost
+              ? brandColor.withValues(alpha: 0.2)
+              : brandColor.withValues(alpha: 0.06),
+          width: 1,
+        ),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+        tileColor: Colors.transparent,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        horizontalTitleGap: 12,
+
+        // Аватарка участника
         leading: CircleAvatar(
-          radius: 24,
-          backgroundImage: NetworkImage(photoUrl),
+          radius: 22,
+          backgroundColor: Colors.grey.shade200,
+          backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+          child: photoUrl.isEmpty
+              ? const Icon(Icons.person, color: Colors.grey, size: 22)
+              : null,
         ),
+
+        // Имя и индикаторы оборудования
         title: Row(
           children: [
-            Text(participant.name, style: TextStyle(color: Colors.white)),
+            Flexible(
+              child: Text(
+                participant.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (userIsMutedMicrophone || userIsMutedCamera)
+              const SizedBox(width: 8),
             if (userIsMutedMicrophone)
-              const Icon(Icons.mic_off_outlined, color: Colors.red),
+              const Padding(
+                padding: EdgeInsets.only(right: 4.0),
+                child: Icon(
+                  Icons.mic_off_rounded,
+                  color: Colors.redAccent,
+                  size: 16,
+                ),
+              ),
             if (userIsMutedCamera)
-              const Icon(Icons.videocam_off_outlined, color: Colors.red),
+              const Icon(
+                Icons.videocam_off_rounded,
+                color: Colors.redAccent,
+                size: 16,
+              ),
           ],
         ),
+
+        // Метка хоста, надпись "Вы" или кастомное меню действий
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isHost)
               const Padding(
-                padding: EdgeInsets.only(right: 8.0),
-                child: Icon(Icons.stars, color: Colors.amber, size: 20),
+                padding: EdgeInsets.only(right: 4.0),
+                child: Icon(Icons.stars_rounded, color: Colors.amber, size: 18),
               ),
-            participant.identity != FirebaseAuth.instance.currentUser!.uid
-                ? PopupMenuButton(
-                    icon: const Icon(Icons.more_horiz, color: Colors.white70),
+            !isMe
+                ? PopupMenuButton<int>(
+                    icon: const Icon(
+                      Icons.more_horiz_rounded,
+                      color: Colors.black45,
+                    ),
+                    elevation: 4,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    color: Colors.purple,
+                    color: Colors.white,
                     itemBuilder: (context) => [
+                      // Опция контакты
                       PopupMenuItem(
+                        value: 1,
+                        child: Text(
+                          isAlreadyContact
+                              ? 'Удалить из контактов'
+                              : 'Добавить в контакты',
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 14,
+                          ),
+                        ),
                         onTap: () {
-                          final String? myUid =
-                              FirebaseAuth.instance.currentUser?.uid;
                           if (myUid == null) return;
-
-                          if (!isAlreadyContact) {
-                            // Если нет в контактах
-                            context.read<ContactsBloc>().add(
-                              AddContactsRequested(
-                                currentUserId: myUid,
-                                contactId: participant.identity,
-                              ),
-                            );
-                          } else {
-                            // Если есть в контактах
-                            context.read<ContactsBloc>().add(
-                              RemoveContactsRequested(
-                                currentUserId: myUid,
-                                contactId: participant.identity,
-                              ),
-                            );
-                          }
+                          context.read<ContactsBloc>().add(
+                            isAlreadyContact
+                                ? RemoveContactsRequested(
+                                    currentUserId: myUid,
+                                    contactId: participant.identity,
+                                  )
+                                : AddContactsRequested(
+                                    currentUserId: myUid,
+                                    contactId: participant.identity,
+                                  ),
+                          );
                         },
-                        child: !isAlreadyContact
-                            ? Text('Добавить в контакты')
-                            : Text('Удалить из контактов'),
                       ),
+                      // Опции для хоста (модерация)
                       if (currentUserIsHost) ...[
                         PopupMenuItem(
-                          child: Text('Назначить главным'),
+                          value: 2,
+                          child: const Text(
+                            'Назначить хостом',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontSize: 14,
+                            ),
+                          ),
                           onTap: () {
                             context.read<VCSBloc>().add(
                               TransferHostRequested(participant.identity),
@@ -134,45 +176,61 @@ class ParticipantWidget extends StatelessWidget {
                           },
                         ),
                         PopupMenuItem(
-                          child: !userIsMutedMicrophone
-                              ? const Text('Отключить доступ к микрофону')
-                              : const Text('Разрешить доступ к микрофону'),
+                          value: 3,
+                          child: Text(
+                            userIsMutedMicrophone
+                                ? 'Разрешить микрофон'
+                                : 'Отключить микрофон',
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 14,
+                            ),
+                          ),
                           onTap: () {
-                            if (!userIsMutedMicrophone) {
-                              context.read<VCSBloc>().add(
-                                MuteParticipantRequested(participant.identity),
-                              );
-                            } else {
-                              context.read<VCSBloc>().add(
-                                UnmuteParticipantRequested(
-                                  participant.identity,
-                                ),
-                              );
-                            }
+                            context.read<VCSBloc>().add(
+                              userIsMutedMicrophone
+                                  ? UnmuteParticipantRequested(
+                                      participant.identity,
+                                    )
+                                  : MuteParticipantRequested(
+                                      participant.identity,
+                                    ),
+                            );
                           },
                         ),
                         PopupMenuItem(
-                          child: !userIsMutedCamera
-                              ? const Text('Отключить доступ к показу видео')
-                              : const Text('Разрешить доступ к показу видео'),
+                          value: 4,
+                          child: Text(
+                            userIsMutedCamera
+                                ? 'Разрешить показ видео'
+                                : 'Отключить показ видео',
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 14,
+                            ),
+                          ),
                           onTap: () {
-                            if (!userIsMutedCamera) {
-                              context.read<VCSBloc>().add(
-                                DisableCameraParticipantRequested(
-                                  participant.identity,
-                                ),
-                              );
-                            } else {
-                              context.read<VCSBloc>().add(
-                                EnableCameraParticipantRequested(
-                                  participant.identity,
-                                ),
-                              );
-                            }
+                            context.read<VCSBloc>().add(
+                              userIsMutedCamera
+                                  ? EnableCameraParticipantRequested(
+                                      participant.identity,
+                                    )
+                                  : DisableCameraParticipantRequested(
+                                      participant.identity,
+                                    ),
+                            );
                           },
                         ),
                         PopupMenuItem(
-                          child: const Text('Исключить'),
+                          value: 5,
+                          child: const Text(
+                            'Исключить',
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           onTap: () {
                             context.read<VCSBloc>().add(
                               KickParticipantRequested(participant.identity),
@@ -182,9 +240,16 @@ class ParticipantWidget extends StatelessWidget {
                       ],
                     ],
                   )
-                : Text(
-                    'Вы',
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                : const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text(
+                      'Вы',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black38,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
           ],
         ),

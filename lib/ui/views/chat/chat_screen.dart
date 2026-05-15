@@ -124,7 +124,7 @@ class ChatScreen extends StatelessWidget {
                                               context.read<VCSRepository>(),
                                             )..add(
                                               ConnectRequested(
-                                                roomName: message
+                                                roomId: message
                                                     .toFirestore()['roomId'],
                                                 identity: user.uid,
                                                 name: user.displayName!,
