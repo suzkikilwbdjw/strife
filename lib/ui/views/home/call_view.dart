@@ -105,45 +105,66 @@ class _CallViewState extends State<CallView> {
 
       // Основной контент
       body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          const SizedBox(height: 16),
+
+          // Блок верхних кнопок действий
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                // Кнопка создания комнаты
+                Expanded(
+                  child: CreateRoomButton(
+                    user: FirebaseAuth.instance.currentUser!,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Кнопка присоединения к звонку
+                Expanded(
+                  child: JoinRoomButton(
+                    user: FirebaseAuth.instance.currentUser!,
+                    textEditingController: _textEditingController,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Надписи недавние звонки
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Недавние звонки',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'История ваших недавних аудио и видеоконференций',
+                  style: TextStyle(fontSize: 13, color: Colors.black45),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              // Кнопка создания комнаты
-              CreateRoomButton(user: FirebaseAuth.instance.currentUser!),
 
-              const SizedBox(width: 8),
-
-              // Кнопка присоединения к звонку
-              JoinRoomButton(
-                user: FirebaseAuth.instance.currentUser!,
-                textEditingController: _textEditingController,
-              ),
-
-              const SizedBox(width: 8),
-            ],
+          // Список истории звонков
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: CallHistory(user: _user),
+            ),
           ),
-
-          const Divider(
-            height: 24, // Пространство над и под линией
-            thickness: 1, // Толщина самой линии
-            color: Colors.grey, // Цвет
-          ),
-
-          const Text(
-            'Недавние',
-            style: TextStyle(color: Colors.purple, fontSize: 18),
-          ),
-
-          const Divider(
-            height: 24, // Пространство над и под линией
-            thickness: 1, // Толщина самой линии
-            color: Colors.grey, // Цвет
-          ),
-
-          CallHistory(user: _user),
         ],
       ),
     );
