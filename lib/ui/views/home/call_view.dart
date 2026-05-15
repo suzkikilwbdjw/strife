@@ -84,18 +84,64 @@ class _CallViewState extends State<CallView> {
         // Правая часть с кнопками действий
         actions: [
           // Иконка уведомлений
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: Colors.white,
-              size: 28,
-            ),
-            tooltip: 'Уведомления',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const NotificationsView(),
-                ),
+          StreamBuilder<int>(
+            stream: context
+                .read<NotificationRepository>()
+                .getUnreadCountNotificationStream(_user.uid),
+            builder: (context, snapshot) {
+              final unreadCount = snapshot.data ?? 0;
+              final hasUnread = unreadCount > 0;
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.notifications_none_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationsView(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  if (hasUnread)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: AnimatedScale(
+                        scale: hasUnread ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFB91ED0),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            unreadCount > 9 ? '9+' : '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               );
             },
           ),
@@ -105,45 +151,66 @@ class _CallViewState extends State<CallView> {
 
       // Основной контент
       body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          const SizedBox(height: 16),
+
+          // Блок верхних кнопок действий
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                // Кнопка создания комнаты
+                Expanded(
+                  child: CreateRoomButton(
+                    user: FirebaseAuth.instance.currentUser!,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Кнопка присоединения к звонку
+                Expanded(
+                  child: JoinRoomButton(
+                    user: FirebaseAuth.instance.currentUser!,
+                    textEditingController: _textEditingController,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Надписи недавние звонки
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Недавние звонки',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'История ваших недавних аудио и видеоконференций',
+                  style: TextStyle(fontSize: 13, color: Colors.black45),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              // Кнопка создания комнаты
-              CreateRoomButton(user: FirebaseAuth.instance.currentUser!),
 
-              const SizedBox(width: 8),
-
-              // Кнопка присоединения к звонку
-              JoinRoomButton(
-                user: FirebaseAuth.instance.currentUser!,
-                textEditingController: _textEditingController,
-              ),
-
-              const SizedBox(width: 8),
-            ],
+          // Список истории звонков
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: CallHistory(user: _user),
+            ),
           ),
-
-          const Divider(
-            height: 24, // Пространство над и под линией
-            thickness: 1, // Толщина самой линии
-            color: Colors.grey, // Цвет
-          ),
-
-          const Text(
-            'Недавние',
-            style: TextStyle(color: Colors.purple, fontSize: 18),
-          ),
-
-          const Divider(
-            height: 24, // Пространство над и под линией
-            thickness: 1, // Толщина самой линии
-            color: Colors.grey, // Цвет
-          ),
-
-          CallHistory(user: _user),
         ],
       ),
     );
@@ -157,69 +224,67 @@ class CallHistory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: context.read<UserRepository>().getCallsStream(user.uid),
-        builder: (context, snapshot) {
-          // Обработка ошибки
-          if (snapshot.hasError) {
-            return Center(child: Text('Ошибка: ${snapshot.error}'));
-          }
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: context.read<UserRepository>().getCallsStream(user.uid),
+      builder: (context, snapshot) {
+        // Обработка ошибки
+        if (snapshot.hasError) {
+          return Center(child: Text('Ошибка: ${snapshot.error}'));
+        }
 
-          // Затем состояние ожидания
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        // Затем состояние ожидания
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          // Проверяем наличие данных
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('У вас пока нет истории звонков'));
-          }
+        // Проверяем наличие данных
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('У вас пока нет истории звонков'));
+        }
 
-          final calls = snapshot.data!;
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            itemCount: calls.length,
-            itemBuilder: (context, index) {
-              final call = calls[index];
+        final calls = snapshot.data!;
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          itemCount: calls.length,
+          itemBuilder: (context, index) {
+            final call = calls[index];
 
-              return CallCardWidget(
-                callData: call,
-                onJoinPressed: () async {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (_) =>
-                        const Center(child: CircularProgressIndicator()),
-                  );
+            return CallCardWidget(
+              callData: call,
+              onJoinPressed: () async {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) =>
+                      const Center(child: CircularProgressIndicator()),
+                );
 
-                  final vcsBloc = context.read<VCSBloc>();
+                final vcsBloc = context.read<VCSBloc>();
 
-                  vcsBloc.add(
-                    ConnectRequested(
-                      roomId: call['id'],
-                      identity: user.uid,
-                      name: user.displayName!,
-                      photoUrl: user.photoURL,
+                vcsBloc.add(
+                  ConnectRequested(
+                    roomId: call['id'],
+                    identity: user.uid,
+                    name: user.displayName!,
+                    photoUrl: user.photoURL,
+                  ),
+                );
+
+                Navigator.pop(context); // Закрываем саму шторку
+
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider.value(
+                      value: vcsBloc,
+                      child: const RoomView(),
                     ),
-                  );
-
-                  Navigator.pop(context); // Закрываем саму шторку
-
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => BlocProvider.value(
-                        value: vcsBloc,
-                        child: const RoomView(),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
-      ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
