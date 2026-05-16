@@ -17,14 +17,18 @@ import 'package:strife/ui/views/room/room_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 import 'package:strife/ui/widgets/contact_widget.dart';
 
-class CallView extends StatefulWidget {
-  const CallView({super.key});
+class CallsView extends StatefulWidget {
+  const CallsView({super.key});
 
   @override
-  State<CallView> createState() => _CallViewState();
+  State<CallsView> createState() => _CallsViewState();
 }
 
-class _CallViewState extends State<CallView> {
+class _CallsViewState extends State<CallsView>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   late final TextEditingController _textEditingController;
   late final User _user;
 
@@ -43,6 +47,7 @@ class _CallViewState extends State<CallView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       // Заголовок в верху страницы
       appBar: AppBar(
@@ -58,28 +63,7 @@ class _CallViewState extends State<CallView> {
         ),
 
         // Основной заголовок и подзаголовок
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              'Strife',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 32,
-              ),
-            ),
-            Text(
-              'Видеоконференции',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 15,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
+        title: CallAppBar(),
 
         // Правая часть с кнопками действий
         actions: [
@@ -178,7 +162,7 @@ class _CallViewState extends State<CallView> {
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 12),
 
           // Надписи недавние звонки
           const Padding(
@@ -208,7 +192,7 @@ class _CallViewState extends State<CallView> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: CallHistory(user: _user),
+              child: CallsHistory(user: _user),
             ),
           ),
         ],
@@ -217,8 +201,38 @@ class _CallViewState extends State<CallView> {
   }
 }
 
-class CallHistory extends StatelessWidget {
-  const CallHistory({super.key, required this.user});
+class CallAppBar extends StatelessWidget {
+  const CallAppBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          'Strife',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 32,
+          ),
+        ),
+        Text(
+          'Видеоконференции',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 15,
+            fontWeight: FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class CallsHistory extends StatelessWidget {
+  const CallsHistory({super.key, required this.user});
 
   final User user;
 
@@ -995,12 +1009,26 @@ class _NewCallSheetState extends State<NewCallSheet> {
                     .read<NotificationRepository>();
 
                 for (var id in _selectedUserIds) {
+                  final contactData = contacts.firstWhere((c) => c['id'] == id);
+
+                  final Map<String, Map<String, dynamic>> participantsInfo = {
+                    widget.user.uid: {
+                      'displayName': widget.user.displayName,
+                      'photoUrl': widget.user.photoURL,
+                    },
+                    id: {
+                      'displayName': contactData['displayName'],
+                      'photoUrl': contactData['photoUrl'],
+                    },
+                  };
+
                   notificationRepository.sendCallRequest(
                     recipientId: id,
                     roomId: roomId,
                     senderId: senderId,
                     senderPhotoUrl: senderPhotoUrl,
                     senderName: senderName,
+                    participantsInfo: participantsInfo,
                   );
                 }
               } else {

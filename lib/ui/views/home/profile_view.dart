@@ -7,11 +7,22 @@ import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/view_models/auth_view_model.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 
-class ProfileView extends StatelessWidget {
+class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
 
   @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     return Scaffold(
       body: StreamBuilder<User?>(
         stream: context.read<UserRepository>().userStream,
@@ -30,96 +41,8 @@ class ProfileView extends StatelessWidget {
           return Column(
             children: [
               // Верхняя часть с градиентом и аватаром
-              Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  // Заливка сверху
-                  Container(
-                    height: 170,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: Theme.of(
-                        context,
-                      ).extension<GradientTheme>()!.mainGradient,
-                    ),
-                    padding: const EdgeInsets.only(left: 20, top: 60),
-                    child: const Text(
-                      'Профиль',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -50,
-                    child: Stack(
-                      children: [
-                        // Аватарка
-                        CircleAvatar(
-                          radius: 60,
-                          backgroundColor: Colors.white,
-                          child: CircleAvatar(
-                            radius: 56,
-                            backgroundImage:
-                                user.photoURL != null &&
-                                    user.photoURL!.isNotEmpty
-                                ? NetworkImage(user.photoURL!)
-                                : NetworkImage('f'),
-                            child:
-                                user.photoURL == null || user.photoURL!.isEmpty
-                                ? Text(
-                                    user.displayName?.isNotEmpty == true
-                                        ? user.displayName![0].toUpperCase()
-                                        : '?',
-                                    style: const TextStyle(
-                                      fontSize: 40,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  )
-                                : null,
-                          ),
-                        ),
-                        // Индикатор статуса
-                        Positioned(
-                          bottom: 5,
-                          right: 5,
-                          child: StreamBuilder<DatabaseEvent>(
-                            stream: FirebaseDatabase.instance
-                                .ref('status/${user.uid}')
-                                .onValue,
-                            builder: (context, snapshot) {
-                              bool isOnline = false;
-                              if (snapshot.hasData &&
-                                  snapshot.data!.snapshot.value != null) {
-                                final data = Map<String, dynamic>.from(
-                                  snapshot.data!.snapshot.value as Map,
-                                );
-                                isOnline = data['state'] == 'online';
-                              }
+              AvatarStack(user: user),
 
-                              return Container(
-                                width: 25,
-                                height: 25,
-                                decoration: BoxDecoration(
-                                  color: isOnline ? Colors.green : Colors.grey,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 1,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 60),
 
               // Имя пользователя
@@ -132,21 +55,7 @@ class ProfileView extends StatelessWidget {
               ),
 
               // Статус пользователя
-              StreamBuilder(
-                stream: FirebaseDatabase.instance
-                    .ref('status/${user.uid}')
-                    .onValue,
-                builder: (context, snapshot) {
-                  final data = snapshot.data?.snapshot.value as Map?;
-                  final status = data?['state'] ?? 'offline';
-                  return Text(
-                    status == 'online' ? 'Online' : 'Offline',
-                    style: TextStyle(
-                      color: status == 'online' ? Colors.green : Colors.grey,
-                    ),
-                  );
-                },
-              ),
+              StatusUser(user: user),
 
               const SizedBox(height: 20),
 
@@ -311,6 +220,124 @@ class ProfileView extends StatelessWidget {
           onTap: onTap,
         ),
         if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16),
+      ],
+    );
+  }
+}
+
+class StatusUser extends StatelessWidget {
+  const StatusUser({super.key, required this.user});
+
+  final User user;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: FirebaseDatabase.instance.ref('status/${user.uid}').onValue,
+      builder: (context, snapshot) {
+        final data = snapshot.data?.snapshot.value as Map?;
+        final status = data?['state'] ?? 'offline';
+        return Text(
+          status == 'online' ? 'Online' : 'Offline',
+          style: TextStyle(
+            color: status == 'online' ? Colors.green : Colors.grey,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class AvatarStack extends StatelessWidget {
+  const AvatarStack({super.key, required this.user});
+
+  final User user;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        // Заливка сверху
+        Container(
+          height: 173.9,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: Theme.of(
+              context,
+            ).extension<GradientTheme>()!.mainGradient,
+          ),
+          padding: const EdgeInsets.only(left: 20, top: 60),
+          child: const Text(
+            'Профиль',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: -50,
+          child: Stack(
+            children: [
+              // Аватарка
+              CircleAvatar(
+                radius: 60,
+                backgroundColor: Colors.white,
+                child: CircleAvatar(
+                  radius: 56,
+                  backgroundImage:
+                      user.photoURL != null && user.photoURL!.isNotEmpty
+                      ? NetworkImage(user.photoURL!)
+                      : NetworkImage('f'),
+                  child: user.photoURL == null || user.photoURL!.isEmpty
+                      ? Text(
+                          user.displayName?.isNotEmpty == true
+                              ? user.displayName![0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+              // Индикатор статуса
+              Positioned(
+                bottom: 5,
+                right: 5,
+                child: StreamBuilder<DatabaseEvent>(
+                  stream: FirebaseDatabase.instance
+                      .ref('status/${user.uid}')
+                      .onValue,
+                  builder: (context, snapshot) {
+                    bool isOnline = false;
+                    if (snapshot.hasData &&
+                        snapshot.data!.snapshot.value != null) {
+                      final data = Map<String, dynamic>.from(
+                        snapshot.data!.snapshot.value as Map,
+                      );
+                      isOnline = data['state'] == 'online';
+                    }
+
+                    return Container(
+                      width: 25,
+                      height: 25,
+                      decoration: BoxDecoration(
+                        color: isOnline ? Colors.green : Colors.grey,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

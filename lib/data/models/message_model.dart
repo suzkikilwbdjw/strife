@@ -7,9 +7,9 @@ class MessageModel {
     required this.text,
     required this.timestamp,
     this.readBy,
+    this.type,
     this.isPending = false,
     this.roomId,
-    this.type,
   });
 
   final String? id;
@@ -18,8 +18,8 @@ class MessageModel {
   final DateTime timestamp;
   final List<String>? readBy;
   final bool isPending;
-  final String? roomId;
   final String? type;
+  final String? roomId;
 
   // Превращаем Snapshot из Firestore в объект
   factory MessageModel.fromFirestore(DocumentSnapshot documentSnapshot) {
@@ -47,8 +47,8 @@ class MessageModel {
       'text': text,
       'timestamp': FieldValue.serverTimestamp(),
       'readBy': readBy ?? [senderId],
+      'type': type ?? 'text',
       'roomId': roomId,
-      'type': type,
     };
   }
 }

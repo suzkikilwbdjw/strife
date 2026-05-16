@@ -39,10 +39,12 @@ class ChatRepository {
 
       batch.set(messageReference, message.toFirestore());
 
-      batch.set(chatReference, {
+      batch.update(chatReference, {
         'lastMessage': message.text,
         'lastUpdate': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+        'lastMessageSenderId': message.senderId,
+        'lastMessageReadBy': [message.senderId],
+      });
 
       await batch.commit();
     } on FirebaseException catch (_) {
@@ -51,7 +53,11 @@ class ChatRepository {
   }
 
   // Создание или получение id личного чата, вне комнаты
-  Future<String> getOrCreatePrivateChatId(String myId, String partnerId) async {
+  Future<String> getOrCreatePrivateChatId(
+    String myId,
+    String partnerId,
+    Map<String, Map<String, String>> participantsInfo,
+  ) async {
     List<String> ids = [myId, partnerId]..sort();
 
     String chatId = ids.join('_');
@@ -66,6 +72,7 @@ class ChatRepository {
         id: chatId,
         type: ChatType.private,
         participants: ids,
+        participantsInfo: participantsInfo,
       );
 
       await _firestore
@@ -79,13 +86,19 @@ class ChatRepository {
 
   // Пометка сообщений прочитанными
   Future<void> markAsRead(String chatId, String userId) async {
+    final chatReference = _firestore.collection('chats').doc(chatId);
+
+    final chatSnapshot = await chatReference.get();
+
+    if (!chatSnapshot.exists) return;
+
     final query = await _firestore
         .collection('chats')
         .doc(chatId)
         .collection('messages')
-        .where('senderId', isNotEqualTo: userId) // Берем только чужие сообщения
+        .where('senderId', isNotEqualTo: userId)
         .orderBy('timestamp', descending: true)
-        .limit(10) // Проверяем только последние 10 сообщений
+        .limit(10)
         .get();
 
     final batch = _firestore.batch();
@@ -94,12 +107,14 @@ class ChatRepository {
       List readBy = doc.data()['readBy'] ?? [];
       if (!readBy.contains(userId)) {
         batch.update(doc.reference, {
-          'readBy': FieldValue.arrayUnion([
-            userId,
-          ]), // Добавляем наш ID в список
+          'readBy': FieldValue.arrayUnion([userId]),
         });
       }
     }
+
+    batch.update(chatReference, {
+      'lastMessageReadBy': FieldValue.arrayUnion([userId]),
+    });
 
     await batch.commit();
   }
@@ -125,6 +140,7 @@ class ChatRepository {
     return _firestore
         .collection('chats')
         .where('participants', arrayContains: userId)
+        .where('type', isEqualTo: 'private')
         .orderBy('lastUpdate', descending: true)
         .snapshots()
         .map(

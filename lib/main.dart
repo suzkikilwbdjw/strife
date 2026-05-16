@@ -6,12 +6,15 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/data/repositories/chat_repository.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 
+import 'dart:io';
+import 'package:http/http.dart' as http;
 // Импорты слоев
 import 'package:strife/firebase/firebase_options.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
@@ -146,9 +149,15 @@ void _initFcmTokenHandling(BuildContext context) async {
   });
 }
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await _showNotificationWithAvatar(message);
+}
+
 Future<void> setupNotifications() async {
-  // Запрос разрешений для Android
   await FirebaseMessaging.instance.requestPermission();
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Создаем канал на устройстве
   await flutterLocalNotificationsPlugin
@@ -174,32 +183,11 @@ Future<void> setupNotifications() async {
     },
   );
 
-  // Когда приложение открыто
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    RemoteNotification? notification = message.notification;
-    AndroidNotification? android = message.notification?.android;
-
-    if (notification != null && android != null) {
-      flutterLocalNotificationsPlugin.show(
-        id: notification.hashCode,
-        title: notification.title,
-        body: notification.body,
-        notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            channel.id,
-            channel.name,
-            channelDescription: channel.description,
-            importance: Importance.max,
-            priority: Priority.high,
-            icon: android.smallIcon,
-          ),
-        ),
-        payload: jsonEncode(message.data),
-      );
-    }
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+    await _showNotificationWithAvatar(message);
   });
 
-  // Когда приложение в фоне
+  // Когда приложение в фоне (клик по системному пушу)
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     _handleMessageClick(message.data);
   });
@@ -214,19 +202,94 @@ Future<void> setupNotifications() async {
   }
 }
 
+Future<void> _showNotificationWithAvatar(RemoteMessage message) async {
+  RemoteNotification? notification = message.notification;
+  if (notification == null) return;
+
+  String? photoUrl =
+      message.notification?.android?.imageUrl ?? message.data['senderPhotoUrl'];
+
+  AndroidNotificationDetails androidDetails;
+
+  try {
+    // Если ссылка на фото есть и она валидная скачиваем её
+    if (photoUrl != null &&
+        photoUrl.isNotEmpty &&
+        photoUrl.startsWith('http')) {
+      //  Скачиваем аватарку
+      final http.Response response = await http.get(Uri.parse(photoUrl));
+      final Directory tempDir = await getTemporaryDirectory();
+      final File file = File(
+        '${tempDir.path}/avatar_${notification.hashCode}.jpg',
+      );
+      await file.writeAsBytes(response.bodyBytes);
+
+      // Создаем объект автора сообщения для MessagingStyle
+      final person = Person(
+        name: notification.title ?? 'Пользователь',
+        key: message.data['senderId'] ?? 'sender',
+        icon: BitmapFilePathAndroidIcon(file.path),
+      );
+
+      // Настраиваем стиль мессенджера
+      final messagingStyle = MessagingStyleInformation(
+        person,
+        conversationTitle: null,
+        messages: [Message(notification.body ?? '', DateTime.now(), person)],
+      );
+
+      androidDetails = AndroidNotificationDetails(
+        channel.id,
+        channel.name,
+        channelDescription: channel.description,
+        importance: Importance.max,
+        priority: Priority.high,
+        styleInformation: messagingStyle,
+      );
+    } else {
+      // Дефолтный вариант, если фото нет
+      androidDetails = AndroidNotificationDetails(
+        channel.id,
+        channel.name,
+        channelDescription: channel.description,
+        importance: Importance.max,
+        priority: Priority.high,
+      );
+    }
+  } catch (e) {
+    // Защита на случай ошибки сети при скачивании картинки
+    androidDetails = AndroidNotificationDetails(
+      channel.id,
+      channel.name,
+      channelDescription: channel.description,
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+  }
+
+  // Выводим готовое уведомление
+  await flutterLocalNotificationsPlugin.show(
+    id: notification.hashCode,
+    title: notification.title,
+    body: notification.body,
+    notificationDetails: NotificationDetails(android: androidDetails),
+    payload: jsonEncode(message.data),
+  );
+}
+
 // Функция обработки клика
 void _handleMessageClick(Map<String, dynamic> data) {
   final String? type = data['type'];
   final String? chatId = data['chatId'];
 
-  if (type == 'call_request' && chatId != null) {
-    // Переход в конкретный чат
+  if ((type == 'call_request' || type == 'message_request') && chatId != null) {
     navigatorKey.currentState?.push(
       MaterialPageRoute(
         builder: (context) => BlocProvider(
           create: (context) => ChatBloc(
             chatRepository: context.read<ChatRepository>(),
             userRepository: context.read<UserRepository>(),
+            notificationRepository: context.read<NotificationRepository>(),
           )..add(InitChat(chatId)),
           child: ChatScreen(
             chatId: chatId,
@@ -236,7 +299,6 @@ void _handleMessageClick(Map<String, dynamic> data) {
       ),
     );
   } else {
-    // Обычное уведомление — идем в список уведомлений
     navigatorKey.currentState?.push(
       MaterialPageRoute(builder: (context) => const NotificationsView()),
     );

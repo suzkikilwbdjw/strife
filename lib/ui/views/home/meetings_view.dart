@@ -17,11 +17,22 @@ import 'package:strife/ui/views/room/room_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 import 'package:strife/ui/widgets/contact_widget.dart';
 
-class MeetingsView extends StatelessWidget {
+class MeetingsView extends StatefulWidget {
   const MeetingsView({super.key});
 
   @override
+  State<MeetingsView> createState() => _MeetingsViewState();
+}
+
+class _MeetingsViewState extends State<MeetingsView>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 140,
