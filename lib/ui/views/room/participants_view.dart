@@ -147,8 +147,12 @@ class ParticipantsView extends StatelessWidget {
                           top: Radius.circular(24),
                         ),
                       ),
-                      builder: (context) =>
-                          InviteContactSheet(user: currentUser, roomId: roomId),
+                      builder: (context) => SingleChildScrollView(
+                        child: InviteContactSheet(
+                          user: currentUser,
+                          roomId: roomId,
+                        ),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),

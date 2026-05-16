@@ -838,219 +838,226 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 24,
-                right: 24,
-                top: 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Верхний индикатор
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(2),
+        return SingleChildScrollView(
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  left: 24,
+                  right: 24,
+                  top: 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Верхний индикатор
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.black12,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  // Заголовок
-                  const Text(
-                    'Выбор участников',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  const Text(
-                    'Выберите пользователей, которых хотите пригласить во встречу.',
-                    style: TextStyle(fontSize: 14, color: Colors.black54),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Поиск
-                  TextField(
-                    onChanged: (value) {
-                      context.read<ContactsBloc>().add(
-                        SearchContactsRequested(searchQuery: value),
-                      );
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Поиск контактов',
-                      hintText: 'Введите имя...',
-                      prefixIcon: Icon(Icons.search_rounded),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                    // Заголовок
+                    const Text(
+                      'Выбор участников',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 8),
 
-                  // Список контактов
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+                    const Text(
+                      'Выберите пользователей, которых хотите пригласить во встречу.',
+                      style: TextStyle(fontSize: 14, color: Colors.black54),
                     ),
-                    child: BlocBuilder<ContactsBloc, ContactsState>(
-                      builder: (context, state) {
-                        final contacts = state.filteredContacts;
 
-                        if (contacts.isEmpty) {
-                          return const SizedBox(
-                            height: 120,
-                            child: Center(
-                              child: Text(
-                                'Контакты не найдены',
-                                style: TextStyle(
-                                  color: Colors.black45,
-                                  fontSize: 15,
+                    const SizedBox(height: 20),
+
+                    // Поиск
+                    TextField(
+                      onChanged: (value) {
+                        context.read<ContactsBloc>().add(
+                          SearchContactsRequested(searchQuery: value),
+                        );
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Поиск контактов',
+                        hintText: 'Введите имя...',
+                        prefixIcon: Icon(Icons.search_rounded),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Список контактов
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+                      ),
+                      child: BlocBuilder<ContactsBloc, ContactsState>(
+                        builder: (context, state) {
+                          final contacts = state.filteredContacts;
+
+                          if (contacts.isEmpty) {
+                            return const SizedBox(
+                              height: 120,
+                              child: Center(
+                                child: Text(
+                                  'Контакты не найдены',
+                                  style: TextStyle(
+                                    color: Colors.black45,
+                                    fontSize: 15,
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-                        }
-
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: contacts.length,
-                          itemBuilder: (context, index) {
-                            final contact = contacts[index];
-
-                            final isSelected = _selectedUserIds.containsKey(
-                              contact['id'],
                             );
+                          }
 
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Ink(
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? const Color(
-                                          0xFFB91ED0,
-                                        ).withValues(alpha: 0.08)
-                                      : const Color(
-                                          0xFFB91ED0,
-                                        ).withValues(alpha: 0.04),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: contacts.length,
+                            itemBuilder: (context, index) {
+                              final contact = contacts[index];
+
+                              final isSelected = _selectedUserIds.containsKey(
+                                contact['id'],
+                              );
+
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                child: Ink(
+                                  decoration: BoxDecoration(
                                     color: isSelected
                                         ? const Color(
                                             0xFFB91ED0,
-                                          ).withValues(alpha: 0.25)
+                                          ).withValues(alpha: 0.08)
                                         : const Color(
                                             0xFFB91ED0,
-                                          ).withValues(alpha: 0.06),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(14),
-                                  splashColor: const Color(
-                                    0xFFB91ED0,
-                                  ).withValues(alpha: 0.1),
-                                  highlightColor: const Color(
-                                    0xFFB91ED0,
-                                  ).withValues(alpha: 0.04),
-                                  onTap: () {
-                                    setModalState(() {
-                                      final id = contact['id'];
-
-                                      if (_selectedUserIds.containsKey(id)) {
-                                        _selectedUserIds.remove(id);
-                                      } else {
-                                        _selectedUserIds[id] =
-                                            contact['photoUrl'];
-                                      }
-                                    });
-
-                                    setState(() {});
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
+                                          ).withValues(alpha: 0.04),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? const Color(
+                                              0xFFB91ED0,
+                                            ).withValues(alpha: 0.25)
+                                          : const Color(
+                                              0xFFB91ED0,
+                                            ).withValues(alpha: 0.06),
+                                      width: 1,
                                     ),
-                                    child: ContactWidget(
-                                      userData: contact,
-                                      trailing: AnimatedContainer(
-                                        duration: const Duration(
-                                          milliseconds: 200,
-                                        ),
-                                        width: 36,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? const Color(0xFFB91ED0)
-                                              : const Color(
-                                                  0xFFB91ED0,
-                                                ).withValues(alpha: 0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          isSelected
-                                              ? Icons.check_rounded
-                                              : Icons.add_rounded,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : const Color(0xFFB91ED0),
-                                          size: 20,
+                                  ),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(14),
+                                    splashColor: const Color(
+                                      0xFFB91ED0,
+                                    ).withValues(alpha: 0.1),
+                                    highlightColor: const Color(
+                                      0xFFB91ED0,
+                                    ).withValues(alpha: 0.04),
+                                    onTap: () {
+                                      setModalState(() {
+                                        final id = contact['id'];
+
+                                        if (_selectedUserIds.containsKey(id)) {
+                                          _selectedUserIds.remove(id);
+                                        } else {
+                                          _selectedUserIds[id] =
+                                              contact['photoUrl'];
+                                        }
+                                      });
+
+                                      setState(() {});
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      child: ContactWidget(
+                                        userData: contact,
+                                        trailing: AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
+                                          width: 36,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? const Color(0xFFB91ED0)
+                                                : const Color(
+                                                    0xFFB91ED0,
+                                                  ).withValues(alpha: 0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            isSelected
+                                                ? Icons.check_rounded
+                                                : Icons.add_rounded,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : const Color(0xFFB91ED0),
+                                            size: 20,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
-                        );
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Кнопка подтверждения
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
                       },
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Кнопка подтверждения
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        _selectedUserIds.isEmpty
+                            ? 'Закрыть'
+                            : 'Готово (${_selectedUserIds.length})',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                    child: Text(
-                      _selectedUserIds.isEmpty
-                          ? 'Закрыть'
-                          : 'Готово (${_selectedUserIds.length})',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
 
-                  const SizedBox(height: 32),
-                ],
-              ),
-            );
-          },
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              );
+            },
+          ),
         );
       },
     );
