@@ -58,28 +58,7 @@ class _CallsViewState extends State<CallsView> {
         ),
 
         // Основной заголовок и подзаголовок
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              'Strife',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 32,
-              ),
-            ),
-            Text(
-              'Видеоконференции',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 15,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
+        title: CallAppBar(),
 
         // Правая часть с кнопками действий
         actions: [
@@ -178,7 +157,7 @@ class _CallsViewState extends State<CallsView> {
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 12),
 
           // Надписи недавние звонки
           const Padding(
@@ -213,6 +192,36 @@ class _CallsViewState extends State<CallsView> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class CallAppBar extends StatelessWidget {
+  const CallAppBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          'Strife',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 32,
+          ),
+        ),
+        Text(
+          'Видеоконференции',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 15,
+            fontWeight: FontWeight.normal,
+          ),
+        ),
+      ],
     );
   }
 }

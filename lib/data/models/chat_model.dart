@@ -8,7 +8,7 @@ class ChatModel {
   final List<String> participants;
   final String? lastMessage;
   final DateTime? lastUpdate;
-  final String? liveKitRoomId;
+  final Map<String, Map<String, String>>? participantsInfo;
 
   ChatModel({
     this.id,
@@ -16,7 +16,7 @@ class ChatModel {
     required this.participants,
     this.lastMessage,
     this.lastUpdate,
-    this.liveKitRoomId,
+    this.participantsInfo,
   });
 
   factory ChatModel.fromFirestore(DocumentSnapshot documentSnapshot) {
@@ -29,7 +29,7 @@ class ChatModel {
       participants: List<String>.from(data['participants'] ?? []),
       lastMessage: data['lastMessage'],
       lastUpdate: (data['lastUpdate'] as Timestamp?)?.toDate(),
-      liveKitRoomId: data['liveKitRoomId'],
+      participantsInfo: data['participantsInfo'],
     );
   }
 
@@ -39,7 +39,7 @@ class ChatModel {
       'participants': participants,
       'lastMessage': lastMessage,
       'lastUpdate': FieldValue.serverTimestamp(),
-      'liveKitRoomId': liveKitRoomId,
+      'participantsInfo': participantsInfo,
     };
   }
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:strife/data/repositories/notification_repository.dart';
 
 import 'chat_event.dart';
 import 'chat_state.dart';
@@ -13,18 +14,59 @@ import 'package:strife/data/models/message_model.dart';
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final ChatRepository chatRepository;
   final UserRepository userRepository;
+  final NotificationRepository notificationRepository;
 
   StreamSubscription<List<MessageModel>>? _messagesSubscription;
 
   String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
   String? _currentChatId;
 
-  ChatBloc({required this.chatRepository, required this.userRepository})
-    : super(const ChatState()) {
+  ChatBloc({
+    required this.chatRepository,
+    required this.userRepository,
+    required this.notificationRepository,
+  }) : super(const ChatState()) {
     on<InitChat>(_onInitChat);
     on<MessagesUpdated>(_onMessagesUpdated);
     on<SendMessage>(_onSendMessage);
     on<LoadUser>(_onLoadUser);
+    on<SendMessageRequest>(_onSendMessageRequest);
+  }
+
+  Future<void> _onSendMessageRequest(
+    SendMessageRequest event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (_currentChatId == null || currentUserId == null) return;
+
+    try {
+      emit(state.copyWith(error: null));
+
+      // Отправитель
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      final String senderId = currentUser.uid;
+      final String senderName = currentUser.displayName ?? 'Пользователь';
+      final String senderPhotoUrl = currentUser.photoURL ?? '';
+
+      // Получатель
+      final chatParts = _currentChatId!.split('_');
+      final String recipientId = chatParts.firstWhere(
+        (id) => id != senderId,
+        orElse: () => senderId,
+      );
+
+      await notificationRepository.sendMessageRequest(
+        recipientId: recipientId,
+        senderId: senderId,
+        senderName: senderName,
+        senderPhotoUrl: senderPhotoUrl,
+        textMessage: event.textMessage,
+      );
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
   }
 
   /// Загрузка данных пользователя

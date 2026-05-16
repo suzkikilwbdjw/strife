@@ -150,30 +150,37 @@ class NotificationRepository {
     return _firestore
         .collection('notifications')
         .where('recipientId', isEqualTo: userId)
-        .where('status', isNotEqualTo: 'hidden')
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs.map((doc) {
-            final data = doc.data();
-            data['id'] = doc.id;
-            return data;
-          }).toList(),
+          (snapshot) => snapshot.docs
+              .map((doc) {
+                final data = doc.data();
+                data['id'] = doc.id;
+                return data;
+              })
+              .toList()
+              .where(
+                (notification) =>
+                    notification['status'] != 'hidden' &&
+                    notification['type'] != 'message_request',
+              )
+              .toList(),
         );
   }
 
   // Стрим для получения количества непрочитанных уведомлений
   Stream<int> getUnreadCountNotificationStream(String userId) {
-    try {
-      return _firestore
-          .collection('notifications')
-          .where('status', isEqualTo: 'unread')
-          .where('recipientId', isEqualTo: userId)
-          .snapshots()
-          .map((snapshot) => snapshot.docs.length);
-    } catch (e) {
-      rethrow;
-    }
+    return _firestore
+        .collection('notifications')
+        .where('status', isEqualTo: 'unread')
+        .where('recipientId', isEqualTo: userId)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .where((doc) => doc.get('type') != 'message_request')
+              .length,
+        );
   }
 
   // Удаление уведомления
@@ -212,6 +219,35 @@ class NotificationRepository {
         throw Exception(
           errorData['error'] ?? 'Не удалось обновить статус уведомлений',
         );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Запрос для отправки push для сообщения
+  Future<void> sendMessageRequest({
+    required String recipientId,
+    required String senderId,
+    required String senderName,
+    required String senderPhotoUrl,
+    required String textMessage,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications/send-message-request'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'recipientId': recipientId,
+          'senderId': senderId,
+          'senderName': senderName,
+          'senderPhotoUrl': senderPhotoUrl,
+          'textMessage': textMessage,
+        }),
+      );
+      if (response.statusCode != 200) {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['error'] ?? 'Не удалось отправить сообщение');
       }
     } catch (e) {
       rethrow;

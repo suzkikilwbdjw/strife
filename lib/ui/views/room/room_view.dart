@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:strife/data/repositories/chat_repository.dart';
+import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/chats/chat_event.dart';
@@ -591,6 +592,8 @@ class NavigationBottomAppBar extends StatelessWidget {
                           create: (context) => ChatBloc(
                             chatRepository: context.read<ChatRepository>(),
                             userRepository: context.read<UserRepository>(),
+                            notificationRepository: context
+                                .read<NotificationRepository>(),
                           )..add(InitChat(bloc.roomId!)),
                           child: DraggableScrollableSheet(
                             initialChildSize: 0.75,

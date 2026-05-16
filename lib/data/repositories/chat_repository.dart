@@ -39,10 +39,12 @@ class ChatRepository {
 
       batch.set(messageReference, message.toFirestore());
 
-      batch.set(chatReference, {
+      batch.update(chatReference, {
         'lastMessage': message.text,
         'lastUpdate': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+        'lastMessageSenderId': message.senderId,
+        'lastMessageReadBy': [message.senderId],
+      });
 
       await batch.commit();
     } on FirebaseException catch (_) {
@@ -51,7 +53,11 @@ class ChatRepository {
   }
 
   // Создание или получение id личного чата, вне комнаты
-  Future<String> getOrCreatePrivateChatId(String myId, String partnerId) async {
+  Future<String> getOrCreatePrivateChatId(
+    String myId,
+    String partnerId,
+    Map<String, Map<String, String>> participantsInfo,
+  ) async {
     List<String> ids = [myId, partnerId]..sort();
 
     String chatId = ids.join('_');
@@ -66,6 +72,7 @@ class ChatRepository {
         id: chatId,
         type: ChatType.private,
         participants: ids,
+        participantsInfo: participantsInfo,
       );
 
       await _firestore
@@ -79,6 +86,8 @@ class ChatRepository {
 
   // Пометка сообщений прочитанными
   Future<void> markAsRead(String chatId, String userId) async {
+    final chatReference = _firestore.collection('chats').doc(chatId);
+
     final query = await _firestore
         .collection('chats')
         .doc(chatId)
@@ -100,6 +109,10 @@ class ChatRepository {
         });
       }
     }
+
+    batch.update(chatReference, {
+      'lastMessageReadBy': FieldValue.arrayUnion([userId]),
+    });
 
     await batch.commit();
   }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:strife/data/repositories/chat_repository.dart';
+import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/chats/chat_event.dart';
@@ -32,11 +33,9 @@ class _ChatsViewState extends State<ChatsView>
     return Scaffold(
       // Загловок страницы
       appBar: AppBar(
-        // Увеличиваем высоту, чтобы полям ввода не было тесно внутри градиента
         toolbarHeight: 140,
         backgroundColor: Colors.transparent,
-        elevation: 0, // Убираем тень под AppBar
-        // Применяем ваш фирменный фиолетовый градиент Strife
+        elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: Theme.of(
@@ -67,8 +66,13 @@ class _ChatsViewState extends State<ChatsView>
             padding: const EdgeInsets.all(4),
             itemCount: chats.length,
             itemBuilder: (context, index) {
+              //Данные чата
               final chat = chats[index];
+
+              // Мой id
               final myId = FirebaseAuth.instance.currentUser!.uid;
+
+              // Учасtника чата, list содеrжит только id
               final participants = List<String>.from(
                 chat['participants'] ?? [],
               );
@@ -85,90 +89,20 @@ class _ChatsViewState extends State<ChatsView>
                 partnerId = myId;
               }
 
-              // Используем FutureBuilder, чтобы подтянуть данные собеседника
-              return FutureBuilder<Map<String, dynamic>>(
-                future: context.read<UserRepository>().getUserData(partnerId),
-                builder: (context, userSnapshot) {
-                  final userData = userSnapshot.data ?? {};
-                  final name = userData['displayName'] ?? 'Загрузка...';
-                  final photo = userData['photoUrl'];
+              // Достаем данные из мапы participantsInfo
+              final Map<String, dynamic> members =
+                  chat['participantsInfo'] ?? {};
+              final Map<String, dynamic> partnerData = members[partnerId] ?? {};
 
-                  return ListTile(
-                    onTap: () {
-                      // Переход в чат
-                      _navigateToChat(context, chat['id'], myId);
-                    },
-                    leading: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundImage: photo != null
-                              ? NetworkImage(photo)
-                              : null,
-                          backgroundColor: Colors.purple.shade100,
-                          child: photo == null
-                              ? Text(name[0].toUpperCase())
-                              : null,
-                        ),
-                        Positioned(
-                          bottom: 1.0,
-                          right: 1.0,
-                          child: StreamBuilder<DatabaseEvent>(
-                            stream: FirebaseDatabase.instance
-                                .ref('status/$partnerId')
-                                .onValue,
-                            builder: (context, snapshot) {
-                              bool isOnline = false;
-                              if (snapshot.hasData &&
-                                  snapshot.data!.snapshot.value != null) {
-                                final data = Map<String, dynamic>.from(
-                                  snapshot.data!.snapshot.value as Map,
-                                );
-                                isOnline = data['state'] == 'online';
-                              }
+              final String name = partnerData['displayName'];
+              final String? photo = partnerData['photoUrl'];
 
-                              return Container(
-                                width: 14,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  color: isOnline ? Colors.green : Colors.grey,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 1,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    title: Text(
-                      name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      chat['lastMessage'] ?? 'Нет сообщений',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          chat['lastUpdate'] != null
-                              ? formatTimestamp(chat['lastUpdate'])
-                              : '',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+              return UserInChatCard(
+                photo: photo,
+                name: name,
+                partnerId: partnerId,
+                chat: chat,
+                myId: myId,
               );
             },
           );
@@ -176,8 +110,241 @@ class _ChatsViewState extends State<ChatsView>
       ),
     );
   }
+}
 
-  String formatTimestamp(dynamic timestamp) {
+void _navigateToChat(BuildContext context, String chatId, String myId) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => BlocProvider(
+        create: (context) => ChatBloc(
+          chatRepository: context.read<ChatRepository>(),
+          userRepository: context.read<UserRepository>(),
+          notificationRepository: context.read<NotificationRepository>(),
+        )..add(InitChat(chatId)),
+        child: ChatScreen(chatId: chatId, currentUserId: myId),
+      ),
+    ),
+  );
+}
+
+class UserInChatCard extends StatelessWidget {
+  const UserInChatCard({
+    super.key,
+    required this.photo,
+    required this.name,
+    required this.partnerId,
+    required this.chat,
+    required this.myId,
+  });
+
+  final dynamic photo;
+  final dynamic name;
+  final String partnerId;
+  final Map<String, dynamic> chat;
+  final String myId;
+
+  @override
+  Widget build(BuildContext context) {
+    const brandColor = Color(0xFFB91ED0);
+
+    // Достаем данные последнего сообщения
+    final String lastMessage = chat['lastMessage'] ?? 'Нет сообщений';
+    final String? lastMessageSenderId =
+        chat['lastMessageSenderId']; // ID отправителя последнего сообщения
+    final List<dynamic> lastMessageReadBy =
+        chat['lastMessageReadBy'] ?? []; // Кто прочитал последнее сообщение
+
+    final bool isMyMessage = lastMessageSenderId == myId;
+    // Если сообщение чужое и моего ID нет в списке прочитавших — оно непрочитанное
+    final bool isUnreadForMe =
+        !isMyMessage &&
+        lastMessageSenderId != null &&
+        !lastMessageReadBy.contains(myId);
+    // Если сообщение моё и ID собеседника есть в списке — оно прочитано собеседником
+    final bool isReadByPartner =
+        isMyMessage && lastMessageReadBy.contains(partnerId);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+      child: Ink(
+        decoration: BoxDecoration(
+          color: isUnreadForMe
+              ? brandColor.withValues(alpha: 0.06)
+              : const Color(0xFFF5F5F7),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isUnreadForMe
+                ? brandColor.withValues(alpha: 0.15)
+                : brandColor.withValues(alpha: 0.03),
+            width: 1,
+          ),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          splashColor: brandColor.withValues(alpha: 0.1),
+          highlightColor: brandColor.withValues(alpha: 0.04),
+          onTap: () {
+            _navigateToChat(context, chat['id'], myId);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12.0,
+              vertical: 10.0,
+            ),
+            child: Row(
+              children: [
+                // Аватарка и онлайн статус
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: brandColor.withValues(alpha: 0.15),
+                      backgroundImage:
+                          photo != null && photo.toString().isNotEmpty
+                          ? NetworkImage(photo)
+                          : null,
+                      child: photo == null || photo.toString().isEmpty
+                          ? Text(
+                              name != null && name.toString().isNotEmpty
+                                  ? name[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                color: brandColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0.0,
+                      right: 0.0,
+                      child: StreamBuilder<DatabaseEvent>(
+                        stream: FirebaseDatabase.instance
+                            .ref('status/$partnerId')
+                            .onValue,
+                        builder: (context, snapshot) {
+                          bool isOnline = false;
+                          if (snapshot.hasData &&
+                              snapshot.data!.snapshot.value != null) {
+                            final data = Map<String, dynamic>.from(
+                              snapshot.data!.snapshot.value as Map,
+                            );
+                            isOnline = data['state'] == 'online';
+                          }
+
+                          return Container(
+                            width: 13,
+                            height: 13,
+                            decoration: BoxDecoration(
+                              color: isOnline ? Colors.green : Colors.grey,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 1.5,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+
+                // Имя и последние сообщение
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        name ?? 'Пользователь',
+                        style: TextStyle(
+                          fontWeight: isUnreadForMe
+                              ? FontWeight.bold
+                              : FontWeight.bold,
+                          fontSize: 15,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        lastMessage,
+                        style: TextStyle(
+                          color: isUnreadForMe
+                              ? Colors.black87
+                              : Colors.black54,
+                          fontSize: 13,
+                          fontWeight: isUnreadForMe
+                              ? FontWeight.w500
+                              : FontWeight.normal,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Время галочка/индикатор
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Время последнего обновления чата
+                    Text(
+                      chat['lastUpdate'] != null
+                          ? _formatTimestamp(chat['lastUpdate'])
+                          : '',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.black38,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Если сообщение отправил я
+                    if (isMyMessage &&
+                        chat['lastMessage'] != null &&
+                        chat['lastMessage'].toString().isNotEmpty)
+                      Icon(
+                        isReadByPartner
+                            ? Icons.done_all_rounded
+                            : Icons.done_rounded,
+                        size: 16,
+                        color: isReadByPartner ? brandColor : Colors.black38,
+                      ),
+
+                    // Если сообщение пришло мне и оно не прочитано
+                    if (isUnreadForMe)
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: brandColor,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 8,
+                          minHeight: 8,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return '';
 
     // Преобразуем Firestore Timestamp в DateTime
@@ -360,87 +527,8 @@ class _NewChatSheetState extends State<NewChatSheet> {
           const SizedBox(height: 16),
 
           // Список контактов
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight:
-                  MediaQuery.sizeOf(context).height *
-                  0.4, // Список занимает максимум 40% экрана
-            ),
-            child: contacts.isEmpty
-                ? const SizedBox(
-                    height: 100,
-                    child: Center(
-                      child: Text(
-                        'Контакты не найдены',
-                        style: TextStyle(color: Colors.black45, fontSize: 15),
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: contacts.length,
-                    itemBuilder: (context, index) {
-                      final contact = contacts[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Ink(
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFFB91ED0,
-                            ).withValues(alpha: 0.04),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: const Color(
-                                0xFFB91ED0,
-                              ).withValues(alpha: 0.06),
-                              width: 1,
-                            ),
-                          ),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            splashColor: const Color(
-                              0xFFB91ED0,
-                            ).withValues(alpha: 0.1),
-                            highlightColor: const Color(
-                              0xFFB91ED0,
-                            ).withValues(alpha: 0.04),
-                            onTap: () async {
-                              final currentUser =
-                                  FirebaseAuth.instance.currentUser;
-                              if (currentUser == null) return;
+          ContactListWidget(contacts: contacts),
 
-                              final myId = currentUser.uid;
-                              final chatId = await context
-                                  .read<ChatRepository>()
-                                  .getOrCreatePrivateChatId(
-                                    myId,
-                                    contact['id'],
-                                  );
-
-                              if (!context.mounted) return;
-                              Navigator.pop(context);
-                              _navigateToChat(context, chatId, myId);
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8.0,
-                                vertical: 2.0,
-                              ),
-                              child: ContactWidget(
-                                userData: contact,
-                                trailing: const Icon(
-                                  Icons.arrow_forward_ios_rounded,
-                                  size: 14,
-                                  color: Colors.black26,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
           const SizedBox(height: 24),
         ],
       ),
@@ -448,17 +536,112 @@ class _NewChatSheetState extends State<NewChatSheet> {
   }
 }
 
-void _navigateToChat(BuildContext context, String chatId, String myId) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => BlocProvider(
-        create: (context) => ChatBloc(
-          chatRepository: context.read<ChatRepository>(),
-          userRepository: context.read<UserRepository>(),
-        )..add(InitChat(chatId)),
-        child: ChatScreen(chatId: chatId, currentUserId: myId),
+class ContactListWidget extends StatelessWidget {
+  const ContactListWidget({super.key, required this.contacts});
+
+  final List<Map<String, dynamic>> contacts;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight:
+            MediaQuery.sizeOf(context).height *
+            0.4, // Список занимает максимум 40% экрана
       ),
-    ),
-  );
+      child: contacts.isEmpty
+          ? const SizedBox(
+              height: 100,
+              child: Center(
+                child: Text(
+                  'Контакты не найдены',
+                  style: TextStyle(color: Colors.black45, fontSize: 15),
+                ),
+              ),
+            )
+          : ListView.builder(
+              shrinkWrap: true,
+              itemCount: contacts.length,
+              itemBuilder: (context, index) {
+                final contact = contacts[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFB91ED0).withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: const Color(0xFFB91ED0).withValues(alpha: 0.06),
+                        width: 1,
+                      ),
+                    ),
+
+                    // Стрелка
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      splashColor: const Color(
+                        0xFFB91ED0,
+                      ).withValues(alpha: 0.1),
+                      highlightColor: const Color(
+                        0xFFB91ED0,
+                      ).withValues(alpha: 0.04),
+                      onTap: () async {
+                        // Получаем текущего пользователя
+                        final currentUser = FirebaseAuth.instance.currentUser;
+                        if (currentUser == null) return;
+
+                        // Получаем наш айди
+                        final myId = currentUser.uid;
+                        // ID контакта, на которого нажали
+                        final partnerId = contact['id'];
+
+                        // Собираем Map с информацией о себе и о собеседнике
+                        final Map<String, Map<String, String>>
+                        participantsInfo = {
+                          myId: {
+                            'displayName': currentUser.displayName!,
+                            'photoUrl': currentUser.photoURL!,
+                          },
+                          partnerId: {
+                            'displayName': contact['displayName'],
+                            'photoUrl': contact['photoUrl'],
+                          },
+                        };
+
+                        // Создаем или получаем айди чата личного с контактом
+                        final chatId = await context
+                            .read<ChatRepository>()
+                            .getOrCreatePrivateChatId(
+                              myId,
+                              contact['id'],
+                              participantsInfo,
+                            );
+
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+
+                        // Переходим на страницу самого чата
+                        _navigateToChat(context, chatId, myId);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8.0,
+                          vertical: 2.0,
+                        ),
+                        child: ContactWidget(
+                          userData: contact,
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: Colors.black26,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
 }
