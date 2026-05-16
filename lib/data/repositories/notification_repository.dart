@@ -47,13 +47,14 @@ class NotificationRepository {
     }
   }
 
-  // Метод для отправки запроса в звонок
+  // Метод для push о приглашение в звонок
   Future<void> sendCallRequest({
     required String senderId,
     required String recipientId,
     required String senderName,
     required String senderPhotoUrl,
     required String roomId,
+    required Map<String, Map<String, dynamic>> participantsInfo,
   }) async {
     try {
       // Делаем запрос на бэкэнд
@@ -66,6 +67,7 @@ class NotificationRepository {
           'senderName': senderName,
           'senderPhotoUrl': senderPhotoUrl,
           'roomId': roomId,
+          'participantsInfo': participantsInfo,
         }),
       );
 

@@ -88,13 +88,17 @@ class ChatRepository {
   Future<void> markAsRead(String chatId, String userId) async {
     final chatReference = _firestore.collection('chats').doc(chatId);
 
+    final chatSnapshot = await chatReference.get();
+
+    if (!chatSnapshot.exists) return;
+
     final query = await _firestore
         .collection('chats')
         .doc(chatId)
         .collection('messages')
-        .where('senderId', isNotEqualTo: userId) // Берем только чужие сообщения
+        .where('senderId', isNotEqualTo: userId)
         .orderBy('timestamp', descending: true)
-        .limit(10) // Проверяем только последние 10 сообщений
+        .limit(10)
         .get();
 
     final batch = _firestore.batch();
@@ -103,9 +107,7 @@ class ChatRepository {
       List readBy = doc.data()['readBy'] ?? [];
       if (!readBy.contains(userId)) {
         batch.update(doc.reference, {
-          'readBy': FieldValue.arrayUnion([
-            userId,
-          ]), // Добавляем наш ID в список
+          'readBy': FieldValue.arrayUnion([userId]),
         });
       }
     }
@@ -138,6 +140,7 @@ class ChatRepository {
     return _firestore
         .collection('chats')
         .where('participants', arrayContains: userId)
+        .where('type', isEqualTo: 'private')
         .orderBy('lastUpdate', descending: true)
         .snapshots()
         .map(

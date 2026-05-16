@@ -1,6 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
+import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
@@ -32,6 +35,13 @@ class _HomeViewState extends State<HomeView> {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: selectedIndex);
+
+    // Загружаем контакты
+    context.read<ContactsBloc>().add(
+      LoadContactsRequested(
+        currentUserId: FirebaseAuth.instance.currentUser!.uid,
+      ),
+    );
   }
 
   @override
@@ -62,9 +72,9 @@ class _HomeViewState extends State<HomeView> {
             children: const [
               CallsView(key: ValueKey('calls')),
               ChatsView(key: ValueKey('chats')),
-              ProfileView(key: ValueKey('profile')),
               MeetingsView(key: ValueKey('meetings')),
               ContactsView(key: ValueKey('contacts')),
+              ProfileView(key: ValueKey('profile')),
             ],
           ),
 
@@ -115,21 +125,21 @@ class _HomeViewState extends State<HomeView> {
             _buildNavItem(1, Icons.messenger_outline, Icons.messenger, 'Чаты'),
             _buildNavItem(
               2,
-              Icons.person_3_outlined,
-              Icons.person_3,
-              'Профиль',
-            ),
-            _buildNavItem(
-              3,
               Icons.calendar_today_outlined,
               Icons.calendar_today,
               'Встречи',
             ),
             _buildNavItem(
-              4,
+              3,
               Icons.contacts_outlined,
               Icons.contacts,
               'Контакты',
+            ),
+            _buildNavItem(
+              4,
+              Icons.person_3_outlined,
+              Icons.person_3,
+              'Профиль',
             ),
           ],
         ),

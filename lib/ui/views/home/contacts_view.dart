@@ -29,12 +29,6 @@ class _ContactsViewState extends State<ContactsView>
   @override
   void initState() {
     super.initState();
-    final userId = FirebaseAuth.instance.currentUser!.uid;
-
-    // Загружаем данные
-    context.read<ContactsBloc>().add(
-      LoadContactsRequested(currentUserId: userId),
-    );
 
     // Устанавливаем поиск по контактам в ноль
     context.read<ContactsBloc>().add(SearchContactsRequested(searchQuery: ''));

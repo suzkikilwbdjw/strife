@@ -24,6 +24,7 @@ class SendCallRequestRequested extends ContactsEvent {
   final String senderName;
   final String senderPhotoUrl;
   final String roomId;
+  final Map<String, Map<String, dynamic>> participantsInfo;
 
   SendCallRequestRequested({
     required this.senderId,
@@ -31,6 +32,7 @@ class SendCallRequestRequested extends ContactsEvent {
     required this.senderName,
     required this.senderPhotoUrl,
     required this.roomId,
+    required this.participantsInfo,
   });
 }
 

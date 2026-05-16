@@ -195,7 +195,10 @@ class RoomView extends StatelessWidget {
                 // Закрываем страницу звонка
                 Navigator.of(context).pop();
               },
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Colors.white,
+              ),
             ),
           ),
 
@@ -584,6 +587,21 @@ class NavigationBottomAppBar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 50),
                     ),
                     onPressed: () async {
+                      final String currentRoomId = bloc.roomId!;
+                      final myId = FirebaseAuth.instance.currentUser!.uid;
+                      final List<String> participantIds = bloc
+                          .state
+                          .participants
+                          .map((p) => p.identity)
+                          .toList();
+
+                      await context.read<ChatRepository>().syncRoomChat(
+                        currentRoomId,
+                        participantIds,
+                      );
+
+                      if (!context.mounted) return;
+
                       await showModalBottomSheet<void>(
                         context: context,
                         isScrollControlled: true,
@@ -597,7 +615,7 @@ class NavigationBottomAppBar extends StatelessWidget {
                           )..add(InitChat(bloc.roomId!)),
                           child: DraggableScrollableSheet(
                             initialChildSize: 0.75,
-                            maxChildSize: 0.75,
+                            maxChildSize: 0.9,
                             expand: false,
                             builder: (context, scrollController) => Container(
                               clipBehavior: Clip.antiAlias,
@@ -610,8 +628,7 @@ class NavigationBottomAppBar extends StatelessWidget {
                               child: ChatScreen(
                                 controller: scrollController,
                                 chatId: bloc.roomId!,
-                                currentUserId:
-                                    FirebaseAuth.instance.currentUser!.uid,
+                                currentUserId: myId,
                               ),
                             ),
                           ),

@@ -36,9 +36,15 @@ class SendMessageRequest extends ChatEvent {
   SendMessageRequest({required this.textMessage});
 }
 
-// Загрузка пользователя
+// Событие для загрузка пользователя
 class LoadUser extends ChatEvent {
   final String userId;
 
   LoadUser(this.userId);
+}
+
+class ChatDataUpdated extends ChatEvent {
+  final Map<String, dynamic> chatData;
+
+  ChatDataUpdated({required this.chatData});
 }

@@ -63,7 +63,6 @@ class _ChatsViewState extends State<ChatsView>
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(4),
             itemCount: chats.length,
             itemBuilder: (context, index) {
               //Данные чата
@@ -166,7 +165,7 @@ class UserInChatCard extends StatelessWidget {
         isMyMessage && lastMessageReadBy.contains(partnerId);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0),
       child: Ink(
         decoration: BoxDecoration(
           color: isUnreadForMe

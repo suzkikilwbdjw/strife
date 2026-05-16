@@ -392,12 +392,29 @@ class _InviteContactSheetState extends State<InviteContactSheet> {
                       final notificationRepository = context
                           .read<NotificationRepository>();
                       for (var id in _selectedUserIds) {
+                        final contactData = contacts.firstWhere(
+                          (c) => c['id'] == id,
+                        );
+
+                        final Map<String, Map<String, dynamic>>
+                        participantsInfo = {
+                          widget.user.uid: {
+                            'displayName': widget.user.displayName,
+                            'photoUrl': widget.user.photoURL,
+                          },
+                          id: {
+                            'displayName': contactData['displayName'],
+                            'photoUrl': contactData['photoUrl'],
+                          },
+                        };
+
                         notificationRepository.sendCallRequest(
                           recipientId: id,
                           roomId: widget.roomId,
                           senderId: senderId,
                           senderPhotoUrl: senderPhotoUrl,
                           senderName: senderName,
+                          participantsInfo: participantsInfo,
                         );
                       }
 

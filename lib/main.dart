@@ -292,7 +292,6 @@ void _handleMessageClick(Map<String, dynamic> data) {
             notificationRepository: context.read<NotificationRepository>(),
           )..add(InitChat(chatId)),
           child: ChatScreen(
-            // Убедитесь, что импорт ChatScreen на месте
             chatId: chatId,
             currentUserId: FirebaseAuth.instance.currentUser!.uid,
           ),

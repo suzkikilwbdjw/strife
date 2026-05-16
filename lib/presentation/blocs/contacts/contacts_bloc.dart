@@ -45,6 +45,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
         senderName: event.senderName,
         senderPhotoUrl: event.senderPhotoUrl,
         roomId: event.roomId,
+        participantsInfo: event.participantsInfo,
       );
 
       // Эмитим успех

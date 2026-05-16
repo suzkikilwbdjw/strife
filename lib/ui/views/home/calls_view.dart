@@ -24,7 +24,11 @@ class CallsView extends StatefulWidget {
   State<CallsView> createState() => _CallsViewState();
 }
 
-class _CallsViewState extends State<CallsView> {
+class _CallsViewState extends State<CallsView>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   late final TextEditingController _textEditingController;
   late final User _user;
 
@@ -43,6 +47,7 @@ class _CallsViewState extends State<CallsView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       // Заголовок в верху страницы
       appBar: AppBar(
@@ -1004,12 +1009,26 @@ class _NewCallSheetState extends State<NewCallSheet> {
                     .read<NotificationRepository>();
 
                 for (var id in _selectedUserIds) {
+                  final contactData = contacts.firstWhere((c) => c['id'] == id);
+
+                  final Map<String, Map<String, dynamic>> participantsInfo = {
+                    widget.user.uid: {
+                      'displayName': widget.user.displayName,
+                      'photoUrl': widget.user.photoURL,
+                    },
+                    id: {
+                      'displayName': contactData['displayName'],
+                      'photoUrl': contactData['photoUrl'],
+                    },
+                  };
+
                   notificationRepository.sendCallRequest(
                     recipientId: id,
                     roomId: roomId,
                     senderId: senderId,
                     senderPhotoUrl: senderPhotoUrl,
                     senderName: senderName,
+                    participantsInfo: participantsInfo,
                   );
                 }
               } else {
