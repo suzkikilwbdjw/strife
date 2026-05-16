@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:strife/data/repositories/user_repository.dart';
@@ -515,12 +516,12 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                   style: const TextStyle(fontSize: 14, color: Colors.black54),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Название встречи
                 _buildInputField(
                   'Название встречи',
-                  'Планерка команды',
+                  'Планерка команды...',
                   controller: _titleController,
                   prefix: const Icon(Icons.edit_outlined),
                 ),
@@ -530,7 +531,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                 // Участники
                 _buildParticipantsField(),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
 
                 // Дата
                 _buildInputField(
@@ -543,7 +544,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                   },
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
 
                 // Время
                 _buildInputField(
@@ -709,13 +710,6 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Участники',
-          style: TextStyle(color: Colors.black54, fontSize: 14),
-        ),
-
-        const SizedBox(height: 8),
-
         InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () => _showContactsPicker(context),
@@ -723,7 +717,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: Colors.black54),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -736,7 +730,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                   child: _selectedUserIds.isEmpty
                       ? const Text(
                           'Выбрать участников',
-                          style: TextStyle(fontSize: 15, color: Colors.black54),
+                          style: TextStyle(fontSize: 15, color: Colors.black),
                         )
                       : Wrap(
                           spacing: 8,
@@ -777,11 +771,6 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.black54, fontSize: 14),
-        ),
-
         const SizedBox(height: 8),
 
         TextFormField(
@@ -796,35 +785,14 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
             return null;
           },
 
+          textCapitalization: TextCapitalization.sentences,
+          inputFormatters: [LengthLimitingTextInputFormatter(40)],
           decoration: InputDecoration(
+            labelText: label,
             hintText: hint,
             prefixIcon: prefix,
-
-            border: const OutlineInputBorder(
+            border: OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(12)),
-            ),
-
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFFB91ED0),
-                width: 1.5,
-              ),
-            ),
-
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red),
-            ),
-
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 1.5),
             ),
           ),
         ),
