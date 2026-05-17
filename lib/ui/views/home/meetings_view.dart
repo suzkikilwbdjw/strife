@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -178,179 +179,244 @@ class MeetingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const brandColor = Color(0xFFB91ED0);
+    final myUid = FirebaseAuth.instance.currentUser?.uid;
+
     final creatorId = meetingInfo['senderId'];
+    final title = meetingInfo['titleMeeting'] ?? 'Без названия';
 
-    final title = meetingInfo['titleMeeting'];
+    // Парсинг даты и времени
+    final meetingDateTime = (meetingInfo['meetingDateTime'] as Timestamp)
+        .toDate();
+    final formattedDate = DateFormat('dd.MM.yyyy').format(meetingDateTime);
+    final formattedTime = DateFormat('HH:mm').format(meetingDateTime);
 
-    final date = meetingInfo['dateMeeting'];
-    final DateTime tempDate = DateTime.parse(date);
-    final String formattedDate = DateFormat('dd.MM.yyyy').format(tempDate);
-
-    final time = meetingInfo['timeMeeting'];
     final participants = meetingInfo['participantIds'] as List;
 
-    return Container(
-      // Настройка размеров и отступов карточки
-      padding: const EdgeInsets.all(24),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F7FA), // Светлый фон
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Заголовок
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Название встречи
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
+    // Определение статусов встречи
+    final String status = meetingInfo['status'] ?? 'not_started';
+    final bool isStarted = status == 'started';
+    final bool isCompleted = status == 'completed';
+    final bool isNotStarted =
+        status == 'not_started' || (meetingInfo['not_started'] == true);
 
-              // Кнопка редактирования
-              if (creatorId == FirebaseAuth.instance.currentUser!.uid)
-                IconButton(
-                  onPressed: () async {
-                    await showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (context) =>
-                          NewMeetingSheet(initialMeeting: meetingInfo),
-                    );
-                  },
-                  icon: const Icon(Icons.mode_edit_outline_outlined),
-                ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 16.0),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isStarted
+              ? brandColor.withValues(alpha: 0.06)
+              : const Color(0xFFF5F5F7),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isStarted
+                ? brandColor.withValues(alpha: 0.2)
+                : brandColor.withValues(alpha: 0.03),
+            width: 1,
           ),
-          const SizedBox(height: 16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Заголовок карточки
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                // Кнопка редактирования только для создателя встречи
+                if (creatorId == myUid && !isCompleted && !isStarted)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.mode_edit_outline_outlined,
+                      color: Colors.black45,
+                      size: 20,
+                    ),
+                    onPressed: () async {
+                      await showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
+                        ),
+                        builder: (context) =>
+                            NewMeetingSheet(initialMeeting: meetingInfo),
+                      );
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
 
-          // Ряд с информацией
-          Row(
-            children: [
-              _buildInfoItem(Icons.calendar_month_outlined, formattedDate),
-              const SizedBox(width: 16),
-              _buildInfoItem(Icons.access_time, time),
-              const SizedBox(width: 16),
-              _buildInfoItem(
-                Icons.person_outline,
-                participants.length.toString(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+            // Ряд с метаданными встречи (Дата, Время, Участники)
+            Row(
+              children: [
+                _buildInfoItem(
+                  Icons.calendar_today_outlined,
+                  formattedDate,
+                  isStarted,
+                  brandColor,
+                ),
+                const SizedBox(width: 16),
+                _buildInfoItem(
+                  Icons.access_time_rounded,
+                  formattedTime,
+                  isStarted,
+                  brandColor,
+                ),
+                const SizedBox(width: 16),
+                _buildInfoItem(
+                  Icons.people_alt_outlined,
+                  participants.length.toString(),
+                  isStarted,
+                  brandColor,
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
 
-          // Кнопка 'Присоединиться'
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) =>
-                      const Center(child: CircularProgressIndicator()),
-                );
-                final roomId = meetingInfo['roomId'];
-
-                // Проверка существует ли комната
-                final exists = await context
-                    .read<VCSRepository>()
-                    .checkRoomExists(roomId);
-                if (!context.mounted) return;
-
-                Navigator.of(context).pop(); // закрыли loader
-
-                if (exists) {
-                  final User user = FirebaseAuth.instance.currentUser!;
-
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => BlocProvider(
-                        create: (_) =>
-                            VCSBloc(context.read<VCSRepository>())..add(
-                              ConnectRequested(
-                                roomId: roomId,
-                                identity: user.uid,
-                                name: user.displayName!,
-                                photoUrl: user.photoURL!,
-                              ),
-                            ),
-                        child: const RoomView(),
-                      ),
+            if (isCompleted)
+              // Встреча завершена
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Встреча завершена',
+                  style: TextStyle(
+                    color: Colors.black38,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else if (isNotStarted)
+              // Встреча запланирована, но еще не началась
+              ElevatedButton.icon(
+                onPressed: null,
+                icon: const Icon(Icons.lock_clock_outlined, size: 18),
+                label: const Text(
+                  'Не началась',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              )
+            else if (isStarted)
+              // Встреча активна прямо сейчас
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.video_call_rounded, size: 22),
+                label: const Text(
+                  'Войти в звонок',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () async {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(
+                      child: CircularProgressIndicator(color: brandColor),
                     ),
                   );
-                } else {
-                  // Ошибка в случае неправельного id комнаты
+
+                  final roomId = meetingInfo['roomId'];
+                  final bool exists = await context
+                      .read<VCSRepository>()
+                      .checkRoomExists(roomId);
+
                   if (!context.mounted) return;
+                  Navigator.of(context).pop();
 
-                  Navigator.of(context).pop(); // закрываем лоадер
+                  if (exists) {
+                    final User user = FirebaseAuth.instance.currentUser!;
+                    final vcsBloc = context.read<VCSBloc>();
 
-                  // Показываем ошибку пользователю
-                  AppNotifications.showError(
-                    context,
-                    'Введен неверный id комнаты',
-                  );
+                    vcsBloc.add(
+                      ConnectRequested(
+                        roomId: roomId,
+                        identity: user.uid,
+                        name: user.displayName ?? 'User',
+                        photoUrl: user.photoURL,
+                      ),
+                    );
 
-                  return;
-                }
-              },
-              icon: const Icon(
-                Icons.videocam_outlined,
-                color: Colors.white,
-                size: 28,
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: vcsBloc,
+                          child: const RoomView(),
+                        ),
+                      ),
+                    );
+                  } else {
+                    AppNotifications.showError(
+                      context,
+                      'Эта комната конференции больше не существует',
+                    );
+                  }
+                },
               ),
-              label: const Text(
-                'Присоединиться',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFC137DF), // Фиолетовый цвет
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // Присодениться к встрече можно только за 10 минут до начала
-  bool canJoin(DateTime meetingDate, TimeOfDay meetingTime) {
-    final now = DateTime.now();
-    final start = DateTime(
-      meetingDate.year,
-      meetingDate.month,
-      meetingDate.day,
-      meetingTime.hour,
-      meetingTime.minute,
-    );
-
-    return now.isAfter(start.subtract(const Duration(minutes: 10)));
-  }
-
-  // Вспомогательный метод для элементов информации
-  Widget _buildInfoItem(IconData icon, String text) {
+  // Красивый хелпер метаданных
+  Widget _buildInfoItem(
+    IconData icon,
+    String text,
+    bool isStarted,
+    Color brandColor,
+  ) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
-        const SizedBox(width: 4),
-        Text(text, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+        Icon(
+          icon,
+          size: 16,
+          color: isStarted ? brandColor.withValues(alpha: 0.7) : Colors.black45,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: TextStyle(
+            color: isStarted ? brandColor : Colors.black54,
+            fontSize: 13,
+            fontWeight: isStarted ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
       ],
     );
   }
@@ -369,11 +435,9 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
   // Выбранные пользователя, которые будут приглашены в звонок
   final Map<String, dynamic> _selectedUserIds = {};
 
-  // Выбранное время встречи
-  TimeOfDay? _selectedTime;
-
-  // Выбранная дата встречи
-  DateTime? _selectedDate;
+  DateTime? _selectedDate; // Отдельно дата
+  TimeOfDay? _selectedTime; // Отдельно время
+  DateTime? _selectedDateTime; // Полная дата+время
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
@@ -391,42 +455,13 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
       // Заголовок
       _titleController.text = meeting['titleMeeting'] ?? '';
 
-      // Дата
-      if (meeting['dateMeeting'] != null) {
-        _selectedDate = DateTime.parse(meeting['dateMeeting']);
-        _dateController.text = DateFormat('dd.MM.yyyy').format(_selectedDate!);
-      }
-
-      //  Время
-      if (meeting['timeMeeting'] != null) {
-        final String timeStr = meeting['timeMeeting'];
-
-        // Убираем лишние пробелы и переводим в верхний регистр
-        final cleanTime = timeStr.trim().toUpperCase();
-
-        // Определяем, есть ли там AM/PM
-        bool isPM = cleanTime.contains('PM');
-        bool isAM = cleanTime.contains('AM');
-
-        // Убираем буквы, оставляем только цифры и двоеточие
-        final parts = cleanTime
-            .replaceAll('AM', '')
-            .replaceAll('PM', '')
-            .trim()
-            .split(':');
-
-        if (parts.length == 2) {
-          int hour = int.parse(parts[0]);
-          int minute = int.parse(parts[1]);
-
-          // Корректируем часы для 12-часового формата
-          if (isPM && hour < 12) hour += 12;
-          if (isAM && hour == 12) hour = 0;
-
-          _selectedTime = TimeOfDay(hour: hour, minute: minute);
-
-          _timeController.text = timeStr;
-        }
+      // Время и дата
+      if (meeting['meetingDateTime'] != null) {
+        _selectedDateTime = (meeting['meetingDateTime'] as Timestamp).toDate();
+        _dateController.text = DateFormat(
+          'dd.MM.yyyy',
+        ).format(_selectedDateTime!);
+        _timeController.text = DateFormat('HH:mm').format(_selectedDateTime!);
       }
 
       // Участники
@@ -565,19 +600,29 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                       ? null
                       : () async {
                           if (_formKey.currentState!.validate()) {
+                            final now = DateTime.now();
+
+                            final meetingDateTime = DateTime(
+                              _selectedDate!.year,
+                              _selectedDate!.month,
+                              _selectedDate!.day,
+                              _selectedTime!.hour,
+                              _selectedTime!.minute,
+                            );
+
+                            if (meetingDateTime.isBefore(now)) {
+                              AppNotifications.showError(
+                                context,
+                                'Нельзя создать встречу в прошлом',
+                              );
+                              return;
+                            }
+
                             final user = FirebaseAuth.instance.currentUser!;
 
                             final senderId = user.uid;
                             final senderName = user.displayName!;
                             final senderPhotoUrl = user.photoURL!;
-
-                            final String dateIso = _selectedDate!
-                                .toIso8601String()
-                                .split('T')[0];
-
-                            final String timeString = _selectedTime!.format(
-                              context,
-                            );
 
                             if (widget.initialMeeting != null) {
                               context.read<MeetingsBloc>().add(
@@ -589,8 +634,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                                   senderName: senderName,
                                   senderPhotoUrl: senderPhotoUrl,
                                   titleMeeting: _titleController.text.trim(),
-                                  dateMeeting: dateIso,
-                                  timeMeeting: timeString,
+                                  meetingDateTime: _selectedDateTime!,
                                 ),
                               );
                             } else {
@@ -599,6 +643,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                                   .createRoom(
                                     roomName: 'test',
                                     creatorId: senderId,
+                                    type: 'meeting',
                                   );
 
                               if (!context.mounted) return;
@@ -612,8 +657,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                                   senderPhotoUrl: senderPhotoUrl,
                                   roomId: roomId,
                                   titleMeeting: _titleController.text.trim(),
-                                  dateMeeting: dateIso,
-                                  timeMeeting: timeString,
+                                  meetingDateTime: _selectedDateTime!,
                                 ),
                               );
                             }
@@ -656,8 +700,32 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     );
   }
 
+  void _updateControllers() {
+    if (_selectedDate != null) {
+      _dateController.text = DateFormat('dd.MM.yyyy').format(_selectedDate!);
+    }
+    if (_selectedTime != null) {
+      _timeController.text = _selectedTime!.format(context);
+    }
+  }
+
+  void _updateFullDateTime() {
+    if (_selectedDate != null && _selectedTime != null) {
+      _selectedDateTime = DateTime(
+        _selectedDate!.year,
+        _selectedDate!.month,
+        _selectedDate!.day,
+        _selectedTime!.hour,
+        _selectedTime!.minute,
+      );
+    } else {
+      _selectedDateTime = null;
+    }
+  }
+
+  // Только выбор ДАТЫ
   Future<void> _pickDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now(),
@@ -665,27 +733,25 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFFB91ED0),
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
+            colorScheme: const ColorScheme.light(primary: Color(0xFFB91ED0)),
           ),
           child: child!,
         );
       },
     );
 
-    if (picked != null && picked != _selectedDate) {
+    if (pickedDate != null) {
       setState(() {
-        _selectedDate = picked;
-        _dateController.text = DateFormat('dd.MM.yyyy').format(picked);
+        _selectedDate = pickedDate;
+        _updateControllers();
+        _updateFullDateTime();
       });
     }
   }
 
+  // Только выбор ВРЕМЕНИ
   Future<void> _pickTime(BuildContext context) async {
-    final timeOfDay = await showTimePicker(
+    final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: _selectedTime ?? TimeOfDay.now(),
       builder: (context, child) {
@@ -698,10 +764,11 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
       },
     );
 
-    if (timeOfDay != null && timeOfDay != _selectedTime) {
+    if (pickedTime != null) {
       setState(() {
-        _selectedTime = timeOfDay;
-        _timeController.text = _selectedTime!.format(context);
+        _selectedTime = pickedTime;
+        _updateControllers();
+        _updateFullDateTime();
       });
     }
   }

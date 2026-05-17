@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 
 class VCSRepository {
   // Адресс server.mjs
-  final _httpUrl = 'http://62.109.2.27:4000';
+  final _httpUrl = 'https://seva.danilkin2244.fvds.ru';
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   // Запрос токена у сервера
@@ -130,6 +130,8 @@ class VCSRepository {
   Future<String> createRoom({
     required String roomName,
     required String creatorId,
+    String status = 'active',
+    String type = 'call',
   }) async {
     try {
       final roomRef = _firestore.collection('rooms').doc();
@@ -141,7 +143,8 @@ class VCSRepository {
         'hostIds': [creatorId],
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-        'status': 'active',
+        'status': status,
+        'type': type,
       });
 
       return roomRef.id;

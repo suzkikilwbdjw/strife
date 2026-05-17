@@ -80,7 +80,7 @@ class AuthRepository {
   Future<UserCredential?> loginWithYandex() async {
     const String clientId = 'eec50519460e457fa6684940520fbfbc';
     const String redirectUri = 'com.example.strife://callback';
-    const String backendUrl = 'http://62.109.2.27';
+    const String backendUrl = 'https://seva.danilkin2244.fvds.ru';
 
     final appLinks = AppLinks();
     StreamSubscription? linkSubscription;
@@ -97,7 +97,7 @@ class AuthRepository {
 
           try {
             final response = await http.post(
-              Uri.parse('$backendUrl:4000/auth/yandex'),
+              Uri.parse('$backendUrl/auth/yandex'),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({'code': code}),
             );

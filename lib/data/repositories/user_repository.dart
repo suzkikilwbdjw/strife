@@ -10,7 +10,7 @@ import 'dart:convert';
 class UserRepository {
   final _firestore = FirebaseFirestore.instance;
 
-  final String _baseUrl = 'http://62.109.2.27:4000';
+  final String _baseUrl = 'https://seva.danilkin2244.fvds.ru';
 
   Stream<User?> get userStream => FirebaseAuth.instance.userChanges();
 
@@ -196,7 +196,7 @@ class UserRepository {
     return _firestore
         .collection('meetings')
         .where('participantIds', arrayContains: userId)
-        .orderBy('timestamp', descending: true)
+        .orderBy('meetingDateTime', descending: true)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs.map((doc) {
@@ -212,6 +212,7 @@ class UserRepository {
     return _firestore
         .collection('rooms')
         .where('participantIds', arrayContains: userId)
+        .where('type', isEqualTo: 'call')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map(

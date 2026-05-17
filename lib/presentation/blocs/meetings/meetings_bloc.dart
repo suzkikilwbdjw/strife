@@ -26,8 +26,7 @@ class MeetingsBloc extends Bloc<MeetingsEvent, MeetingsState> {
         senderPhotoUrl: event.senderPhotoUrl,
         meetingId: event.meetingId,
         titleMeeting: event.titleMeeting,
-        dateMeeting: event.dateMeeting,
-        timeMeeting: event.timeMeeting,
+        meetingDateTime: event.meetingDateTime,
         participantIds: event.participantIds,
         senderName: event.senderName,
       );
@@ -51,8 +50,7 @@ class MeetingsBloc extends Bloc<MeetingsEvent, MeetingsState> {
         senderPhotoUrl: event.senderPhotoUrl,
         roomId: event.roomId,
         titleMeeting: event.titleMeeting,
-        dateMeeting: event.dateMeeting,
-        timeMeeting: event.timeMeeting,
+        meetingDateTime: event.meetingDateTime,
       );
 
       emit(state.copyWith(isLoading: false));

@@ -14,6 +14,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   String? roomId;
 
   Room? _room;
+
   EventsListener<RoomEvent>? _listener;
 
   VCSBloc(this._repository) : super(const VCSState()) {
@@ -230,7 +231,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
 
       roomId = _room!.name;
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      rethrow;
     }
   }
 

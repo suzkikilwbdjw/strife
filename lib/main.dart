@@ -20,6 +20,8 @@ import 'package:strife/firebase/firebase_options.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
+import 'package:strife/presentation/blocs/home/home_bloc.dart';
+import 'package:strife/presentation/blocs/home/home_event.dart';
 import 'package:strife/presentation/blocs/meetings/meetings_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
@@ -81,6 +83,10 @@ Future<void> main() async {
           ),
           BlocProvider(
             create: (context) => VCSBloc(context.read<VCSRepository>()),
+          ),
+          BlocProvider(
+            create: (context) => NavigationBloc(),
+            child: const HomeView(),
           ),
         ],
         child: const MyApp(),
@@ -282,6 +288,9 @@ void _handleMessageClick(Map<String, dynamic> data) {
   final String? type = data['type'];
   final String? chatId = data['chatId'];
 
+  final context = navigatorKey.currentContext;
+  if (context == null) return;
+
   if ((type == 'call_request' || type == 'message_request') && chatId != null) {
     navigatorKey.currentState?.push(
       MaterialPageRoute(
@@ -298,6 +307,14 @@ void _handleMessageClick(Map<String, dynamic> data) {
         ),
       ),
     );
+  } else if (type == 'meeting_request' ||
+      type == 'meeting_reminder_request' ||
+      type == 'update_meeting_request') {
+    // Сбрасываем стек экранов до самого первого
+    navigatorKey.currentState?.popUntil((route) => route.isFirst);
+
+    // Меняем вкладку в Блоке на индекс 2
+    context.read<NavigationBloc>().add(ChangeTab(2));
   } else {
     navigatorKey.currentState?.push(
       MaterialPageRoute(builder: (context) => const NotificationsView()),
