@@ -210,7 +210,18 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
 
       // Создаем экземпляр комнаты
       _room = Room(
-        roomOptions: const RoomOptions(adaptiveStream: true, dynacast: true),
+        roomOptions: const RoomOptions(
+          adaptiveStream: true,
+          dynacast: true,
+          defaultVideoPublishOptions: VideoPublishOptions(
+            videoCodec: 'h264',
+            simulcast: true,
+            videoEncoding: VideoEncoding(
+              maxFramerate: 30,
+              maxBitrate: 3_000_000,
+            ),
+          ),
+        ),
       );
 
       _listener = _room!.createListener();
@@ -273,7 +284,12 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     final newValue = !state.isCameraEnabled;
 
-    await _room!.localParticipant?.setCameraEnabled(newValue);
+    await _room!.localParticipant?.setCameraEnabled(
+      newValue,
+      cameraCaptureOptions: CameraCaptureOptions(
+        params: VideoParametersPresets.h1080_169,
+      ),
+    );
 
     emit(state.copyWith(isCameraEnabled: newValue));
   }
