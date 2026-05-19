@@ -565,99 +565,106 @@ class NavigationBottomAppBar extends StatelessWidget {
 
               // Нижняя панель с кнопками чат и участники
               Row(
-                spacing: 24,
+                spacing: 12,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   // Чат
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF474747),
-                      padding: const EdgeInsets.symmetric(horizontal: 50),
-                    ),
-                    onPressed: () async {
-                      final String currentRoomId = bloc.roomId!;
-                      final myId = FirebaseAuth.instance.currentUser!.uid;
-                      final List<String> participantIds = bloc
-                          .state
-                          .participants
-                          .map((p) => p.identity)
-                          .toList();
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF474747),
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      ),
+                      onPressed: () async {
+                        final String currentRoomId = bloc.roomId!;
+                        final myId = FirebaseAuth.instance.currentUser!.uid;
+                        final List<String> participantIds = bloc
+                            .state
+                            .participants
+                            .map((p) => p.identity)
+                            .toList();
 
-                      await context.read<ChatRepository>().syncRoomChat(
-                        currentRoomId,
-                        participantIds,
-                      );
+                        await context.read<ChatRepository>().syncRoomChat(
+                          currentRoomId,
+                          participantIds,
+                        );
 
-                      if (!context.mounted) return;
+                        if (!context.mounted) return;
 
-                      await showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => BlocProvider(
-                          create: (context) => ChatBloc(
-                            chatRepository: context.read<ChatRepository>(),
-                            userRepository: context.read<UserRepository>(),
-                            notificationRepository: context
-                                .read<NotificationRepository>(),
-                          )..add(InitChat(bloc.roomId!)),
-                          child: DraggableScrollableSheet(
-                            initialChildSize: 0.75,
-                            maxChildSize: 0.9,
-                            expand: false,
-                            builder: (context, scrollController) => Container(
-                              clipBehavior: Clip.antiAlias,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(30),
+                        await showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => BlocProvider(
+                            create: (context) => ChatBloc(
+                              chatRepository: context.read<ChatRepository>(),
+                              userRepository: context.read<UserRepository>(),
+                              notificationRepository: context
+                                  .read<NotificationRepository>(),
+                            )..add(InitChat(bloc.roomId!)),
+                            child: DraggableScrollableSheet(
+                              initialChildSize: 0.75,
+                              maxChildSize: 0.9,
+                              expand: false,
+                              builder: (context, scrollController) => Container(
+                                clipBehavior: Clip.antiAlias,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(30),
+                                  ),
                                 ),
-                              ),
-                              child: ChatScreen(
-                                controller: scrollController,
-                                chatId: bloc.roomId!,
-                                currentUserId: myId,
+                                child: ChatScreen(
+                                  controller: scrollController,
+                                  chatId: bloc.roomId!,
+                                  currentUserId: myId,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.chat_bubble_outline_rounded),
-                    label: const Text('Чат'),
+                        );
+                      },
+                      icon: Icon(Icons.chat_bubble_outline_rounded),
+                      label: const Text('Чат', overflow: TextOverflow.ellipsis),
+                    ),
                   ),
                   // Участники
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF474747),
-                      padding: const EdgeInsets.symmetric(horizontal: 30),
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF474747),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed: () async {
+                        await showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(24),
+                            ),
+                          ),
+                          builder: (context) => BlocProvider.value(
+                            value: bloc,
+                            child: DraggableScrollableSheet(
+                              initialChildSize: 0.6,
+                              maxChildSize: 0.8,
+                              minChildSize: 0.4,
+                              expand: false,
+                              builder: (context, scrollController) =>
+                                  ParticipantsView(
+                                    scrollController: scrollController,
+                                  ),
+                            ),
+                          ),
+                        );
+                      },
+                      icon: Icon(Icons.group_outlined, size: 25),
+                      label: const Text(
+                        'Участники',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    onPressed: () async {
-                      await showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(24),
-                          ),
-                        ),
-                        builder: (context) => BlocProvider.value(
-                          value: bloc,
-                          child: DraggableScrollableSheet(
-                            initialChildSize: 0.6,
-                            maxChildSize: 0.8,
-                            minChildSize: 0.4,
-                            expand: false,
-                            builder: (context, scrollController) =>
-                                ParticipantsView(
-                                  scrollController: scrollController,
-                                ),
-                          ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.group_outlined, size: 25),
-                    label: const Text('Участники'),
                   ),
                 ],
               ),

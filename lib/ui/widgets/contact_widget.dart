@@ -72,6 +72,7 @@ class ContactWidget extends StatelessWidget {
               displayName!,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
 
@@ -104,6 +105,8 @@ class ContactWidget extends StatelessWidget {
                       color: Colors.black54,
                       fontSize: 11.0,
                     ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ],
