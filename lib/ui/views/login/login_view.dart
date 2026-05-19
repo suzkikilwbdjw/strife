@@ -76,10 +76,7 @@ class LoginView extends StatelessWidget {
 
                     const Text(
                       'Войдите в свой аккаунт',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
                     ),
 
                     const SizedBox(height: 60),
@@ -147,9 +144,7 @@ class RegisterNavigationText extends StatelessWidget {
             ),
             recognizer: TapGestureRecognizer()
               ..onTap = () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => RegistrationView()),
-                );
+                Navigator.of(context).push(_createRoute());
               },
           ),
         ],
@@ -166,11 +161,7 @@ class SocialDivider extends StatelessWidget {
     return Row(
       children: [
         const Expanded(
-          child: Divider(
-            thickness: 1,
-            color: Colors.white24,
-            endIndent: 12,
-          ),
+          child: Divider(thickness: 1, color: Colors.white24, endIndent: 12),
         ),
         Text(
           'или войти с помощью',
@@ -181,11 +172,7 @@ class SocialDivider extends StatelessWidget {
           ),
         ),
         const Expanded(
-          child: Divider(
-            thickness: 1,
-            color: Colors.white24,
-            indent: 12,
-          ),
+          child: Divider(thickness: 1, color: Colors.white24, indent: 12),
         ),
       ],
     );
@@ -366,10 +353,7 @@ class _EmailTextFormState extends State<EmailTextForm> {
                       minHeight: 48,
                     ),
                   ),
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                  ),
+                  style: const TextStyle(color: Colors.black87, fontSize: 16),
                 ),
               ),
               if (hasError)
@@ -422,9 +406,8 @@ class _PasswordTextFormState extends State<PasswordTextForm> {
       width: double.infinity,
       child: FormField<String>(
         autovalidateMode: AutovalidateMode.onUserInteraction,
-        validator: (value) => (value == null || value.length < 6)
-            ? 'Минимум 6 символов'
-            : null,
+        validator: (value) =>
+            (value == null || value.length < 6) ? 'Минимум 6 символов' : null,
         builder: (field) {
           final hasError = field.errorText != null;
 
@@ -515,10 +498,7 @@ class _PasswordTextFormState extends State<PasswordTextForm> {
                       minHeight: 48,
                     ),
                   ),
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                  ),
+                  style: const TextStyle(color: Colors.black87, fontSize: 16),
                 ),
               ),
               if (hasError)
@@ -575,9 +555,7 @@ class LoginButton extends StatelessWidget {
             EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           ),
           shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           elevation: WidgetStatePropertyAll(isLoading ? 0 : 2),
         ),
@@ -629,4 +607,20 @@ class LoginButton extends StatelessWidget {
       ),
     );
   }
+}
+
+Route<void> _createRoute() {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) =>
+        const RegistrationView(),
+    transitionDuration: const Duration(milliseconds: 400),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return ScaleTransition(
+        scale: Tween<double>(begin: 0.85, end: 1.0).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeInOutCubic),
+        ),
+        child: FadeTransition(opacity: animation, child: child),
+      );
+    },
+  );
 }
