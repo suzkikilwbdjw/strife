@@ -396,7 +396,8 @@ class ChatAppBar extends StatelessWidget {
                       top: Radius.circular(24),
                     ),
                   ),
-                  builder: (context) => const NewChatSheet(),
+                  builder: (context) =>
+                      SingleChildScrollView(child: const NewChatSheet()),
                 );
               },
             ),

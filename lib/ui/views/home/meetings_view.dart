@@ -194,11 +194,11 @@ class MeetingCard extends StatelessWidget {
     final participants = meetingInfo['participantIds'] as List;
 
     // Определение статусов встречи
-    final String status = meetingInfo['status'] ?? 'not_started';
+    final String status = meetingInfo['status'];
     final bool isStarted = status == 'started';
     final bool isCompleted = status == 'completed';
-    final bool isNotStarted =
-        status == 'not_started' || (meetingInfo['not_started'] == true);
+    final bool isCancelled = status == 'cancelled';
+    final bool isNotStarted = status == 'not_started';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 16.0),
@@ -237,12 +237,15 @@ class MeetingCard extends StatelessWidget {
                   ),
                 ),
                 // Кнопка редактирования только для создателя встречи
-                if (creatorId == myUid && !isCompleted && !isStarted)
+                if (creatorId == myUid &&
+                    !isCompleted &&
+                    !isStarted &&
+                    !isCancelled)
                   IconButton(
                     icon: const Icon(
                       Icons.mode_edit_outline_outlined,
-                      color: Colors.black45,
-                      size: 20,
+                      color: Colors.black87,
+                      size: 24,
                     ),
                     onPressed: () async {
                       await showModalBottomSheet(
@@ -342,14 +345,6 @@ class MeetingCard extends StatelessWidget {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () async {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (_) => const Center(
-                      child: CircularProgressIndicator(color: brandColor),
-                    ),
-                  );
-
                   final roomId = meetingInfo['roomId'];
                   final bool exists = await context
                       .read<VCSRepository>()
@@ -386,6 +381,38 @@ class MeetingCard extends StatelessWidget {
                     );
                   }
                 },
+              )
+            else if (isCancelled)
+              // Встреча отменена
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.red.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.cancel_outlined,
+                      size: 18,
+                      color: Colors.red.shade400,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Встреча отменена',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
           ],
         ),
@@ -457,11 +484,27 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
 
       // Время и дата
       if (meeting['meetingDateTime'] != null) {
+        // Выставление текущей даты встрeчи
         _selectedDateTime = (meeting['meetingDateTime'] as Timestamp).toDate();
+
+        // Выставление даты в поле ввода
         _dateController.text = DateFormat(
           'dd.MM.yyyy',
         ).format(_selectedDateTime!);
+
+        // Выставление времени в поле ввода
         _timeController.text = DateFormat('HH:mm').format(_selectedDateTime!);
+
+        _selectedDate = DateTime(
+          _selectedDateTime!.year,
+          _selectedDateTime!.month,
+          _selectedDateTime!.day,
+        );
+
+        _selectedTime = TimeOfDay(
+          hour: _selectedDateTime!.hour,
+          minute: _selectedDateTime!.minute,
+        );
       }
 
       // Участники
@@ -492,14 +535,23 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     );
 
     return BlocListener<MeetingsBloc, MeetingsState>(
+      listenWhen: (previous, current) =>
+          previous.error != current.error ||
+          previous.isLoading != current.isLoading,
       listener: (context, state) {
         if (state.error != null) {
           AppNotifications.showError(context, state.error!);
-        } else if (!state.isLoading) {
-          widget.initialMeeting == null
-              ? AppNotifications.showSuccess(context, 'Встреча создана')
-              : AppNotifications.showSuccess(context, 'Встреча обновлена');
+          return;
+        }
 
+        if (!state.isLoading) {
+          if (widget.initialMeeting == null) {
+            AppNotifications.showSuccess(context, 'Встреча создана');
+          } else if (state.isCancelled) {
+            AppNotifications.showSuccess(context, 'Встреча отменена');
+          } else {
+            AppNotifications.showSuccess(context, 'Встреча обновлена');
+          }
           Navigator.pop(context);
         }
       },
@@ -602,15 +654,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                           if (_formKey.currentState!.validate()) {
                             final now = DateTime.now();
 
-                            final meetingDateTime = DateTime(
-                              _selectedDate!.year,
-                              _selectedDate!.month,
-                              _selectedDate!.day,
-                              _selectedTime!.hour,
-                              _selectedTime!.minute,
-                            );
-
-                            if (meetingDateTime.isBefore(now)) {
+                            if (_selectedDateTime!.isBefore(now)) {
                               AppNotifications.showError(
                                 context,
                                 'Нельзя создать встречу в прошлом',
@@ -624,19 +668,64 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                             final senderName = user.displayName!;
                             final senderPhotoUrl = user.photoURL!;
 
+                            final titleMeeting = _titleController.text.trim();
+                            final meetingDateTime = _selectedDateTime!;
+                            final participantIds = _selectedUserIds.keys
+                                .toList();
+
                             if (widget.initialMeeting != null) {
-                              context.read<MeetingsBloc>().add(
-                                SendUpdateMeetingRequested(
-                                  meetingId: widget.initialMeeting!['id'],
-                                  senderId: senderId,
-                                  participantIds: _selectedUserIds.keys
-                                      .toList(),
-                                  senderName: senderName,
-                                  senderPhotoUrl: senderPhotoUrl,
-                                  titleMeeting: _titleController.text.trim(),
-                                  meetingDateTime: _selectedDateTime!,
-                                ),
+                              final meetingId = widget.initialMeeting!['id'];
+
+                              // Проверка на то что изменились ли какие значения
+                              // Достаем старый список из Firestore и приводим его к List<String>
+                              final oldParticipants = List<String>.from(
+                                widget.initialMeeting!['participantIds'] ?? [],
                               );
+
+                              // Сравниваем их как множества
+                              final bool isParticipantsChanged =
+                                  Set.from(oldParticipants).length !=
+                                      Set.from(participantIds).length ||
+                                  !Set.from(
+                                    oldParticipants,
+                                  ).containsAll(participantIds);
+
+                              // Приводим старую дату из Timestamp к DateTime
+                              final DateTime oldDateTime =
+                                  (widget.initialMeeting!['meetingDateTime']
+                                          as Timestamp)
+                                      .toDate();
+
+                              // Сравнение времени
+                              final bool isDateChanged =
+                                  oldDateTime.millisecondsSinceEpoch !=
+                                  meetingDateTime.millisecondsSinceEpoch;
+
+                              // Сравнение текста
+                              final bool isTitleChanged =
+                                  widget.initialMeeting!['titleMeeting'] !=
+                                  titleMeeting;
+
+                              final isChange =
+                                  isTitleChanged ||
+                                  isDateChanged ||
+                                  isParticipantsChanged;
+
+                              if (isChange) {
+                                context.read<MeetingsBloc>().add(
+                                  SendUpdateMeetingRequested(
+                                    meetingId: meetingId,
+                                    senderId: senderId,
+                                    participantIds: participantIds,
+                                    senderName: senderName,
+                                    senderPhotoUrl: senderPhotoUrl,
+                                    titleMeeting: titleMeeting,
+                                    meetingDateTime: meetingDateTime,
+                                  ),
+                                );
+                              } else {
+                                Navigator.pop(context);
+                              }
                             } else {
                               final roomId = await context
                                   .read<VCSRepository>()
@@ -651,13 +740,12 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                               context.read<MeetingsBloc>().add(
                                 SendMeetingRequestRequested(
                                   senderId: senderId,
-                                  participantIds: _selectedUserIds.keys
-                                      .toList(),
+                                  participantIds: participantIds,
                                   senderName: senderName,
                                   senderPhotoUrl: senderPhotoUrl,
                                   roomId: roomId,
-                                  titleMeeting: _titleController.text.trim(),
-                                  meetingDateTime: _selectedDateTime!,
+                                  titleMeeting: titleMeeting,
+                                  meetingDateTime: meetingDateTime,
                                 ),
                               );
                             }
@@ -691,10 +779,149 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                         ),
                 ),
 
+                if (widget.initialMeeting != null) ...[
+                  const SizedBox(height: 12),
+                  // Кнопка oтменить встречу
+                  OutlinedButton.icon(
+                    onPressed: isLoading
+                        ? null
+                        : () => _showDeleteConfirmation(context),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                    label: const Text(
+                      'Отменить встречу',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(
+                        color: Colors.redAccent,
+                        width: 1.2,
+                      ),
+                      foregroundColor: Colors.redAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 32),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    final User user = FirebaseAuth.instance.currentUser!;
+
+    final meetingId = widget.initialMeeting!['id'];
+    final roomId = widget.initialMeeting!['roomId'];
+
+    final senderId = user.uid;
+    final senderName = user.displayName!;
+    final senderPhotoUrl = user.photoURL!;
+
+    final titleMeeting = _titleController.text.trim();
+    final meetingDateTime = _selectedDateTime!;
+    final participantIds = _selectedUserIds.keys.toList();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.only(
+          top: 24,
+          left: 24,
+          right: 24,
+          bottom: 12,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Предупреждающая красная иконка
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.redAccent,
+              size: 40,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Отмена встречи',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Вы действительно хотите отменить и полностью удалить эту встречу? Это действие нельзя будет отменить.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.black54,
+                height: 1.3,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+
+            // Красная кнопка подтверждения
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () async {
+                // Закрываем диалоговое окно
+                Navigator.of(dialogContext).pop();
+
+                context.read<MeetingsBloc>().add(
+                  SendCancleMeetingRequested(
+                    meetingId: meetingId,
+                    roomId: roomId,
+                    senderId: senderId,
+                    titleMeeting: titleMeeting,
+                    meetingDateTime: meetingDateTime,
+                    senderName: senderName,
+                    senderPhotoUrl: senderPhotoUrl,
+                    participantIds: participantIds,
+                  ),
+                );
+              },
+              child: const Text(
+                'Да, отменить',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Кнопка назад
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text(
+                'Назад',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -723,7 +950,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     }
   }
 
-  // Только выбор ДАТЫ
+  // Только выбор даты
   Future<void> _pickDate(BuildContext context) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -749,7 +976,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
     }
   }
 
-  // Только выбор ВРЕМЕНИ
+  // Только выбор времени
   Future<void> _pickTime(BuildContext context) async {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,

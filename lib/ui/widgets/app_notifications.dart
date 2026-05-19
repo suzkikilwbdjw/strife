@@ -1,113 +1,131 @@
+import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:strife/themes/gradient_theme.dart';
 
 class AppNotifications {
-  // Общий метод для построения уведомления
-  static void _show(
-    BuildContext context, {
+  static void _show({
     required String title,
     required String message,
     required IconData icon,
-    required Gradient gradient,
+    required Color iconColor,
   }) {
     HapticFeedback.lightImpact();
 
-    final messenger = ScaffoldMessenger.of(context);
-
-    messenger.showSnackBar(
-      SnackBar(
-        elevation: 0,
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.transparent,
-        content: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          height: 80,
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
+    BotToast.showCustomNotification(
+      duration: const Duration(seconds: 4),
+      wrapAnimation: (controller, cancel, child) {
+        return SlideTransition(
+          position: Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
+              .animate(
+                CurvedAnimation(parent: controller, curve: Curves.easeOutCubic),
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: Colors.white, size: 30),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Text(
-                      message,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+          child: child,
+        );
+      },
+      toastBuilder: (cancelFunc) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  width: 1,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white54, size: 20),
-                onPressed: () => messenger.hideCurrentSnackBar(),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(icon, color: iconColor, size: 24),
+                  const SizedBox(width: 12),
+
+                  // Блок текста
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          message,
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Тонкая серая кнопка закрытия
+                  IconButton(
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.black26,
+                      size: 18,
+                    ),
+                    onPressed: () => cancelFunc(),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  // Метод для ошибки
+  // Ошибка
   static void showError(BuildContext context, String message) {
     _show(
-      context,
-      title: 'Ой, ошибка!',
+      title: 'Ошибка',
       message: message,
-      icon: Icons.error_outline,
-      gradient: Theme.of(context).extension<GradientTheme>()!.mainGradient,
+      icon: Icons.error_outline_rounded,
+      iconColor: const Color(0xFFD32F2F),
     );
   }
 
-  // Метод для успеха
+  // Успех
   static void showSuccess(BuildContext context, String message) {
     _show(
-      context,
-      title: 'Успешно!',
+      title: 'Успешно',
       message: message,
-      icon: Icons.check_circle_outline,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF2E7D32), Color(0xFF43A047)],
-      ),
+      icon: Icons.check_circle_outline_rounded,
+      iconColor: const Color(0xFF2E7D32),
     );
   }
 
-  // Метод для нейтрального вывода
+  // Инфо / Нейтральное
   static void showInfo(BuildContext context, String message) {
     _show(
-      context,
-      title: 'Четко',
+      title: 'Уведомление',
       message: message,
-      icon: Icons.info_outline,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
-      ),
+      icon: Icons.info_outline_rounded,
+      iconColor: const Color(0xFFB91ED0),
     );
   }
 }

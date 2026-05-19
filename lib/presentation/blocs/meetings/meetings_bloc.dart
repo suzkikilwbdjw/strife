@@ -13,6 +13,35 @@ class MeetingsBloc extends Bloc<MeetingsEvent, MeetingsState> {
   void _registerEventHandlers() {
     on<SendMeetingRequestRequested>(_sendMeetingRequest);
     on<SendUpdateMeetingRequested>(_sendUpdateMeetingRequest);
+    on<SendCancleMeetingRequested>(_sendCancleMeetingRequest);
+  }
+
+  Future<void> _sendCancleMeetingRequest(
+    SendCancleMeetingRequested event,
+    Emitter<MeetingsState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(isLoading: true, error: null, isCancelled: false));
+      _notificationRepository.sendCancleMeetingRequest(
+        senderId: event.senderId,
+        senderPhotoUrl: event.senderPhotoUrl,
+        meetingId: event.meetingId,
+        titleMeeting: event.titleMeeting,
+        meetingDateTime: event.meetingDateTime,
+        participantIds: event.participantIds,
+        senderName: event.senderName,
+        roomId: event.roomId,
+      );
+      emit(state.copyWith(isLoading: false, isCancelled: true));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          error: e.toString(),
+          isLoading: false,
+          isCancelled: false,
+        ),
+      );
+    }
   }
 
   Future<void> _sendUpdateMeetingRequest(

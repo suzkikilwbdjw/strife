@@ -143,6 +143,39 @@ class NotificationRepository {
     }
   }
 
+  Future<void> sendCancleMeetingRequest({
+    required String senderId,
+    required String senderPhotoUrl,
+    required String meetingId,
+    required DateTime meetingDateTime,
+    required List<String> participantIds,
+    required String senderName,
+    required String roomId,
+    required String titleMeeting,
+  }) async {
+    final url = Uri.parse(
+      '$_baseUrl/notifications/cancle-meeting-request/$meetingId',
+    );
+
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'senderId': senderId,
+        'senderPhotoUrl': senderPhotoUrl,
+        'meetingDateTime': meetingDateTime.toIso8601String(),
+        'participantIds': participantIds,
+        'senderName': senderName,
+        'roomId': roomId,
+        'titleMeeting': titleMeeting,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update meeting: ${response.body}');
+    }
+  }
+
   // Стрим для отслеживания уведомлений
   Stream<List<Map<String, dynamic>>> getNotificationsStream(String userId) {
     return _firestore
