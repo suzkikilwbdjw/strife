@@ -64,16 +64,20 @@ class ContactWidget extends StatelessWidget {
         ],
       ),
 
-      // Отображаемое имя
       title: Row(
         children: [
-          Text(
-            displayName!,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          // Отображаемое имя
+          Expanded(
+            child: Text(
+              displayName!,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
 
           const SizedBox(width: 4),
-
+          // Звезда
           if (isFavorite)
             const Icon(Icons.star, color: Colors.amberAccent, size: 15.0),
         ],
@@ -99,8 +103,10 @@ class ContactWidget extends StatelessWidget {
                     email,
                     style: const TextStyle(
                       color: Colors.black54,
-                      fontSize: 12.0,
+                      fontSize: 11.0,
                     ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ],

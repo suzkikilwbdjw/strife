@@ -23,18 +23,6 @@ class RoomView extends StatelessWidget {
 
     return MultiBlocListener(
       listeners: [
-        // Слушатель подключения
-        BlocListener<VCSBloc, VCSState>(
-          listenWhen: (p, c) =>
-              p.isConnected != c.isConnected || p.error != c.error,
-          listener: (context, state) {
-            if (state.error != null) {
-              Navigator.of(context).pop();
-              AppNotifications.showError(context, state.error!);
-            }
-          },
-        ),
-
         // Слушатель переподключения
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) => p.isReconnecting != c.isReconnecting,
@@ -179,7 +167,7 @@ class RoomView extends StatelessWidget {
           );
 
           // Закрываем страницу звонка
-          Navigator.of(context).pop();
+          Navigator.of(context).popUntil((route) => route.isFirst);
         },
 
         child: Scaffold(
@@ -193,7 +181,7 @@ class RoomView extends StatelessWidget {
                 );
 
                 // Закрываем страницу звонка
-                Navigator.of(context).pop();
+                Navigator.of(context).popUntil((route) => route.isFirst);
               },
               icon: const Icon(
                 Icons.arrow_back_ios_new_rounded,
@@ -577,99 +565,106 @@ class NavigationBottomAppBar extends StatelessWidget {
 
               // Нижняя панель с кнопками чат и участники
               Row(
-                spacing: 24,
+                spacing: 12,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   // Чат
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF474747),
-                      padding: const EdgeInsets.symmetric(horizontal: 50),
-                    ),
-                    onPressed: () async {
-                      final String currentRoomId = bloc.roomId!;
-                      final myId = FirebaseAuth.instance.currentUser!.uid;
-                      final List<String> participantIds = bloc
-                          .state
-                          .participants
-                          .map((p) => p.identity)
-                          .toList();
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF474747),
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      ),
+                      onPressed: () async {
+                        final String currentRoomId = bloc.roomId!;
+                        final myId = FirebaseAuth.instance.currentUser!.uid;
+                        final List<String> participantIds = bloc
+                            .state
+                            .participants
+                            .map((p) => p.identity)
+                            .toList();
 
-                      await context.read<ChatRepository>().syncRoomChat(
-                        currentRoomId,
-                        participantIds,
-                      );
+                        await context.read<ChatRepository>().syncRoomChat(
+                          currentRoomId,
+                          participantIds,
+                        );
 
-                      if (!context.mounted) return;
+                        if (!context.mounted) return;
 
-                      await showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => BlocProvider(
-                          create: (context) => ChatBloc(
-                            chatRepository: context.read<ChatRepository>(),
-                            userRepository: context.read<UserRepository>(),
-                            notificationRepository: context
-                                .read<NotificationRepository>(),
-                          )..add(InitChat(bloc.roomId!)),
-                          child: DraggableScrollableSheet(
-                            initialChildSize: 0.75,
-                            maxChildSize: 0.9,
-                            expand: false,
-                            builder: (context, scrollController) => Container(
-                              clipBehavior: Clip.antiAlias,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(30),
+                        await showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => BlocProvider(
+                            create: (context) => ChatBloc(
+                              chatRepository: context.read<ChatRepository>(),
+                              userRepository: context.read<UserRepository>(),
+                              notificationRepository: context
+                                  .read<NotificationRepository>(),
+                            )..add(InitChat(bloc.roomId!)),
+                            child: DraggableScrollableSheet(
+                              initialChildSize: 0.75,
+                              maxChildSize: 0.9,
+                              expand: false,
+                              builder: (context, scrollController) => Container(
+                                clipBehavior: Clip.antiAlias,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(30),
+                                  ),
                                 ),
-                              ),
-                              child: ChatScreen(
-                                controller: scrollController,
-                                chatId: bloc.roomId!,
-                                currentUserId: myId,
+                                child: ChatScreen(
+                                  controller: scrollController,
+                                  chatId: bloc.roomId!,
+                                  currentUserId: myId,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.chat_bubble_outline_rounded),
-                    label: const Text('Чат'),
+                        );
+                      },
+                      icon: Icon(Icons.chat_bubble_outline_rounded),
+                      label: const Text('Чат', overflow: TextOverflow.ellipsis),
+                    ),
                   ),
                   // Участники
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF474747),
-                      padding: const EdgeInsets.symmetric(horizontal: 30),
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF474747),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed: () async {
+                        await showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(24),
+                            ),
+                          ),
+                          builder: (context) => BlocProvider.value(
+                            value: bloc,
+                            child: DraggableScrollableSheet(
+                              initialChildSize: 0.6,
+                              maxChildSize: 0.8,
+                              minChildSize: 0.4,
+                              expand: false,
+                              builder: (context, scrollController) =>
+                                  ParticipantsView(
+                                    scrollController: scrollController,
+                                  ),
+                            ),
+                          ),
+                        );
+                      },
+                      icon: Icon(Icons.group_outlined, size: 25),
+                      label: const Text(
+                        'Участники',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    onPressed: () async {
-                      await showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(24),
-                          ),
-                        ),
-                        builder: (context) => BlocProvider.value(
-                          value: bloc,
-                          child: DraggableScrollableSheet(
-                            initialChildSize: 0.6,
-                            maxChildSize: 0.8,
-                            minChildSize: 0.4,
-                            expand: false,
-                            builder: (context, scrollController) =>
-                                ParticipantsView(
-                                  scrollController: scrollController,
-                                ),
-                          ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.group_outlined, size: 25),
-                    label: const Text('Участники'),
                   ),
                 ],
               ),
@@ -982,14 +977,28 @@ class ParticipantTile extends StatelessWidget {
                     child: Icon(Icons.push_pin, color: Colors.deepPurpleAccent),
                   ),
 
-                // Статус бар с именем
-                BottomStatusBarName(
-                  participant: participant,
-                  isCompact: isCompact,
-                ),
+                Positioned(
+                  left: 4.0,
+                  bottom: 4.0,
+                  right: 4.0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Статус бар с именем
+                      Flexible(
+                        child: BottomStatusBarName(
+                          participant: participant,
+                          isCompact: isCompact,
+                        ),
+                      ),
 
-                // Статус бар с качеством соединения
-                BottomStatusBarQualityConnection(participant: participant),
+                      // Статус бар с качеством соединения
+                      BottomStatusBarQualityConnection(
+                        participant: participant,
+                      ),
+                    ],
+                  ),
+                ),
 
                 // Статус бар со статусом вкл/выкл камеры и мирко
                 BottomStatusBarCameraAndMicrophone(participant: participant),
@@ -1070,27 +1079,19 @@ class BottomStatusBarName extends StatelessWidget {
   final bool isCompact;
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      bottom: 4,
-      left: 4,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.all(Radius.circular(20)),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+      ),
+      padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+      child: Text(
+        participant.name,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: isCompact ? 10.0 : 14.0,
         ),
-        padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-        child: Row(
-          spacing: 4,
-          children: [
-            Text(
-              participant.name,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: isCompact ? 10.0 : 14.0,
-              ),
-            ),
-          ],
-        ),
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -1154,28 +1155,24 @@ class BottomStatusBarQualityConnection extends StatelessWidget {
       (VCSBloc bloc) => bloc.state.connectionQualities[participant.sid],
     );
 
-    return Positioned(
-      bottom: 4,
-      right: 8,
-      child: Icon(
-        switch (connectionQuality) {
-          ConnectionQuality.excellent => Icons.signal_cellular_alt_rounded,
-          ConnectionQuality.good => Icons.signal_cellular_alt_2_bar_rounded,
-          ConnectionQuality.poor => Icons.signal_cellular_alt_1_bar_rounded,
-          ConnectionQuality.lost => Icons.signal_cellular_nodata_rounded,
-          ConnectionQuality.unknown => Icons.signal_cellular_nodata_rounded,
-          null => Icons.signal_cellular_alt_rounded,
-        },
-        color: switch (connectionQuality) {
-          ConnectionQuality.excellent => Colors.green,
-          ConnectionQuality.good => Colors.yellow,
-          ConnectionQuality.poor => Colors.red,
-          ConnectionQuality.lost => Colors.red,
-          ConnectionQuality.unknown => Colors.red,
-          null => Colors.green,
-        },
-        semanticLabel: 'Качество сети',
-      ),
+    return Icon(
+      switch (connectionQuality) {
+        ConnectionQuality.excellent => Icons.signal_cellular_alt_rounded,
+        ConnectionQuality.good => Icons.signal_cellular_alt_2_bar_rounded,
+        ConnectionQuality.poor => Icons.signal_cellular_alt_1_bar_rounded,
+        ConnectionQuality.lost => Icons.signal_cellular_nodata_rounded,
+        ConnectionQuality.unknown => Icons.signal_cellular_nodata_rounded,
+        null => Icons.signal_cellular_alt_rounded,
+      },
+      color: switch (connectionQuality) {
+        ConnectionQuality.excellent => Colors.green,
+        ConnectionQuality.good => Colors.yellow,
+        ConnectionQuality.poor => Colors.red,
+        ConnectionQuality.lost => Colors.red,
+        ConnectionQuality.unknown => Colors.red,
+        null => Colors.green,
+      },
+      semanticLabel: 'Качество сети',
     );
   }
 }

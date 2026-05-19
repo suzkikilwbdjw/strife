@@ -61,8 +61,6 @@ class MessageBubble extends StatelessWidget {
             messageModel: messageModel,
             isReadByPartner: isReadByPartner,
           ),
-
-          if (isMe && !isPrivateChat) const SizedBox(width: 40),
         ],
       ),
     );

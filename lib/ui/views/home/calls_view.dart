@@ -536,6 +536,8 @@ class JoinRoomButton extends StatelessWidget {
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
 
@@ -741,6 +743,9 @@ class CreateRoomButton extends StatelessWidget {
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
+
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -967,20 +972,12 @@ class _NewCallSheetState extends State<NewCallSheet> {
               final senderName = widget.user.displayName!;
               final senderPhotoUrl = widget.user.photoURL!;
 
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) =>
-                    const Center(child: CircularProgressIndicator()),
-              );
-
               final roomId = await context.read<VCSRepository>().createRoom(
                 roomName: displayRoomName,
                 creatorId: senderId,
               );
 
               if (!context.mounted) return;
-              Navigator.of(context).pop(); // Закрываем крутилку лоадера
 
               if (roomId.isNotEmpty) {
                 final vcsBloc = context.read<VCSBloc>();

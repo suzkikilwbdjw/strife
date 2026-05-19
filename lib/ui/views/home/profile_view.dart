@@ -52,6 +52,8 @@ class _ProfileViewState extends State<ProfileView>
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
 
               // Статус пользователя
