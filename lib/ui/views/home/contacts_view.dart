@@ -1,10 +1,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:strife/data/repositories/notification_repository.dart';
+import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_state.dart';
+import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
+import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
+import 'package:strife/ui/views/room/room_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 import 'package:strife/ui/widgets/contact_widget.dart';
 
@@ -19,7 +24,7 @@ class _ContactsViewState extends State<ContactsView>
     with AutomaticKeepAliveClientMixin {
   // Флаг для показа только избранных контактов
   bool _showFavorites = false;
-
+  final User user = FirebaseAuth.instance.currentUser!;
   // Для получения адреса почты
   final TextEditingController textEditingController = TextEditingController();
 
@@ -29,7 +34,6 @@ class _ContactsViewState extends State<ContactsView>
   @override
   void initState() {
     super.initState();
-
     // Устанавливаем поиск по контактам в ноль
     context.read<ContactsBloc>().add(SearchContactsRequested(searchQuery: ''));
   }
@@ -69,110 +73,157 @@ class _ContactsViewState extends State<ContactsView>
               : state.filteredContacts;
 
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16.0,
                   vertical: 12.0,
                 ),
-                child: Row(
-                  children: <Widget>[
-                    // Кнопка "Все контакты"
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _showFavorites = false),
-
-                        child: Container(
-                          height: 40,
-                          decoration: BoxDecoration(
-                            gradient: !_showFavorites ? mainGradient : null,
-                            color: _showFavorites
-                                ? const Color(0xFFD9D9D9)
-                                : null,
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'Все контакты',
-                              style: TextStyle(
-                                color: !_showFavorites
-                                    ? Colors.white
-                                    : Colors.black54,
-                                fontWeight: FontWeight.bold,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F7),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      // Вкладка "Все контакты"
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _showFavorites = false),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            height: 36,
+                            decoration: BoxDecoration(
+                              gradient: !_showFavorites ? mainGradient : null,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Все контакты',
+                                style: TextStyle(
+                                  color: !_showFavorites
+                                      ? Colors.white
+                                      : Colors.black54,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    // Кнопка "Избранные"
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _showFavorites = true),
-                        child: Container(
-                          height: 40,
-                          decoration: BoxDecoration(
-                            gradient: _showFavorites ? mainGradient : null,
-                            color: !_showFavorites
-                                ? const Color(0xFFD9D9D9)
-                                : null,
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _showFavorites ? Icons.star : Icons.star_border,
-                                size: 18,
-                                color: _showFavorites
-                                    ? Colors.white
-                                    : Colors.black54,
-                              ),
-
-                              const SizedBox(width: 4),
-
-                              Text(
-                                'Избранные',
-                                style: TextStyle(
+                      const SizedBox(width: 4),
+                      // Вкладка "Избранные"
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _showFavorites = true),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            height: 36,
+                            decoration: BoxDecoration(
+                              gradient: _showFavorites ? mainGradient : null,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  _showFavorites
+                                      ? Icons.star_rounded
+                                      : Icons.star_border_rounded,
+                                  size: 16,
                                   color: _showFavorites
                                       ? Colors.white
                                       : Colors.black54,
-                                  fontWeight: FontWeight.bold,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Избранные',
+                                  style: TextStyle(
+                                    color: _showFavorites
+                                        ? Colors.white
+                                        : Colors.black54,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-
-              const Divider(height: 1, thickness: 1, color: Colors.black12),
+              const SizedBox(height: 8),
 
               // Список контактов
               Expanded(
                 child: displayedContacts.isEmpty
                     ? Center(
-                        child: Text(
-                          _showFavorites
-                              ? 'Нет избранных контактов'
-                              : 'Список пуст',
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _showFavorites
+                                  ? Icons.star_border_rounded
+                                  : Icons.people_outline_rounded,
+                              size: 40,
+                              color: Colors.black26,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _showFavorites
+                                  ? 'Нет избранных контактов'
+                                  : 'Список контактов пуст',
+                              style: const TextStyle(
+                                color: Colors.black45,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
                         ),
                       )
                     : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: displayedContacts.length,
-                        itemBuilder: (context, index) => ContactWidget(
-                          userData: displayedContacts[index],
-                          trailing: _buildDefaultTrailing(
-                            context,
-                            displayedContacts[index],
-                          ),
-                        ),
+                        itemBuilder: (context, index) {
+                          final contact = displayedContacts[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFB91ED0,
+                                ).withValues(alpha: 0.04),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFFB91ED0,
+                                  ).withValues(alpha: 0.06),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0,
+                                  vertical: 4.0,
+                                ),
+                                child: ContactWidget(
+                                  userData: contact,
+                                  trailing: _buildDefaultTrailing(
+                                    context,
+                                    contact,
+                                    user,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
               ),
             ],
@@ -186,81 +237,132 @@ class _ContactsViewState extends State<ContactsView>
   Widget _buildDefaultTrailing(
     BuildContext context,
     Map<String, dynamic> userData,
+    User user,
   ) {
     final isFavorite = userData['isFavorite'] ?? false;
-
+    const brandColor = Color(0xFFB91ED0);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Кнопка видеовызова
-        _buildCircleButton(
-          icon: Icons.videocam_outlined,
-          onPressed: () {
-            // Lогика вызова
+        // Kнопка видеовызова
+        IconButton(
+          icon: const Icon(
+            Icons.videocam_outlined,
+            color: brandColor,
+            size: 22,
+          ),
+          onPressed: () async {
+            final senderId = user.uid;
+            final senderName = user.displayName!;
+            final senderPhotoUrl = user.photoURL!;
+
+            final roomId = await context.read<VCSRepository>().createRoom(
+              roomName: 'Групповой звонок',
+              creatorId: senderId,
+            );
+
+            if (!context.mounted) return;
+
+            if (roomId.isNotEmpty) {
+              final vcsBloc = context.read<VCSBloc>();
+
+              vcsBloc.add(
+                ConnectRequested(
+                  roomId: roomId,
+                  identity: user.uid,
+                  name: user.displayName!,
+                  photoUrl: user.photoURL,
+                ),
+              );
+
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: vcsBloc,
+                    child: const RoomView(),
+                  ),
+                ),
+              );
+
+              final notificationRepository = context
+                  .read<NotificationRepository>();
+              final participantId = userData['id'];
+              final Map<String, Map<String, dynamic>> participantsInfo = {
+                user.uid: {
+                  'displayName': user.displayName,
+                  'photoUrl': user.photoURL,
+                },
+                participantId: {
+                  'displayName': userData['displayName'],
+                  'photoUrl': userData['photoUrl'],
+                },
+              };
+
+              notificationRepository.sendCallRequest(
+                recipientId: participantId,
+                roomId: roomId,
+                senderId: senderId,
+                senderPhotoUrl: senderPhotoUrl,
+                senderName: senderName,
+                participantsInfo: participantsInfo,
+              );
+            } else {
+              AppNotifications.showError(context, 'Не удалось создать комнату');
+            }
           },
         ),
-        const SizedBox(width: 8),
-        // Меню
-        _buildCircleButton(
-          child: PopupMenuButton(
-            icon: const Icon(Icons.more_vert_outlined),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            color: Colors.purple.shade700,
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                child: Text(
-                  isFavorite ? 'Удалить из избранных' : 'Добавить в избранное',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                onTap: () {
-                  context.read<ContactsBloc>().add(
-                    ToggleFavoriteRequested(
-                      currentUserId: FirebaseAuth.instance.currentUser!.uid,
-                      contactId: userData['id'],
-                      isFavorite: !isFavorite,
-                    ),
-                  );
-                },
-              ),
-              PopupMenuItem(
-                child: const Text(
-                  'Удалить из контактов',
-                  style: TextStyle(color: Colors.white),
-                ),
-                onTap: () {
-                  context.read<ContactsBloc>().add(
-                    RemoveContactsRequested(
-                      currentUserId: FirebaseAuth.instance.currentUser!.uid,
-                      contactId: userData['id'],
-                    ),
-                  );
-                },
-              ),
-            ],
+
+        // Кнопка выпадающего меню управления контактом
+        PopupMenuButton<int>(
+          icon: const Icon(
+            Icons.more_vert_outlined,
+            color: Colors.black45,
+            size: 20,
           ),
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          color: Colors.white,
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 1,
+              child: Text(
+                isFavorite ? 'Удалить из избранных' : 'Добавить в избранное',
+                style: const TextStyle(color: Colors.black87, fontSize: 14),
+              ),
+              onTap: () {
+                context.read<ContactsBloc>().add(
+                  ToggleFavoriteRequested(
+                    currentUserId: FirebaseAuth.instance.currentUser!.uid,
+                    contactId: userData['id'],
+                    isFavorite: !isFavorite,
+                  ),
+                );
+              },
+            ),
+            PopupMenuItem(
+              value: 2,
+              child: const Text(
+                'Удалить из контактов',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                context.read<ContactsBloc>().add(
+                  RemoveContactsRequested(
+                    currentUserId: FirebaseAuth.instance.currentUser!.uid,
+                    contactId: userData['id'],
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ],
-    );
-  }
-
-  Widget _buildCircleButton({
-    IconData? icon,
-    VoidCallback? onPressed,
-    Widget? child,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.grey.shade100,
-      ),
-      child:
-          child ??
-          IconButton(
-            icon: Icon(icon, color: Colors.purple),
-            onPressed: onPressed,
-          ),
     );
   }
 }
