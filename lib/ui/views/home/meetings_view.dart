@@ -351,7 +351,6 @@ class MeetingCard extends StatelessWidget {
                       .checkRoomExists(roomId);
 
                   if (!context.mounted) return;
-                  Navigator.of(context).pop();
 
                   if (exists) {
                     final User user = FirebaseAuth.instance.currentUser!;
