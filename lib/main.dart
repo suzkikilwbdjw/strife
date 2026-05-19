@@ -1,18 +1,19 @@
 import 'dart:convert';
 
+import 'package:bot_toast/bot_toast.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/data/repositories/chat_repository.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
-
 import 'dart:io';
 import 'package:http/http.dart' as http;
 // Импорты слоев
@@ -20,6 +21,8 @@ import 'package:strife/firebase/firebase_options.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
+import 'package:strife/presentation/blocs/home/home_bloc.dart';
+import 'package:strife/presentation/blocs/home/home_event.dart';
 import 'package:strife/presentation/blocs/meetings/meetings_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
@@ -50,6 +53,8 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  await initializeDateFormatting('ru');
 
   // Настройка уведомлений
   await setupNotifications();
@@ -82,6 +87,10 @@ Future<void> main() async {
           BlocProvider(
             create: (context) => VCSBloc(context.read<VCSRepository>()),
           ),
+          BlocProvider(
+            create: (context) => NavigationBloc(),
+            child: const HomeView(),
+          ),
         ],
         child: const MyApp(),
       ),
@@ -95,6 +104,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      builder: BotToastInit(),
+      navigatorObservers: [BotToastNavigatorObserver()],
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       theme: ThemeData(
@@ -282,6 +293,9 @@ void _handleMessageClick(Map<String, dynamic> data) {
   final String? type = data['type'];
   final String? chatId = data['chatId'];
 
+  final context = navigatorKey.currentContext;
+  if (context == null) return;
+
   if ((type == 'call_request' || type == 'message_request') && chatId != null) {
     navigatorKey.currentState?.push(
       MaterialPageRoute(
@@ -298,6 +312,15 @@ void _handleMessageClick(Map<String, dynamic> data) {
         ),
       ),
     );
+  } else if (type == 'meeting_request' ||
+      type == 'meeting_reminder_request' ||
+      type == 'update_meeting_request' ||
+      type == 'cancel_meeting_request') {
+    // Сбрасываем стек экранов до самого первого
+    navigatorKey.currentState?.popUntil((route) => route.isFirst);
+
+    // Меняем вкладку в Блоке на индекс 2
+    context.read<NavigationBloc>().add(ChangeTab(2));
   } else {
     navigatorKey.currentState?.push(
       MaterialPageRoute(builder: (context) => const NotificationsView()),

@@ -90,7 +90,7 @@ class AuthViewModel extends ChangeNotifier {
       // Используем fullName для URL
       final encodedName = Uri.encodeComponent(displayName);
       final avatarUrl =
-          'http://62.109.2.27:4000/avatar/get-avatar?name=$encodedName&size=256&background=random&length=2&rounded=true&format=png';
+          'https://seva.danilkin2244.fvds.ru/avatar/get-avatar?name=$encodedName&size=256&background=random&length=2&rounded=true&format=png';
 
       // Обновление аватарки пользователя
       await user.updatePhotoURL(avatarUrl);

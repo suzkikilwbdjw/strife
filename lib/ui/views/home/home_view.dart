@@ -4,6 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
+import 'package:strife/presentation/blocs/home/home_bloc.dart';
+import 'package:strife/presentation/blocs/home/home_event.dart';
+import 'package:strife/presentation/blocs/home/home_state.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
@@ -22,7 +25,6 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  int selectedIndex = 0;
   late final PageController _pageController;
 
   double _pipTop = 80.0;
@@ -34,7 +36,10 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: selectedIndex);
+    // Получаем текущий индекс из Блока для инициализации страницы
+    final initialTab = context.read<NavigationBloc>().state.currentTabIndex;
+
+    _pageController = PageController(initialPage: initialTab);
 
     // Загружаем контакты
     context.read<ContactsBloc>().add(
@@ -59,89 +64,123 @@ class _HomeViewState extends State<HomeView> {
       _isPipInitialized = true;
     }
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          PageView(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                selectedIndex = index;
-              });
-            },
-            children: const [
-              CallsView(key: ValueKey('calls')),
-              ChatsView(key: ValueKey('chats')),
-              MeetingsView(key: ValueKey('meetings')),
-              ContactsView(key: ValueKey('contacts')),
-              ProfileView(key: ValueKey('profile')),
-            ],
-          ),
+    return BlocListener<NavigationBloc, NavigationState>(
+      listenWhen: (previous, current) =>
+          previous.currentTabIndex != current.currentTabIndex,
+      listener: (context, state) {
+        if (_pageController.hasClients &&
+            _pageController.page?.round() != state.currentTabIndex) {
+          _pageController.animateToPage(
+            state.currentTabIndex,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                context.read<NavigationBloc>().add(ChangeTab(index));
+              },
+              children: const [
+                CallsView(key: ValueKey('calls')),
+                ChatsView(key: ValueKey('chats')),
+                MeetingsView(key: ValueKey('meetings')),
+                ContactsView(key: ValueKey('contacts')),
+                ProfileView(key: ValueKey('profile')),
+              ],
+            ),
 
-          BlocListener<VCSBloc, VCSState>(
-            listenWhen: (p, c) => p.isMinimized != c.isMinimized,
-            listener: (context, state) {
-              if (state.isMinimized) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    setState(() => _animatePipIn = true);
-                  }
-                });
-              } else {
-                setState(() => _animatePipIn = false);
-              }
-            },
-            child: const SizedBox.shrink(),
-          ),
+            BlocListener<VCSBloc, VCSState>(
+              listenWhen: (p, c) => p.isMinimized != c.isMinimized,
+              listener: (context, state) {
+                if (state.isMinimized) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() => _animatePipIn = true);
+                    }
+                  });
+                } else {
+                  setState(() => _animatePipIn = false);
+                }
+              },
+              child: const SizedBox.shrink(),
+            ),
 
-          BlocBuilder<VCSBloc, VCSState>(
-            buildWhen: (p, c) => p.isMinimized != c.isMinimized,
-            builder: (context, state) {
-              // Если звонок не свернут, полностью убираем дерево из Stack
-              if (!state.isConnected) return const SizedBox.shrink();
+            BlocBuilder<VCSBloc, VCSState>(
+              buildWhen: (p, c) => p.isMinimized != c.isMinimized,
+              builder: (context, state) {
+                // Если звонок не свернут, полностью убираем дерево из Stack
+                if (!state.isConnected) return const SizedBox.shrink();
 
-              return _buildAnimatedPipWindow(state, screenSize);
-            },
-          ),
-        ],
-      ),
-
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
+                return _buildAnimatedPipWindow(state, screenSize);
+              },
             ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(0, Icons.phone_outlined, Icons.phone, 'Звонки'),
-            _buildNavItem(1, Icons.messenger_outline, Icons.messenger, 'Чаты'),
-            _buildNavItem(
-              2,
-              Icons.calendar_today_outlined,
-              Icons.calendar_today,
-              'Встречи',
-            ),
-            _buildNavItem(
-              3,
-              Icons.contacts_outlined,
-              Icons.contacts,
-              'Контакты',
-            ),
-            _buildNavItem(
-              4,
-              Icons.person_3_outlined,
-              Icons.person_3,
-              'Профиль',
-            ),
-          ],
+
+        bottomNavigationBar: BlocBuilder<NavigationBloc, NavigationState>(
+          builder: (context, state) {
+            final currentIndex = state.currentTabIndex;
+
+            return Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  // Передаем currentIndex в каждый айтем меню для проверки активности
+                  _buildNavItem(
+                    0,
+                    Icons.phone_outlined,
+                    Icons.phone,
+                    'Звонки',
+                    currentIndex,
+                  ),
+                  _buildNavItem(
+                    1,
+                    Icons.messenger_outline,
+                    Icons.messenger,
+                    'Чаты',
+                    currentIndex,
+                  ),
+                  _buildNavItem(
+                    2,
+                    Icons.calendar_today_outlined,
+                    Icons.calendar_today,
+                    'Встречи',
+                    currentIndex,
+                  ),
+                  _buildNavItem(
+                    3,
+                    Icons.contacts_outlined,
+                    Icons.contacts,
+                    'Контакты',
+                    currentIndex,
+                  ),
+                  _buildNavItem(
+                    4,
+                    Icons.person_3_outlined,
+                    Icons.person_3,
+                    'Профиль',
+                    currentIndex,
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -152,21 +191,14 @@ class _HomeViewState extends State<HomeView> {
     IconData icon,
     IconData activeIcon,
     String label,
+    int currentIndex,
   ) {
-    final isSelected = selectedIndex == index;
+    final isSelected = index == currentIndex;
     const brandColor = Color(0xFFB91ED0);
 
     return GestureDetector(
       onTap: () {
-        _pageController.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOutCubic,
-        );
-
-        setState(() {
-          selectedIndex = index;
-        });
+        context.read<NavigationBloc>().add(ChangeTab(index));
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),

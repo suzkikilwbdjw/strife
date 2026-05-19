@@ -223,6 +223,8 @@ class _NotificationsViewState extends State<NotificationsView> {
                                   'Приглашение на запланированную встречу',
                                 'update_meeting_request' =>
                                   'Информация о встрече была обновлена',
+                                'cancel_meeting_request' =>
+                                  'Встреча была отменена',
                                 _ => 'Новое системное уведомление',
                               },
                               style: TextStyle(

@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class NotificationRepository {
-  final String _baseUrl = 'http://62.109.2.27:4000';
+  final String _baseUrl = 'https://seva.danilkin2244.fvds.ru';
   final _firestore = FirebaseFirestore.instance;
 
   // Метод для отправки запроса в контакты
@@ -87,8 +87,7 @@ class NotificationRepository {
     required String senderPhotoUrl,
     required String roomId,
     required String titleMeeting,
-    required String dateMeeting,
-    required String timeMeeting,
+    required DateTime meetingDateTime,
   }) async {
     try {
       // Делаем запрос на бэкэнд
@@ -102,8 +101,7 @@ class NotificationRepository {
           'senderPhotoUrl': senderPhotoUrl,
           'roomId': roomId,
           'titleMeeting': titleMeeting,
-          'dateMeeting': dateMeeting,
-          'timeMeeting': timeMeeting,
+          'meetingDateTime': meetingDateTime.toIso8601String(),
         }),
       );
 
@@ -121,8 +119,7 @@ class NotificationRepository {
     required String senderPhotoUrl,
     required String meetingId,
     required String titleMeeting,
-    required String dateMeeting,
-    required String timeMeeting,
+    required DateTime meetingDateTime,
     required List<String> participantIds,
     required String senderName,
   }) async {
@@ -135,10 +132,42 @@ class NotificationRepository {
         'senderId': senderId,
         'senderPhotoUrl': senderPhotoUrl,
         'titleMeeting': titleMeeting,
-        'dateMeeting': dateMeeting,
-        'timeMeeting': timeMeeting,
+        'meetingDateTime': meetingDateTime.toIso8601String(),
         'participantIds': participantIds,
         'senderName': senderName,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update meeting: ${response.body}');
+    }
+  }
+
+  Future<void> sendCancleMeetingRequest({
+    required String senderId,
+    required String senderPhotoUrl,
+    required String meetingId,
+    required DateTime meetingDateTime,
+    required List<String> participantIds,
+    required String senderName,
+    required String roomId,
+    required String titleMeeting,
+  }) async {
+    final url = Uri.parse(
+      '$_baseUrl/notifications/cancle-meeting-request/$meetingId',
+    );
+
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'senderId': senderId,
+        'senderPhotoUrl': senderPhotoUrl,
+        'meetingDateTime': meetingDateTime.toIso8601String(),
+        'participantIds': participantIds,
+        'senderName': senderName,
+        'roomId': roomId,
+        'titleMeeting': titleMeeting,
       }),
     );
 
@@ -165,7 +194,8 @@ class NotificationRepository {
               .where(
                 (notification) =>
                     notification['status'] != 'hidden' &&
-                    notification['type'] != 'message_request',
+                    notification['type'] != 'message_request' &&
+                    notification['type'] != 'meeting_reminder_request',
               )
               .toList(),
         );
@@ -180,7 +210,11 @@ class NotificationRepository {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .where((doc) => doc.get('type') != 'message_request')
+              .where(
+                (doc) =>
+                    doc.get('type') != 'message_request' &&
+                    doc.get('type') != 'meeting_reminder_request',
+              )
               .length,
         );
   }

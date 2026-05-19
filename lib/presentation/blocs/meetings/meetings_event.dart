@@ -8,8 +8,7 @@ class SendMeetingRequestRequested extends MeetingsEvent {
     required this.senderPhotoUrl,
     required this.roomId,
     required this.titleMeeting,
-    required this.dateMeeting,
-    required this.timeMeeting,
+    required this.meetingDateTime,
   });
 
   final String senderId;
@@ -18,8 +17,7 @@ class SendMeetingRequestRequested extends MeetingsEvent {
   final String senderPhotoUrl;
   final String roomId;
   final String titleMeeting;
-  final String dateMeeting;
-  final String timeMeeting;
+  final DateTime meetingDateTime;
 }
 
 class SendUpdateMeetingRequested extends MeetingsEvent {
@@ -30,8 +28,7 @@ class SendUpdateMeetingRequested extends MeetingsEvent {
     required this.senderName,
     required this.senderPhotoUrl,
     required this.titleMeeting,
-    required this.dateMeeting,
-    required this.timeMeeting,
+    required this.meetingDateTime,
   });
   final String meetingId;
   final String senderId;
@@ -39,6 +36,26 @@ class SendUpdateMeetingRequested extends MeetingsEvent {
   final String senderName;
   final String senderPhotoUrl;
   final String titleMeeting;
-  final String dateMeeting;
-  final String timeMeeting;
+  final DateTime meetingDateTime;
+}
+
+class SendCancleMeetingRequested extends MeetingsEvent {
+  SendCancleMeetingRequested({
+    required this.meetingId,
+    required this.senderId,
+    required this.participantIds,
+    required this.senderName,
+    required this.senderPhotoUrl,
+    required this.titleMeeting,
+    required this.meetingDateTime,
+    required this.roomId,
+  });
+  final String meetingId;
+  final String senderId;
+  final List<String> participantIds;
+  final String senderName;
+  final String senderPhotoUrl;
+  final String roomId;
+  final String titleMeeting;
+  final DateTime meetingDateTime;
 }
