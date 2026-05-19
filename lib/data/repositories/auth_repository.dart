@@ -43,23 +43,33 @@ class AuthRepository {
     User user, {
     Map<String, dynamic>? extraData,
   }) async {
-    // Токен для получения уведомлений
+    // Получаем ссылку на документ пользователя
+    final userDocRef = _firestore.collection('users').doc(user.uid);
+
+    // Проверяем, существует ли документ
+    final docSnapshot = await userDocRef.get();
+    final bool docExists = docSnapshot.exists;
+
+    // Получаем FCM-токен
     String? token = await FirebaseMessaging.instance.getToken();
 
-    final data = {
+    // Собираем map данных
+    final data = <String, dynamic>{
       'uid': user.uid,
       'email': user.email,
-      'displayName': user.displayName,
-      'photoUrl': user.photoURL,
       'lastSeen': FieldValue.serverTimestamp(),
       if (extraData != null) ...extraData,
       if (token != null) ...{'fcmToken': token},
     };
 
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .set(data, SetOptions(merge: true));
+    // Добавляем имя и фото только если документа еще нет в базе
+    if (!docExists) {
+      data['displayName'] = user.displayName;
+      data['photoUrl'] = user.photoURL;
+    }
+
+    // Записываем данные
+    await userDocRef.set(data, SetOptions(merge: true));
   }
 
   // Выход из аккаунта
@@ -84,12 +94,9 @@ class AuthRepository {
 
     final appLinks = AppLinks();
     StreamSubscription? linkSubscription;
-
-    // Создаем Completer
     final completer = Completer<UserCredential?>();
 
     try {
-      // Начинаем слушать входящие ссылки
       linkSubscription = appLinks.uriLinkStream.listen((uri) async {
         if (uri.scheme == 'com.example.strife' &&
             uri.queryParameters.containsKey('code')) {
@@ -109,8 +116,26 @@ class AuthRepository {
             final data = jsonDecode(response.body);
             final String firebaseToken = data['firebaseToken'];
 
+            // Получаем имя и фото, которые прислал бэкенд
+            final String? yandexName = data['displayName'];
+            final String? yandexPhoto = data['photoURL'];
+
+            // Авторизуемся в Firebase
             final userCredential = await FirebaseAuth.instance
                 .signInWithCustomToken(firebaseToken);
+
+            final user = userCredential.user;
+
+            if (user != null) {
+              if (user.displayName == null && yandexName != null) {
+                await user.updateDisplayName(yandexName);
+              }
+              if (user.photoURL == null && yandexPhoto != null) {
+                await user.updatePhotoURL(yandexPhoto);
+              }
+              // Перезагружаем данные пользователя, чтобы изменения применились
+              await user.reload();
+            }
 
             if (!completer.isCompleted) completer.complete(userCredential);
           } catch (e) {
@@ -119,21 +144,17 @@ class AuthRepository {
         }
       });
 
-      // Формируем URL для авторизации
       final authUrl = Uri.https('oauth.yandex.ru', '/authorize', {
         'response_type': 'code',
         'client_id': clientId,
         'redirect_uri': redirectUri,
       });
 
-      // Открываем браузер.
       await launchUrl(authUrl, mode: LaunchMode.externalApplication);
 
       return await completer.future.timeout(
         const Duration(seconds: 60),
-        onTimeout: () {
-          return null;
-        },
+        onTimeout: () => null,
       );
     } catch (e) {
       return null;

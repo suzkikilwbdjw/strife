@@ -377,7 +377,7 @@ class ChatAppBar extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
-                fontSize: 26, // Слегка увеличили для солидности
+                fontSize: 26,
               ),
             ),
 

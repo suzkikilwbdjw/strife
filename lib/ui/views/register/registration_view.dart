@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/view_models/auth_view_model.dart';
-import 'package:strife/ui/widgets/error_label_widget.dart';
+import 'package:strife/ui/widgets/app_notifications.dart';
 
 class RegistrationView extends StatefulWidget {
   const RegistrationView({super.key});
@@ -38,8 +38,8 @@ class _RegistrationViewState extends State<RegistrationView> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          iconTheme: const IconThemeData(color: Colors.white),
           toolbarHeight: 100,
+          leading: BackIconButton(),
           title: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -48,15 +48,15 @@ class _RegistrationViewState extends State<RegistrationView> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
-                  fontSize: 36,
-                  letterSpacing: 1.5,
+                  fontSize: 32,
+                  letterSpacing: 0.5,
                 ),
               ),
               Text(
                 'Видеоконференции',
                 style: TextStyle(
                   color: Colors.white70,
-                  fontSize: 14,
+                  fontSize: 15,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -90,10 +90,7 @@ class _RegistrationViewState extends State<RegistrationView> {
 
                     const Text(
                       'Создайте свой аккаунт',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
                     ),
 
                     const SizedBox(height: 40),
@@ -144,6 +141,22 @@ class _RegistrationViewState extends State<RegistrationView> {
   }
 }
 
+class BackIconButton extends StatelessWidget {
+  const BackIconButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(
+        Icons.arrow_back_ios_new_rounded,
+        color: Colors.white,
+        size: 32,
+      ),
+      onPressed: () => Navigator.of(context).pop(),
+    );
+  }
+}
+
 class NameTextForm extends StatefulWidget {
   final TextEditingController controller;
   final String label;
@@ -184,99 +197,91 @@ class _NameTextFormState extends State<NameTextForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: FormField<String>(
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        validator: (v) => (v == null || v.isEmpty) ? 'Введите имя' : null,
-        builder: (field) {
-          final hasError = field.errorText != null;
+    const brandColor = Color(0xFFB91ED0);
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: _isFocused ? 0.15 : 0.08,
-                      ),
-                      blurRadius: _isFocused ? 12 : 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  focusNode: _focusNode,
-                  controller: widget.controller,
-                  textInputAction: TextInputAction.next,
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(widget.maxLength),
-                  ],
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.95),
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide.none,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: hasError
-                            ? Colors.red.withValues(alpha: 0.3)
-                            : Colors.transparent,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: hasError
-                            ? Colors.red.withValues(alpha: 0.5)
-                            : Colors.blue.withValues(alpha: 0.5),
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    hintText: widget.label,
-                    hintStyle: TextStyle(
-                      color: Colors.grey.withValues(alpha: 0.5),
-                      fontSize: 16,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(left: 16, right: 12),
-                      child: Icon(
-                        Icons.person_outline,
-                        color: Colors.grey,
-                        size: 20,
-                      ),
-                    ),
-                    prefixIconConstraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
-                  ),
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                  ),
-                  onChanged: (value) => field.didChange(value),
-                ),
-              ),
-              if (hasError)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, left: 4),
-                  child: ErrorLabel(errorText: field.errorText),
-                ),
-            ],
-          );
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: _isFocused
+                ? brandColor.withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.05),
+            blurRadius: _isFocused ? 14 : 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        focusNode: _focusNode,
+        controller: widget.controller,
+        textInputAction: TextInputAction.next,
+        textCapitalization: TextCapitalization.words,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        style: const TextStyle(color: Colors.black87, fontSize: 16),
+
+        inputFormatters: [LengthLimitingTextInputFormatter(widget.maxLength)],
+
+        validator: (value) {
+          if (value == null || value.trim().isEmpty) {
+            return 'Введите имя';
+          }
+          return null;
         },
+
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.white,
+          hintText: widget.label,
+          hintStyle: TextStyle(
+            color: Colors.grey.withValues(alpha: 0.5),
+            fontSize: 16,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
+
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 12),
+            child: Icon(
+              Icons.person_outline_rounded,
+              color: _isFocused ? brandColor : Colors.grey,
+              size: 20,
+            ),
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 48,
+            minHeight: 48,
+          ),
+
+          border: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(14),
+          ),
+
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: brandColor.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+
+          errorBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          errorStyle: const TextStyle(fontSize: 13, color: Colors.redAccent),
+        ),
       ),
     );
   }
@@ -298,43 +303,30 @@ class RegisterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authVM = context.watch<AuthViewModel>();
+    final isLoading = context.select<AuthViewModel, bool>((vm) => vm.isLoading);
+    const brandColor = Color(0xFFB91ED0);
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.4),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
       child: FilledButton(
-        style: ButtonStyle(
-          backgroundColor: WidgetStatePropertyAll(
-            authVM.isLoading
-                ? Colors.blue.withValues(alpha: 0.6)
-                : Colors.white.withValues(alpha: 0.95),
+        style: FilledButton.styleFrom(
+          backgroundColor: isLoading
+              ? Colors.white.withValues(alpha: 0.6)
+              : Colors.white,
+          foregroundColor: Colors.black87,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
-          foregroundColor: WidgetStatePropertyAll(
-            authVM.isLoading ? Colors.white : Colors.black87,
-          ),
-          padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          ),
-          shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          elevation: WidgetStatePropertyAll(authVM.isLoading ? 0 : 2),
+          elevation: isLoading ? 0 : 4,
+          shadowColor: brandColor.withValues(alpha: 0.3),
         ),
-        onPressed: authVM.isLoading
+        onPressed: isLoading
             ? null
             : () async {
                 if (formKey.currentState!.validate()) {
+                  final authVM = context.read<AuthViewModel>();
+
                   final success = await authVM.signUp(
                     email: emailController.text.trim(),
                     password: passwordController.text.trim(),
@@ -344,36 +336,29 @@ class RegisterButton extends StatelessWidget {
                   if (!context.mounted) return;
 
                   if (!success) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(authVM.error ?? 'Ошибка регистрации'),
-                        backgroundColor: Colors.red.withValues(alpha: 0.8),
-                        behavior: SnackBarBehavior.floating,
-                        margin: const EdgeInsets.all(16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+                    AppNotifications.showError(
+                      context,
+                      authVM.error ?? 'Ошибка регистрации',
                     );
                   } else {
                     Navigator.of(context).pop();
                   }
                 }
               },
-        child: authVM.isLoading
+        child: isLoading
             ? const SizedBox(
-                height: 24,
-                width: 24,
+                height: 20,
+                width: 20,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
                 ),
               )
             : const Text(
                 'Создать аккаунт',
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -384,7 +369,6 @@ class RegisterButton extends StatelessWidget {
 
 class EmailTextForm extends StatefulWidget {
   final TextEditingController controller;
-
   const EmailTextForm({super.key, required this.controller});
 
   @override
@@ -415,103 +399,92 @@ class _EmailTextFormState extends State<EmailTextForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: FormField<String>(
+    const brandColor = Color(0xFFB91ED0);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: _isFocused
+                ? brandColor.withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.05),
+            blurRadius: _isFocused ? 14 : 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        focusNode: _focusNode,
+        controller: widget.controller,
+        keyboardType: TextInputType.emailAddress,
+        textInputAction: TextInputAction.next,
         autovalidateMode: AutovalidateMode.onUserInteraction,
+        style: const TextStyle(color: Colors.black87, fontSize: 16),
+
         validator: (value) {
-          if (value == null || value.isEmpty) return 'Введите почту';
-          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+          if (value == null || value.trim().isEmpty) return 'Введите почту';
+          final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+          if (!emailRegex.hasMatch(value.trim())) {
             return 'Некорректная почта';
           }
           return null;
         },
-        builder: (field) {
-          final hasError = field.errorText != null;
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: _isFocused ? 0.15 : 0.08,
-                      ),
-                      blurRadius: _isFocused ? 12 : 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  focusNode: _focusNode,
-                  textInputAction: TextInputAction.next,
-                  controller: widget.controller,
-                  keyboardType: TextInputType.emailAddress,
-                  onChanged: field.didChange,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.95),
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide.none,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: hasError
-                            ? Colors.red.withValues(alpha: 0.3)
-                            : Colors.transparent,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: hasError
-                            ? Colors.red.withValues(alpha: 0.5)
-                            : Colors.blue.withValues(alpha: 0.5),
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    hintText: 'Email',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.withValues(alpha: 0.5),
-                      fontSize: 16,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(left: 16, right: 12),
-                      child: Icon(
-                        Icons.email_outlined,
-                        color: Colors.grey,
-                        size: 20,
-                      ),
-                    ),
-                    prefixIconConstraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
-                  ),
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              if (hasError)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, left: 4),
-                  child: ErrorLabel(errorText: field.errorText),
-                ),
-            ],
-          );
-        },
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.white,
+          hintText: 'Почта',
+          hintStyle: TextStyle(
+            color: Colors.grey.withValues(alpha: 0.5),
+            fontSize: 16,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
+
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 12),
+            child: Icon(
+              Icons.email_outlined,
+              color: _isFocused ? brandColor : Colors.grey,
+              size: 20,
+            ),
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 48,
+            minHeight: 48,
+          ),
+
+          border: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(14),
+          ),
+
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: brandColor.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+
+          errorBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+            borderRadius: BorderRadius.circular(14),
+          ),
+
+          errorStyle: const TextStyle(fontSize: 13, color: Colors.redAccent),
+        ),
       ),
     );
   }
@@ -558,10 +531,20 @@ class _PasswordTextFormState extends State<PasswordTextForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: FormField<String>(
-        autovalidateMode: AutovalidateMode.onUserInteraction,
+    const brandColor = Color(0xFFB91ED0);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: _isFocused ? 0.15 : 0.05),
+            blurRadius: _isFocused ? 14 : 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextFormField(
         validator: (value) {
           final currentText = widget.controller.text;
           if (currentText.isEmpty) return 'Введите пароль';
@@ -573,113 +556,93 @@ class _PasswordTextFormState extends State<PasswordTextForm> {
           }
           return null;
         },
-        builder: (field) {
-          final hasError = field.errorText != null;
+        focusNode: _focusNode,
+        controller: widget.controller,
+        obscureText: _obscureText,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        textInputAction: widget.originalPasswordController != null
+            ? TextInputAction.done
+            : TextInputAction.next,
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.white,
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: _isFocused ? 0.15 : 0.08,
-                      ),
-                      blurRadius: _isFocused ? 12 : 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  focusNode: _focusNode,
-                  controller: widget.controller,
-                  obscureText: _obscureText,
-                  textInputAction: widget.originalPasswordController != null
-                      ? TextInputAction.done
-                      : TextInputAction.next,
-                  onChanged: (value) => field.didChange(value),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.95),
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide.none,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: hasError
-                            ? Colors.red.withValues(alpha: 0.3)
-                            : Colors.transparent,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: hasError
-                            ? Colors.red.withValues(alpha: 0.5)
-                            : Colors.blue.withValues(alpha: 0.5),
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    hintText: widget.label,
-                    hintStyle: TextStyle(
-                      color: Colors.grey.withValues(alpha: 0.5),
-                      fontSize: 16,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(left: 16, right: 12),
-                      child: Icon(
-                        Icons.lock_outline,
-                        color: Colors.grey,
-                        size: 20,
-                      ),
-                    ),
-                    prefixIconConstraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
-                    suffixIcon: Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: IconButton(
-                        icon: Icon(
-                          _obscureText
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: Colors.grey,
-                          size: 20,
-                        ),
-                        onPressed: () {
-                          setState(() => _obscureText = !_obscureText);
-                        },
-                      ),
-                    ),
-                    suffixIconConstraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
-                  ),
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                  ),
-                ),
+          border: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(14),
+          ),
+
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(14),
+          ),
+
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: brandColor.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+
+          errorBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+            borderRadius: BorderRadius.circular(14),
+          ),
+
+          focusedErrorBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+            borderRadius: BorderRadius.circular(14),
+          ),
+
+          errorStyle: const TextStyle(fontSize: 13, color: Colors.redAccent),
+
+          hintText: widget.label,
+          hintStyle: TextStyle(
+            color: Colors.grey.withValues(alpha: 0.5),
+            fontSize: 16,
+          ),
+
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
+
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 12),
+            child: Icon(
+              Icons.lock_outline_rounded,
+              color: _isFocused ? brandColor : Colors.grey,
+              size: 20,
+            ),
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 48,
+            minHeight: 48,
+          ),
+          suffixIcon: Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              icon: Icon(
+                _obscureText
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                color: _isFocused
+                    ? brandColor.withValues(alpha: 0.7)
+                    : Colors.grey,
+                size: 20,
               ),
-              if (hasError)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, left: 4),
-                  child: ErrorLabel(errorText: field.errorText),
-                ),
-            ],
-          );
-        },
+              onPressed: () {
+                setState(() => _obscureText = !_obscureText);
+              },
+            ),
+          ),
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 48,
+            minHeight: 48,
+          ),
+        ),
+        style: const TextStyle(color: Colors.black87, fontSize: 16),
       ),
     );
   }
