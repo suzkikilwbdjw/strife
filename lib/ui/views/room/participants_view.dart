@@ -67,20 +67,22 @@ class ParticipantsView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Список участников звонка (ограничен по высоте)
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight:
-                  MediaQuery.sizeOf(context).height *
-                  0.4, // Список занимает максимум 40% экрана
-            ),
-            child: ListView.builder(
-              controller: scrollController,
-              shrinkWrap: true,
-              itemCount: count,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: ParticipantWidget(participant: participants[index]),
+          // Список участников звонка
+          Expanded(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight:
+                    MediaQuery.sizeOf(context).height *
+                    0.4, // Список занимает максимум 40% экрана
+              ),
+              child: ListView.builder(
+                controller: scrollController,
+                shrinkWrap: true,
+                itemCount: count,
+                itemBuilder: (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: ParticipantWidget(participant: participants[index]),
+                ),
               ),
             ),
           ),
