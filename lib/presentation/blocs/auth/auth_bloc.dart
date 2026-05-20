@@ -86,7 +86,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       await _authRepository.saveUserData(
         updatedUser,
-        extraData: {'displayName': event.displayName},
+        extraData: {'displayName': event.displayName, 'photoUrl': avatarUrl},
       );
 
       emit(state.copyWith(status: AuthStatus.success));
