@@ -46,8 +46,8 @@ class ContactsState extends Equatable {
     isSubmitted,
     status,
     error,
-    const DeepCollectionEquality().hash(allContacts),
-    const DeepCollectionEquality().hash(filteredContacts),
+    allContacts,
+    filteredContacts,
     searchQuery,
   ];
 }

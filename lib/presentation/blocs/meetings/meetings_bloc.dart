@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
-import 'package:collection/collection.dart';
 
 part 'meetings_state.dart';
 part 'meetings_event.dart';

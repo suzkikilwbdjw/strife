@@ -57,7 +57,7 @@ class SendCallRequestRequested extends ContactsEvent {
     senderName,
     senderPhotoUrl,
     roomId,
-    const DeepCollectionEquality().hash(participantsInfo),
+    participantsInfo,
   ];
 }
 
@@ -105,9 +105,7 @@ class UpdateContactsListRequested extends ContactsEvent {
   const UpdateContactsListRequested({required this.fullContacts});
 
   @override
-  List<Object?> get props => [
-    const DeepCollectionEquality().hash(fullContacts),
-  ];
+  List<Object?> get props => [fullContacts];
 }
 
 class SearchContactsRequested extends ContactsEvent {
