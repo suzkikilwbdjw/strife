@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:equatable/equatable.dart';
 
-class MessageModel {
-  MessageModel({
+class MessageModel extends Equatable {
+  const MessageModel({
     this.id,
     required this.senderId,
     required this.text,
@@ -51,4 +52,16 @@ class MessageModel {
       'roomId': roomId,
     };
   }
+
+  @override
+  List<Object?> get props => [
+    id,
+    senderId,
+    text,
+    timestamp,
+    readBy,
+    type,
+    isPending,
+    roomId,
+  ];
 }

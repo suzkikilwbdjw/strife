@@ -4,7 +4,6 @@ import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:collection/collection.dart';
 import '../../../data/repositories/vcs_repository.dart';
 part 'vcs_event.dart';
 part 'vcs_state.dart';

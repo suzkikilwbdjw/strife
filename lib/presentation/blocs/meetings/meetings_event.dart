@@ -29,7 +29,7 @@ class SendMeetingRequestRequested extends MeetingsEvent {
   @override
   List<Object?> get props => [
     senderId,
-    const DeepCollectionEquality().hash(participantIds),
+    participantIds,
     senderName,
     senderPhotoUrl,
     roomId,
@@ -61,7 +61,7 @@ class SendUpdateMeetingRequested extends MeetingsEvent {
   List<Object?> get props => [
     meetingId,
     senderId,
-    const DeepCollectionEquality().hash(participantIds),
+    participantIds,
     senderName,
     senderPhotoUrl,
     titleMeeting,
@@ -94,7 +94,7 @@ class SendCancelMeetingRequested extends MeetingsEvent {
   List<Object?> get props => [
     meetingId,
     senderId,
-    const DeepCollectionEquality().hash(participantIds),
+    participantIds,
     senderName,
     senderPhotoUrl,
     roomId,
