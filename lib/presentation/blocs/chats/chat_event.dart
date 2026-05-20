@@ -1,19 +1,30 @@
-import 'package:strife/data/models/message_model.dart';
+part of 'chat_bloc.dart';
 
-abstract class ChatEvent {}
+abstract class ChatEvent extends Equatable {
+  const ChatEvent();
+
+  @override
+  List<Object?> get props => [];
+}
 
 // Событие инита чата
 class InitChat extends ChatEvent {
   final String chatId;
 
-  InitChat(this.chatId);
+  const InitChat(this.chatId);
+
+  @override
+  List<Object> get props => [chatId];
 }
 
 // Событие для обновление сообщений
 class MessagesUpdated extends ChatEvent {
   final List<MessageModel> messages;
 
-  MessagesUpdated(this.messages);
+  const MessagesUpdated(this.messages);
+
+  @override
+  List<Object?> get props => [messages];
 }
 
 // Событие для отправки сообщений без уведомления
@@ -22,29 +33,41 @@ class SendMessage extends ChatEvent {
   final String senderId;
   final String text;
 
-  SendMessage({
+  const SendMessage({
     required this.chatId,
     required this.senderId,
     required this.text,
   });
+
+  @override
+  List<Object?> get props => [chatId, senderId, text];
 }
 
 // Событие для отправки сообщений c уведомлениями
 class SendMessageRequest extends ChatEvent {
   final String textMessage;
 
-  SendMessageRequest({required this.textMessage});
+  const SendMessageRequest({required this.textMessage});
+
+  @override
+  List<Object?> get props => [textMessage];
 }
 
 // Событие для загрузка пользователя
 class LoadUser extends ChatEvent {
   final String userId;
 
-  LoadUser(this.userId);
+  const LoadUser(this.userId);
+
+  @override
+  List<Object?> get props => [userId];
 }
 
 class ChatDataUpdated extends ChatEvent {
   final Map<String, dynamic> chatData;
 
-  ChatDataUpdated({required this.chatData});
+  const ChatDataUpdated({required this.chatData});
+
+  @override
+  List<Object?> get props => [chatData];
 }

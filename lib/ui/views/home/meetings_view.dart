@@ -7,13 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_state.dart';
 import 'package:strife/presentation/blocs/meetings/meetings_bloc.dart';
-import 'package:strife/presentation/blocs/meetings/meetings_event.dart';
-import 'package:strife/presentation/blocs/meetings/meetings_state.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
-import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/room/room_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
@@ -889,7 +884,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                 Navigator.of(dialogContext).pop();
 
                 context.read<MeetingsBloc>().add(
-                  SendCancleMeetingRequested(
+                  SendCancelMeetingRequested(
                     meetingId: meetingId,
                     roomId: roomId,
                     senderId: senderId,

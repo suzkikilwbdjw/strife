@@ -6,10 +6,7 @@ import 'package:strife/data/repositories/chat_repository.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
-import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
-import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
-import 'package:strife/presentation/blocs/vcs/vcs_state.dart';
 import 'package:strife/ui/views/chat/chat_screen.dart';
 import 'package:strife/ui/views/room/participants_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
@@ -118,7 +115,7 @@ class RoomView extends StatelessWidget {
             );
 
             context.read<VCSBloc>().add(
-              SyncHardwareStatus(isMicEnabled: false),
+              const SyncHardwareStatus(isMicEnabled: false),
             );
           },
         ),
@@ -150,7 +147,7 @@ class RoomView extends StatelessWidget {
                   : 'Модератор разрешил доступ к камере',
             );
             context.read<VCSBloc>().add(
-              SyncHardwareStatus(isCamEnabled: false),
+              const SyncHardwareStatus(isCamEnabled: false),
             );
           },
         ),
@@ -177,7 +174,7 @@ class RoomView extends StatelessWidget {
             leading: IconButton(
               onPressed: () {
                 context.read<VCSBloc>().add(
-                  ToggleMinimizeRoomRequested(minimize: true),
+                  const ToggleMinimizeRoomRequested(minimize: true),
                 );
 
                 // Закрываем страницу звонка

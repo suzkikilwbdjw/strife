@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
-import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 
 class ParticipantWidget extends StatelessWidget {
   final Participant participant;

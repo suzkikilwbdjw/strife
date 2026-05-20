@@ -1,10 +1,10 @@
-import 'package:livekit_client/livekit_client.dart';
+part of 'vcs_bloc.dart';
 
 const _undefined = Object();
 
 enum RoomLeaveReason { none, kicked, terminatedByHost }
 
-class VCSState {
+class VCSState extends Equatable {
   final bool isMinimized;
 
   final bool isConnected;
@@ -99,4 +99,26 @@ class VCSState {
       error: error,
     );
   }
+
+  @override
+  List<Object?> get props => [
+    isMinimized,
+    isConnected,
+    const DeepCollectionEquality().hash(participants),
+    pinnedParticipantSid,
+    activeSpeakerSid,
+    const DeepCollectionEquality().hash(hostSids),
+    const DeepCollectionEquality().hash(mutedMicrophoneByHostSids),
+    const DeepCollectionEquality().hash(mutedCameraByHostSids),
+    leaveReason,
+    isReconnecting,
+    isRemoteAudioEnabled,
+    isCameraEnabled,
+    isMicrophoneEnabled,
+    const DeepCollectionEquality().hash(connectionQualities),
+    const DeepCollectionEquality().hash(videoTracks),
+    const DeepCollectionEquality().hash(audioTracks),
+    const DeepCollectionEquality().hash(photoUrls),
+    error,
+  ];
 }

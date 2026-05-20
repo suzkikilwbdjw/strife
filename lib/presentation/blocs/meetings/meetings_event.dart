@@ -1,7 +1,22 @@
-abstract class MeetingsEvent {}
+part of 'meetings_bloc.dart';
+
+abstract class MeetingsEvent extends Equatable {
+  const MeetingsEvent();
+
+  @override
+  List<Object?> get props => [];
+}
 
 class SendMeetingRequestRequested extends MeetingsEvent {
-  SendMeetingRequestRequested({
+  final String senderId;
+  final List<String> participantIds;
+  final String senderName;
+  final String senderPhotoUrl;
+  final String roomId;
+  final String titleMeeting;
+  final DateTime meetingDateTime;
+
+  const SendMeetingRequestRequested({
     required this.senderId,
     required this.participantIds,
     required this.senderName,
@@ -11,25 +26,19 @@ class SendMeetingRequestRequested extends MeetingsEvent {
     required this.meetingDateTime,
   });
 
-  final String senderId;
-  final List<String> participantIds;
-  final String senderName;
-  final String senderPhotoUrl;
-  final String roomId;
-  final String titleMeeting;
-  final DateTime meetingDateTime;
+  @override
+  List<Object?> get props => [
+    senderId,
+    const DeepCollectionEquality().hash(participantIds),
+    senderName,
+    senderPhotoUrl,
+    roomId,
+    titleMeeting,
+    meetingDateTime,
+  ];
 }
 
 class SendUpdateMeetingRequested extends MeetingsEvent {
-  SendUpdateMeetingRequested({
-    required this.meetingId,
-    required this.senderId,
-    required this.participantIds,
-    required this.senderName,
-    required this.senderPhotoUrl,
-    required this.titleMeeting,
-    required this.meetingDateTime,
-  });
   final String meetingId;
   final String senderId;
   final List<String> participantIds;
@@ -37,10 +46,8 @@ class SendUpdateMeetingRequested extends MeetingsEvent {
   final String senderPhotoUrl;
   final String titleMeeting;
   final DateTime meetingDateTime;
-}
 
-class SendCancleMeetingRequested extends MeetingsEvent {
-  SendCancleMeetingRequested({
+  const SendUpdateMeetingRequested({
     required this.meetingId,
     required this.senderId,
     required this.participantIds,
@@ -48,8 +55,21 @@ class SendCancleMeetingRequested extends MeetingsEvent {
     required this.senderPhotoUrl,
     required this.titleMeeting,
     required this.meetingDateTime,
-    required this.roomId,
   });
+
+  @override
+  List<Object?> get props => [
+    meetingId,
+    senderId,
+    const DeepCollectionEquality().hash(participantIds),
+    senderName,
+    senderPhotoUrl,
+    titleMeeting,
+    meetingDateTime,
+  ];
+}
+
+class SendCancelMeetingRequested extends MeetingsEvent {
   final String meetingId;
   final String senderId;
   final List<String> participantIds;
@@ -58,4 +78,27 @@ class SendCancleMeetingRequested extends MeetingsEvent {
   final String roomId;
   final String titleMeeting;
   final DateTime meetingDateTime;
+
+  const SendCancelMeetingRequested({
+    required this.meetingId,
+    required this.senderId,
+    required this.participantIds,
+    required this.senderName,
+    required this.senderPhotoUrl,
+    required this.roomId,
+    required this.titleMeeting,
+    required this.meetingDateTime,
+  });
+
+  @override
+  List<Object?> get props => [
+    meetingId,
+    senderId,
+    const DeepCollectionEquality().hash(participantIds),
+    senderName,
+    senderPhotoUrl,
+    roomId,
+    titleMeeting,
+    meetingDateTime,
+  ];
 }

@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:livekit_client/livekit_client.dart';
-
+import 'package:collection/collection.dart';
 import '../../../data/repositories/vcs_repository.dart';
-import 'vcs_event.dart';
-import 'vcs_state.dart';
+part 'vcs_event.dart';
+part 'vcs_state.dart';
 
 class VCSBloc extends Bloc<VCSEvent, VCSState> {
-  final VCSRepository _repository;
+  final VCSRepository _vcsRepository;
 
   String? roomId;
 
@@ -17,7 +18,9 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
 
   EventsListener<RoomEvent>? _listener;
 
-  VCSBloc(this._repository) : super(const VCSState()) {
+  VCSBloc({required VCSRepository vcsRepository})
+    : _vcsRepository = vcsRepository,
+      super(const VCSState()) {
     // Регистрируем обработчики
     _registerEventHandlers();
   }
@@ -63,7 +66,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     try {
       emit(state.copyWith(error: null));
 
-      _repository.addParticipant(
+      _vcsRepository.addParticipant(
         roomId: event.roomId,
         participantId: event.participantId,
       );
@@ -105,7 +108,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     try {
       emit(state.copyWith(error: null));
 
-      await _repository.terminateRoom(event.roomId);
+      await _vcsRepository.terminateRoom(event.roomId);
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -116,7 +119,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     try {
-      await _repository.muteParticipant(
+      await _vcsRepository.muteParticipant(
         roomId: _room!.name!,
         participantIdentity: event.participantIdentity,
       );
@@ -130,7 +133,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     try {
-      await _repository.unmuteParticipant(
+      await _vcsRepository.unmuteParticipant(
         roomId: _room!.name!,
         participantIdentity: event.participantIdentity,
       );
@@ -144,7 +147,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     try {
-      await _repository.disableCamera(
+      await _vcsRepository.disableCamera(
         roomId: _room!.name!,
         participantIdentity: event.participantIdentity,
       );
@@ -158,7 +161,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     try {
-      await _repository.enableCamera(
+      await _vcsRepository.enableCamera(
         roomId: _room!.name!,
         participantIdentity: event.participantIdentity,
       );
@@ -172,7 +175,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     try {
-      await _repository.kickParticipant(
+      await _vcsRepository.kickParticipant(
         roomId: _room!.name!,
         participantIdentity: event.participantIdentity,
       );
@@ -186,7 +189,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     try {
-      await _repository.transferHost(
+      await _vcsRepository.transferHost(
         roomId: _room!.name!,
         newHostId: event.participantIdentity,
       );
@@ -227,7 +230,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
       _listener = _room!.createListener();
       _setupRoomListeners(); // Настраиваем подписки LiveKit
 
-      final data = await _repository.fetchToken(
+      final data = await _vcsRepository.fetchToken(
         roomId: event.roomId,
         identity: event.identity,
         name: event.name,
@@ -374,7 +377,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
         // Во всех остальных случаях проверяем базу данных
         try {
           // Запрашиваем актуальный статус комнаты из вашего VCSRepository
-          final isCompleted = await _repository.isRoomCompleted(roomId!);
+          final isCompleted = await _vcsRepository.isRoomCompleted(roomId!);
           if (isCompleted) {
             add(RoomTerminatedByHostRequested());
           }

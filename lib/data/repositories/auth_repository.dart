@@ -44,46 +44,54 @@ class AuthRepository {
     Map<String, dynamic>? extraData,
   }) async {
     // Получаем ссылку на документ пользователя
-    final userDocRef = _firestore.collection('users').doc(user.uid);
+    try {
+      final userDocRef = _firestore.collection('users').doc(user.uid);
 
-    // Проверяем, существует ли документ
-    final docSnapshot = await userDocRef.get();
-    final bool docExists = docSnapshot.exists;
+      // Проверяем, существует ли документ
+      final docSnapshot = await userDocRef.get();
+      final bool docExists = docSnapshot.exists;
 
-    // Получаем FCM-токен
-    String? token = await FirebaseMessaging.instance.getToken();
+      // Получаем FCM-токен
+      String? token = await FirebaseMessaging.instance.getToken();
 
-    // Собираем map данных
-    final data = <String, dynamic>{
-      'uid': user.uid,
-      'email': user.email,
-      'lastSeen': FieldValue.serverTimestamp(),
-      if (extraData != null) ...extraData,
-      if (token != null) ...{'fcmToken': token},
-    };
+      // Собираем map данных
+      final data = <String, dynamic>{
+        'uid': user.uid,
+        'email': user.email,
+        'lastSeen': FieldValue.serverTimestamp(),
+        if (extraData != null) ...extraData,
+        if (token != null) ...{'fcmToken': token},
+      };
 
-    // Добавляем имя и фото только если документа еще нет в базе
-    if (!docExists) {
-      data['displayName'] = user.displayName;
-      data['photoUrl'] = user.photoURL;
+      // Добавляем имя и фото только если документа еще нет в базе
+      if (!docExists) {
+        data['displayName'] = user.displayName;
+        data['photoUrl'] = user.photoURL;
+      }
+
+      // Записываем данные
+      await userDocRef.set(data, SetOptions(merge: true));
+    } catch (e) {
+      rethrow;
     }
-
-    // Записываем данные
-    await userDocRef.set(data, SetOptions(merge: true));
   }
 
   // Выход из аккаунта
   Future<void> logout() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    if (uid != null) {
-      // Удаляем токен перед выходом
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'fcmToken': FieldValue.delete(),
-      });
+      if (uid != null) {
+        // Удаляем токен перед выходом
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'fcmToken': FieldValue.delete(),
+        });
+      }
+
+      await _auth.signOut();
+    } catch (e) {
+      rethrow;
     }
-
-    await _auth.signOut();
   }
 
   // Вход с помощью яндекса
@@ -157,9 +165,18 @@ class AuthRepository {
         onTimeout: () => null,
       );
     } catch (e) {
-      return null;
+      rethrow;
     } finally {
       await linkSubscription?.cancel();
+    }
+  }
+
+  // Метод для сброса пароля
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      rethrow;
     }
   }
 }

@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_state.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 import 'package:strife/ui/widgets/contact_widget.dart';
@@ -82,14 +80,13 @@ class ParticipantsView extends StatelessWidget {
               itemCount: count,
               itemBuilder: (context, index) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
-                // Обернули каждый элемент в Padding, ParticipantWidget пришлете в следующем сообщении
                 child: ParticipantWidget(participant: participants[index]),
               ),
             ),
           ),
           const SizedBox(height: 24),
 
-          // Нижняя панель с кнопками действий в едином стиле
+          // Нижняя панель с кнопками
           Row(
             children: [
               // Кнопка cкопировать ссылку
@@ -132,7 +129,7 @@ class ParticipantsView extends StatelessWidget {
                       LoadContactsRequested(currentUserId: currentUser.uid),
                     );
                     context.read<ContactsBloc>().add(
-                      SearchContactsRequested(searchQuery: ''),
+                      const SearchContactsRequested(searchQuery: ''),
                     );
 
                     // Закрываем шторку участников перед открытием шторки приглашений

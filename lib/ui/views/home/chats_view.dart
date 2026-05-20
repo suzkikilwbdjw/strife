@@ -8,9 +8,7 @@ import 'package:strife/data/repositories/chat_repository.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
-import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/chat/chat_screen.dart';
 import 'package:strife/ui/widgets/contact_widget.dart';
@@ -462,7 +460,7 @@ class _NewChatSheetState extends State<NewChatSheet> {
   void dispose() {
     _searchController.dispose();
     // При закрытии шторки сбрасываем строку поиска, чтобы вернуть полный список контактов
-    _contactsBloc.add(SearchContactsRequested(searchQuery: ''));
+    _contactsBloc.add(const SearchContactsRequested(searchQuery: ''));
     super.dispose();
   }
 

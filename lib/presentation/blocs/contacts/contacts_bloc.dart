@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_state.dart';
+import 'package:collection/collection.dart';
+
+part 'contacts_state.dart';
+part 'contacts_event.dart';
 
 class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
   final UserRepository _userRepository;

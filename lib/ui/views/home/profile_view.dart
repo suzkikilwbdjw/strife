@@ -2,9 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:strife/data/repositories/auth_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/themes/gradient_theme.dart';
-import 'package:strife/ui/view_models/auth_view_model.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 
 class ProfileView extends StatefulWidget {
@@ -159,7 +159,7 @@ class _ProfileViewState extends State<ProfileView>
 
                         if (!context.mounted) return;
 
-                        await context.read<AuthViewModel>().signOut();
+                        await context.read<AuthRepository>().logout();
 
                         if (!context.mounted) return;
 

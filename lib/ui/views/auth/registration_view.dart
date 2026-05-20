@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:strife/data/repositories/auth_repository.dart';
+import 'package:strife/presentation/blocs/auth/auth_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
-import 'package:strife/ui/view_models/auth_view_model.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 
 class RegistrationView extends StatefulWidget {
@@ -33,104 +34,122 @@ class _RegistrationViewState extends State<RegistrationView> {
   Widget build(BuildContext context) {
     final gradient = Theme.of(context).extension<GradientTheme>()!.mainGradient;
 
-    return Container(
-      decoration: BoxDecoration(gradient: gradient),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          toolbarHeight: 100,
-          leading: BackIconButton(),
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Strife',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  fontSize: 32,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Text(
-                'Видеоконференции',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 15,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
+    return BlocProvider(
+      create: (context) =>
+          AuthBloc(authRepository: context.read<AuthRepository>()),
+      child: Container(
+        decoration: BoxDecoration(gradient: gradient),
+        child: Scaffold(
           backgroundColor: Colors.transparent,
-          elevation: 0,
-        ),
-        body: Form(
-          key: _formKey,
-          child: SafeArea(
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  children: <Widget>[
-                    const SizedBox(height: 40),
+          appBar: AppBar(
+            toolbarHeight: 100,
+            leading: const BackIconButton(),
+            title: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Strife',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 32,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  'Видеоконференции',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 15,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+          body: BlocListener<AuthBloc, AuthState>(
+            listenWhen: (previous, current) =>
+                previous.status != current.status,
+            listener: (context, state) {
+              if (state.status == AuthStatus.failure &&
+                  state.errorMessage != null) {
+                AppNotifications.showError(context, state.errorMessage!);
+              }
+              if (state.status == AuthStatus.success) {
+                Navigator.pop(context);
+              }
+            },
+            child: Form(
+              key: _formKey,
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      children: <Widget>[
+                        const SizedBox(height: 40),
 
-                    const Text(
-                      'Регистрация',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize: 32,
-                        letterSpacing: 0.5,
-                      ),
+                        const Text(
+                          'Регистрация',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 32,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        const Text(
+                          'Создайте свой аккаунт',
+                          style: TextStyle(color: Colors.white70, fontSize: 16),
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        NameTextForm(
+                          controller: _displayNameController,
+                          label: 'Имя профиля',
+                          maxLength: 30,
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        EmailTextForm(controller: _emailController),
+
+                        const SizedBox(height: 16),
+
+                        PasswordTextForm(
+                          controller: _passwordController,
+                          label: 'Пароль',
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        PasswordTextForm(
+                          controller: _passwordAgainController,
+                          label: 'Подтвердите пароль',
+                          originalPasswordController: _passwordController,
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        RegisterButton(
+                          formKey: _formKey,
+                          displayNameController: _displayNameController,
+                          emailController: _emailController,
+                          passwordController: _passwordController,
+                        ),
+
+                        const SizedBox(height: 40),
+                      ],
                     ),
-
-                    const SizedBox(height: 12),
-
-                    const Text(
-                      'Создайте свой аккаунт',
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    NameTextForm(
-                      controller: _displayNameController,
-                      label: 'Имя профиля',
-                      maxLength: 30,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    EmailTextForm(controller: _emailController),
-
-                    const SizedBox(height: 16),
-
-                    PasswordTextForm(
-                      controller: _passwordController,
-                      label: 'Пароль',
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    PasswordTextForm(
-                      controller: _passwordAgainController,
-                      label: 'Подтвердите пароль',
-                      originalPasswordController: _passwordController,
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    RegisterButton(
-                      formKey: _formKey,
-                      displayNameController: _displayNameController,
-                      emailController: _emailController,
-                      passwordController: _passwordController,
-                    ),
-
-                    const SizedBox(height: 40),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -303,7 +322,9 @@ class RegisterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.select<AuthViewModel, bool>((vm) => vm.isLoading);
+    final isLoading = context.select<AuthBloc, bool>(
+      (value) => value.state.status == AuthStatus.loading,
+    );
     const brandColor = Color(0xFFB91ED0);
 
     return SizedBox(
@@ -325,24 +346,13 @@ class RegisterButton extends StatelessWidget {
             ? null
             : () async {
                 if (formKey.currentState!.validate()) {
-                  final authVM = context.read<AuthViewModel>();
-
-                  final success = await authVM.signUp(
-                    email: emailController.text.trim(),
-                    password: passwordController.text.trim(),
-                    displayName: displayNameController.text.trim(),
+                  context.read<AuthBloc>().add(
+                    SignUpRequested(
+                      email: emailController.text.trim(),
+                      password: passwordController.text.trim(),
+                      displayName: displayNameController.text.trim(),
+                    ),
                   );
-
-                  if (!context.mounted) return;
-
-                  if (!success) {
-                    AppNotifications.showError(
-                      context,
-                      authVM.error ?? 'Ошибка регистрации',
-                    );
-                  } else {
-                    Navigator.of(context).pop();
-                  }
                 }
               },
         child: isLoading

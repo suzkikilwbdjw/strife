@@ -1,6 +1,6 @@
-import 'package:strife/data/models/message_model.dart';
+part of 'chat_bloc.dart';
 
-class ChatState {
+class ChatState extends Equatable {
   final List<MessageModel> messages;
   final bool isLoading;
   final String? error;
@@ -32,4 +32,7 @@ class ChatState {
       chatData: chatData ?? this.chatData,
     );
   }
+
+  @override
+  List<Object?> get props => [messages, isLoading, error];
 }

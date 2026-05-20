@@ -19,7 +19,6 @@ import 'package:http/http.dart' as http;
 // Импорты слоев
 import 'package:strife/firebase/firebase_options.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
-import 'package:strife/presentation/blocs/chats/chat_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/home/home_bloc.dart';
 import 'package:strife/presentation/blocs/home/home_event.dart';
@@ -27,11 +26,10 @@ import 'package:strife/presentation/blocs/meetings/meetings_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/data/repositories/auth_repository.dart';
-import 'package:strife/ui/view_models/auth_view_model.dart';
 import 'package:strife/ui/views/chat/chat_screen.dart';
 
 // Импорты экранов
-import 'package:strife/ui/views/login/login_view.dart';
+import 'package:strife/ui/views/auth/login_view.dart';
 import 'package:strife/ui/views/home/home_view.dart';
 import 'package:strife/ui/views/notifications/notifications_view.dart';
 
@@ -67,9 +65,6 @@ Future<void> main() async {
         Provider(create: (_) => UserRepository()),
         Provider(create: (_) => VCSRepository()),
         Provider(create: (_) => NotificationRepository()),
-
-        // ViewModels
-        ChangeNotifierProvider(create: (_) => AuthViewModel()),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -81,11 +76,13 @@ Future<void> main() async {
           ),
 
           BlocProvider(
-            create: (context) =>
-                MeetingsBloc(context.read<NotificationRepository>()),
+            create: (context) => MeetingsBloc(
+              notificationRepository: context.read<NotificationRepository>(),
+            ),
           ),
           BlocProvider(
-            create: (context) => VCSBloc(context.read<VCSRepository>()),
+            create: (context) =>
+                VCSBloc(vcsRepository: context.read<VCSRepository>()),
           ),
           BlocProvider(
             create: (context) => NavigationBloc(),

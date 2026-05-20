@@ -4,10 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_state.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
-import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/room/room_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
@@ -35,7 +32,9 @@ class _ContactsViewState extends State<ContactsView>
   void initState() {
     super.initState();
     // Устанавливаем поиск по контактам в ноль
-    context.read<ContactsBloc>().add(SearchContactsRequested(searchQuery: ''));
+    context.read<ContactsBloc>().add(
+      const SearchContactsRequested(searchQuery: ''),
+    );
   }
 
   @override

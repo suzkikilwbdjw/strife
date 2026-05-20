@@ -1,4 +1,6 @@
-class MeetingsState {
+part of 'meetings_bloc.dart';
+
+class MeetingsState extends Equatable {
   final String? error;
   final bool isLoading;
   final bool isCancelled;
@@ -16,4 +18,7 @@ class MeetingsState {
       isCancelled: isCancelled ?? this.isCancelled,
     );
   }
+
+  @override
+  List<Object?> get props => [error, isLoading, isCancelled];
 }

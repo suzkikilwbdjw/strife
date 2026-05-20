@@ -1,161 +1,221 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:strife/ui/view_models/auth_view_model.dart';
-import 'package:strife/ui/views/register/registration_view.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:strife/data/repositories/auth_repository.dart';
+import 'package:strife/presentation/blocs/auth/auth_bloc.dart';
+import 'package:strife/ui/views/auth/reset_password_view.dart';
+import 'package:strife/ui/views/auth/registration_view.dart';
 import 'package:strife/themes/gradient_theme.dart';
-import 'package:provider/provider.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 
-class LoginView extends StatelessWidget {
-  LoginView({super.key});
+class LoginView extends StatefulWidget {
+  const LoginView({super.key});
 
+  @override
+  State<LoginView> createState() => _LoginViewState();
+}
+
+class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final gradient = Theme.of(context).extension<GradientTheme>()!.mainGradient;
 
-    return Container(
-      decoration: BoxDecoration(gradient: gradient),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          toolbarHeight: 100,
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'Strife',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  fontSize: 32,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Text(
-                'Видеоконференции',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 15,
-                  fontWeight: FontWeight.normal,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
+    return BlocProvider(
+      create: (context) =>
+          AuthBloc(authRepository: context.read<AuthRepository>()),
+      child: Container(
+        decoration: BoxDecoration(gradient: gradient),
+        child: Scaffold(
           backgroundColor: Colors.transparent,
-          elevation: 0,
-        ),
-
-        resizeToAvoidBottomInset: false,
-
-        body: Form(
-          key: _formKey,
-          child: SafeArea(
-            child: CustomScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      const SizedBox(height: 40),
-
-                      // Заголовок
-                      const Center(
-                        child: Text(
-                          'Добро пожаловать!',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 32,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Подзаголовок
-                      const Center(
-                        child: Text(
-                          'Войдите в свой аккаунт',
-                          style: TextStyle(color: Colors.white70, fontSize: 16),
-                        ),
-                      ),
-                      const SizedBox(height: 48),
-
-                      // Поля ввода
-                      EmailTextForm(controller: _emailController),
-                      const SizedBox(height: 16),
-                      PasswordTextForm(controller: _passwordController),
-                      const SizedBox(height: 32),
-
-                      // Главная кнопка входа
-                      LoginButton(
-                        formKey: _formKey,
-                        emailController: _emailController,
-                        passwordController: _passwordController,
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Ссылка на регистрацию
-                      const RegisterNavigationText(),
-                    ]),
+          appBar: AppBar(
+            toolbarHeight: 100,
+            title: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Strife',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 32,
+                    letterSpacing: 0.5,
                   ),
                 ),
-
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        const Spacer(),
-
-                        Builder(
-                          builder: (context) {
-                            final bool isKeyboardOpen =
-                                MediaQuery.of(context).viewInsets.bottom > 0;
-
-                            return AnimatedScale(
-                              scale: isKeyboardOpen ? 0.85 : 1.0,
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeInOutCubic,
-                              child: AnimatedOpacity(
-                                opacity: isKeyboardOpen ? 0.0 : 1.0,
-                                duration: const Duration(milliseconds: 180),
-                                curve: Curves.easeInOutCubic,
-                                child: IgnorePointer(
-                                  ignoring: isKeyboardOpen,
-                                  child: const Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      SocialDivider(),
-                                      SizedBox(height: 24),
-                                      SocialLogosRow(),
-                                      SizedBox(
-                                        height: 24,
-                                      ), // Отступ от самого низа экрана
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                Text(
+                  'Видеоконференции',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 15,
+                    fontWeight: FontWeight.normal,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ],
             ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+
+          resizeToAvoidBottomInset: false,
+
+          body: BlocListener<AuthBloc, AuthState>(
+            listenWhen: (previous, current) =>
+                previous.status != current.status,
+            listener: (context, state) {
+              if (state.status == AuthStatus.failure &&
+                  state.errorMessage != null) {
+                AppNotifications.showError(context, state.errorMessage!);
+              }
+              if (state.status == AuthStatus.success &&
+                  state.successMessage != null) {
+                AppNotifications.showSuccess(context, state.successMessage!);
+              }
+            },
+            child: Form(
+              key: _formKey,
+              child: SafeArea(
+                child: CustomScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          const SizedBox(height: 40),
+
+                          // Заголовок
+                          const Center(
+                            child: Text(
+                              'Добро пожаловать!',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 32,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Подзаголовок
+                          const Center(
+                            child: Text(
+                              'Войдите в свой аккаунт',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 48),
+
+                          // Поля ввода
+                          EmailTextForm(controller: _emailController),
+                          const SizedBox(height: 16),
+                          PasswordTextForm(controller: _passwordController),
+                          const SizedBox(height: 12),
+
+                          ResetPasswordNavigationText(),
+                          const SizedBox(height: 20),
+
+                          // Главная кнопка входа
+                          LoginButton(
+                            formKey: _formKey,
+                            emailController: _emailController,
+                            passwordController: _passwordController,
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Ссылка на регистрацию
+                          const RegisterNavigationText(),
+                        ]),
+                      ),
+                    ),
+
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            const Spacer(),
+
+                            Builder(
+                              builder: (context) {
+                                final bool isKeyboardOpen =
+                                    MediaQuery.of(context).viewInsets.bottom >
+                                    0;
+
+                                return AnimatedScale(
+                                  scale: isKeyboardOpen ? 0.85 : 1.0,
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeInOutCubic,
+                                  child: AnimatedOpacity(
+                                    opacity: isKeyboardOpen ? 0.0 : 1.0,
+                                    duration: const Duration(milliseconds: 180),
+                                    curve: Curves.easeInOutCubic,
+                                    child: const Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SocialDivider(),
+                                        SizedBox(height: 24),
+                                        SocialLogosRow(),
+                                        SizedBox(
+                                          height: 24,
+                                        ), // Отступ от самого низа экрана
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class ResetPasswordNavigationText extends StatelessWidget {
+  const ResetPasswordNavigationText({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return RichText(
+      textAlign: TextAlign.end,
+      text: TextSpan(
+        text: 'Забыли пароль?',
+        style: const TextStyle(
+          color: Color.fromARGB(255, 100, 200, 255),
+          fontWeight: FontWeight.w600,
+          decoration: TextDecoration.none,
+        ),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () {
+            Navigator.of(context).push(_createRoute(ResetPasswordView()));
+          },
       ),
     );
   }
@@ -186,7 +246,9 @@ class RegisterNavigationText extends StatelessWidget {
             ),
             recognizer: TapGestureRecognizer()
               ..onTap = () {
-                Navigator.of(context).push(_createRoute());
+                Navigator.of(
+                  context,
+                ).push(_createRoute(const RegistrationView()));
               },
           ),
         ],
@@ -241,7 +303,7 @@ class SocialLogosRow extends StatelessWidget {
         SocialIconButton(
           icon: 'assets/images/yandex_logo.png',
           onPressed: () async {
-            await context.read<AuthViewModel>().signInYandex();
+            context.read<AuthBloc>().add(const SignInWithYandexRequested());
           },
         ),
       ],
@@ -569,7 +631,9 @@ class LoginButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.select<AuthViewModel, bool>((vm) => vm.isLoading);
+    final isLoading = context.select<AuthBloc, bool>(
+      (value) => value.state.status == AuthStatus.loading,
+    );
     const brandColor = Color(0xFFB91ED0);
 
     return SizedBox(
@@ -592,18 +656,12 @@ class LoginButton extends StatelessWidget {
             ? null
             : () async {
                 if (formKey.currentState!.validate()) {
-                  final authVM = context.read<AuthViewModel>();
-
-                  final success = await authVM.signIn(
-                    emailController.text.trim(),
-                    passwordController.text.trim(),
+                  context.read<AuthBloc>().add(
+                    SignInRequested(
+                      email: emailController.text.trim(),
+                      password: passwordController.text.trim(),
+                    ),
                   );
-
-                  if (!context.mounted) return;
-
-                  if (!success) {
-                    AppNotifications.showError(context, authVM.error!);
-                  }
                 }
               },
         child: isLoading
@@ -628,10 +686,9 @@ class LoginButton extends StatelessWidget {
   }
 }
 
-Route<void> _createRoute() {
+Route<void> _createRoute(Widget widget) {
   return PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) =>
-        const RegistrationView(),
+    pageBuilder: (context, animation, secondaryAnimation) => widget,
     transitionDuration: const Duration(milliseconds: 400),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       return ScaleTransition(

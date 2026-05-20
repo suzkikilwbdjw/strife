@@ -1,6 +1,8 @@
+part of 'contacts_bloc.dart';
+
 enum ContactStatus { initial, loading, inviteSuccess, failure }
 
-class ContactsState {
+class ContactsState extends Equatable {
   final bool isSubmitted;
   final ContactStatus status;
   final String? error;
@@ -38,4 +40,14 @@ class ContactsState {
       error: error,
     );
   }
+
+  @override
+  List<Object?> get props => [
+    isSubmitted,
+    status,
+    error,
+    const DeepCollectionEquality().hash(allContacts),
+    const DeepCollectionEquality().hash(filteredContacts),
+    searchQuery,
+  ];
 }

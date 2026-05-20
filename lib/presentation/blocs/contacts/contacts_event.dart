@@ -1,4 +1,11 @@
-abstract class ContactsEvent {}
+part of 'contacts_bloc.dart';
+
+abstract class ContactsEvent extends Equatable {
+  const ContactsEvent();
+
+  @override
+  List<Object?> get props => [];
+}
 
 class ResetContactsStatusRequested extends ContactsEvent {}
 
@@ -9,15 +16,23 @@ class SendFriendRequestRequested extends ContactsEvent {
   final String senderName;
   final String senderPhotoUrl;
 
-  SendFriendRequestRequested({
+  const SendFriendRequestRequested({
     required this.senderId,
     required this.recipientEmail,
     required this.senderName,
     required this.senderPhotoUrl,
   });
+
+  @override
+  List<Object?> get props => [
+    senderId,
+    recipientEmail,
+    senderName,
+    senderPhotoUrl,
+  ];
 }
 
-// Событие для отправки уведомления контаку о приглашении его в звонок
+// Событие для отправки уведомления контакту о приглашении его в звонок
 class SendCallRequestRequested extends ContactsEvent {
   final String senderId;
   final String recipientId;
@@ -26,7 +41,7 @@ class SendCallRequestRequested extends ContactsEvent {
   final String roomId;
   final Map<String, Map<String, dynamic>> participantsInfo;
 
-  SendCallRequestRequested({
+  const SendCallRequestRequested({
     required this.senderId,
     required this.recipientId,
     required this.senderName,
@@ -34,13 +49,26 @@ class SendCallRequestRequested extends ContactsEvent {
     required this.roomId,
     required this.participantsInfo,
   });
+
+  @override
+  List<Object?> get props => [
+    senderId,
+    recipientId,
+    senderName,
+    senderPhotoUrl,
+    roomId,
+    const DeepCollectionEquality().hash(participantsInfo),
+  ];
 }
 
 // Событие для первичной загрузки списка
 class LoadContactsRequested extends ContactsEvent {
   final String currentUserId;
 
-  LoadContactsRequested({required this.currentUserId});
+  const LoadContactsRequested({required this.currentUserId});
+
+  @override
+  List<Object?> get props => [currentUserId];
 }
 
 // Событие для добавления нового контакта
@@ -48,7 +76,13 @@ class AddContactsRequested extends ContactsEvent {
   final String currentUserId;
   final String contactId;
 
-  AddContactsRequested({required this.currentUserId, required this.contactId});
+  const AddContactsRequested({
+    required this.currentUserId,
+    required this.contactId,
+  });
+
+  @override
+  List<Object?> get props => [currentUserId, contactId];
 }
 
 // Событие для удаления контакта
@@ -56,31 +90,46 @@ class RemoveContactsRequested extends ContactsEvent {
   final String currentUserId;
   final String contactId;
 
-  RemoveContactsRequested({
+  const RemoveContactsRequested({
     required this.currentUserId,
     required this.contactId,
   });
+
+  @override
+  List<Object?> get props => [currentUserId, contactId];
 }
 
 class UpdateContactsListRequested extends ContactsEvent {
   final List<Map<String, dynamic>> fullContacts;
 
-  UpdateContactsListRequested({required this.fullContacts});
+  const UpdateContactsListRequested({required this.fullContacts});
+
+  @override
+  List<Object?> get props => [
+    const DeepCollectionEquality().hash(fullContacts),
+  ];
 }
 
 class SearchContactsRequested extends ContactsEvent {
   final String searchQuery;
 
-  SearchContactsRequested({required this.searchQuery});
+  const SearchContactsRequested({required this.searchQuery});
+
+  @override
+  List<Object?> get props => [searchQuery];
 }
 
 class ToggleFavoriteRequested extends ContactsEvent {
   final String currentUserId;
   final String contactId;
   final bool isFavorite;
-  ToggleFavoriteRequested({
+
+  const ToggleFavoriteRequested({
     required this.currentUserId,
     required this.contactId,
     required this.isFavorite,
   });
+
+  @override
+  List<Object?> get props => [currentUserId, contactId, isFavorite];
 }

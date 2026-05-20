@@ -4,18 +4,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
-
-import 'chat_event.dart';
-import 'chat_state.dart';
-
 import 'package:strife/data/repositories/chat_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/models/message_model.dart';
+import 'package:equatable/equatable.dart';
+
+part 'chat_event.dart';
+part 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
-  final ChatRepository chatRepository;
-  final UserRepository userRepository;
-  final NotificationRepository notificationRepository;
+  final ChatRepository _chatRepository;
+  final UserRepository _userRepository;
+  final NotificationRepository _notificationRepository;
 
   StreamSubscription<List<MessageModel>>? _messagesSubscription;
   StreamSubscription<DocumentSnapshot>? _chatSubscription;
@@ -24,10 +24,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   String? _currentChatId;
 
   ChatBloc({
-    required this.chatRepository,
-    required this.userRepository,
-    required this.notificationRepository,
-  }) : super(const ChatState()) {
+    required ChatRepository chatRepository,
+    required UserRepository userRepository,
+    required NotificationRepository notificationRepository,
+  }) : _notificationRepository = notificationRepository,
+       _chatRepository = chatRepository,
+       _userRepository = userRepository,
+       super(const ChatState()) {
     on<InitChat>(_onInitChat);
     on<MessagesUpdated>(_onMessagesUpdated);
     on<ChatDataUpdated>(_onChatDataUpdated);
@@ -60,7 +63,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         orElse: () => senderId,
       );
 
-      await notificationRepository.sendMessageRequest(
+      await _notificationRepository.sendMessageRequest(
         recipientId: recipientId,
         senderId: senderId,
         senderName: senderName,
@@ -84,7 +87,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     await _chatSubscription?.cancel();
 
     // Слушаем сообщения
-    _messagesSubscription = chatRepository.getMessage(event.chatId).listen((
+    _messagesSubscription = _chatRepository.getMessage(event.chatId).listen((
       messages,
     ) {
       add(MessagesUpdated(messages));
@@ -101,7 +104,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         });
 
     if (currentUserId != null) {
-      chatRepository.markAsRead(event.chatId, currentUserId!);
+      _chatRepository.markAsRead(event.chatId, currentUserId!);
     }
   }
 
@@ -145,7 +148,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     );
 
     if (hasUnread && currentUserId != null && _currentChatId != null) {
-      await chatRepository.markAsRead(_currentChatId!, currentUserId!);
+      await _chatRepository.markAsRead(_currentChatId!, currentUserId!);
     }
   }
 
@@ -162,7 +165,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(usersCache: updatedCache));
 
     try {
-      final userData = await userRepository.getUserData(event.userId);
+      final userData = await _userRepository.getUserData(event.userId);
       updatedCache[event.userId] = userData;
       emit(state.copyWith(usersCache: updatedCache));
     } catch (_) {
@@ -185,7 +188,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     );
 
     try {
-      await chatRepository.sendMessage(event.chatId, newMessage);
+      await _chatRepository.sendMessage(event.chatId, newMessage);
     } catch (e) {
       emit(state.copyWith(error: 'Ошибка отправки сообщения'));
     }

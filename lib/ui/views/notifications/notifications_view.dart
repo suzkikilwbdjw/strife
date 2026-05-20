@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 

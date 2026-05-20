@@ -1,23 +1,28 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:strife/data/repositories/notification_repository.dart';
-import 'package:strife/presentation/blocs/meetings/meetings_event.dart';
-import 'package:strife/presentation/blocs/meetings/meetings_state.dart';
+import 'package:collection/collection.dart';
+
+part 'meetings_state.dart';
+part 'meetings_event.dart';
 
 class MeetingsBloc extends Bloc<MeetingsEvent, MeetingsState> {
   final NotificationRepository _notificationRepository;
 
-  MeetingsBloc(this._notificationRepository) : super(const MeetingsState()) {
+  MeetingsBloc({required NotificationRepository notificationRepository})
+    : _notificationRepository = notificationRepository,
+      super(const MeetingsState()) {
     _registerEventHandlers();
   }
 
   void _registerEventHandlers() {
     on<SendMeetingRequestRequested>(_sendMeetingRequest);
     on<SendUpdateMeetingRequested>(_sendUpdateMeetingRequest);
-    on<SendCancleMeetingRequested>(_sendCancleMeetingRequest);
+    on<SendCancelMeetingRequested>(_sendCancleMeetingRequest);
   }
 
   Future<void> _sendCancleMeetingRequest(
-    SendCancleMeetingRequested event,
+    SendCancelMeetingRequested event,
     Emitter<MeetingsState> emit,
   ) async {
     try {

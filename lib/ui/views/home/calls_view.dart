@@ -8,9 +8,7 @@ import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
-import 'package:strife/presentation/blocs/vcs/vcs_event.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
-import 'package:strife/presentation/blocs/contacts/contacts_event.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/ui/views/notifications/notifications_view.dart';
 import 'package:strife/ui/views/room/room_view.dart';
@@ -693,7 +691,7 @@ class CreateRoomButton extends StatelessWidget {
         );
 
         context.read<ContactsBloc>().add(
-          SearchContactsRequested(searchQuery: ''),
+          const SearchContactsRequested(searchQuery: ''),
         );
 
         // Открывает диалоговое окно с созданием звонка
@@ -781,7 +779,7 @@ class _NewCallSheetState extends State<NewCallSheet> {
     _searchController.dispose();
     _roomNameController.dispose();
     // При закрытии шторки сбрасываем строку поиска, чтобы вернуть полный список контактов
-    _contactsBloc.add(SearchContactsRequested(searchQuery: ''));
+    _contactsBloc.add(const SearchContactsRequested(searchQuery: ''));
     super.dispose();
   }
 
