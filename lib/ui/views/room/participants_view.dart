@@ -1,3 +1,4 @@
+import 'package:clipboard/clipboard.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -92,31 +93,7 @@ class ParticipantsView extends StatelessWidget {
           Row(
             children: [
               // Кнопка cкопировать ссылку
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.link_rounded,
-                    size: 18,
-                    color: Colors.black87,
-                  ),
-                  label: const Text(
-                    'Ссылка',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: BorderSide(color: Colors.grey.shade400),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
+              const LinkButton(),
               const SizedBox(width: 12),
 
               // Кнопка пригласить контакты
@@ -174,6 +151,51 @@ class ParticipantsView extends StatelessWidget {
           ),
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+}
+
+class LinkButton extends StatelessWidget {
+  const LinkButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          try {
+            await FlutterClipboard.copy(
+              'strife://room?id=${context.read<VCSBloc>().roomId!}',
+            );
+            if (!context.mounted) return;
+            AppNotifications.showInfo(
+              context,
+              'Ссылка для подключения скоприрована',
+            );
+          } catch (e) {
+            AppNotifications.showError(
+              context,
+              'Не удалось получить ссылку: ${e.toString()}',
+            );
+          }
+        },
+        icon: const Icon(Icons.link_rounded, size: 18, color: Colors.black87),
+        label: const Text(
+          'Ссылка',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          side: BorderSide(color: Colors.grey.shade400),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       ),
     );
   }

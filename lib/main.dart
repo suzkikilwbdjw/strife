@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:app_links/app_links.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -32,6 +34,8 @@ import 'package:strife/ui/views/chat/chat_screen.dart';
 import 'package:strife/ui/views/auth/login_view.dart';
 import 'package:strife/ui/views/home/home_view.dart';
 import 'package:strife/ui/views/notifications/notifications_view.dart';
+import 'package:strife/ui/views/room/room_view.dart';
+import 'package:strife/ui/widgets/app_notifications.dart';
 
 // Создаем плагин
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -95,8 +99,74 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  StreamSubscription<Uri>? _linkSubscriprion;
+
+  final _appLinks = AppLinks();
+
+  @override
+  void initState() {
+    super.initState();
+    initDeepLinks();
+  }
+
+  Future<void> initDeepLinks() async {
+    _linkSubscriprion = _appLinks.uriLinkStream.listen((uri) async {
+      if (uri.isScheme('strife') && uri.host == 'room') {
+        final roomId = uri.queryParameters['id'];
+
+        if (roomId == null) return;
+        if (!mounted) return;
+
+        final exists = await context.read<VCSRepository>().checkRoomExists(
+          roomId,
+        );
+
+        if (exists) {
+          debugPrint('Комната существует');
+          final User? user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            if (!mounted) return;
+            final vcsBloc = context.read<VCSBloc>();
+            vcsBloc.add(
+              ConnectRequested(
+                roomId: roomId,
+                identity: user.uid,
+                name: user.displayName!,
+                photoUrl: user.photoURL!,
+              ),
+            );
+            navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (context) =>
+                    BlocProvider.value(value: vcsBloc, child: RoomView()),
+              ),
+            );
+          }
+        } else {
+          if (!mounted) return;
+
+          // Показываем ошибку пользователю
+          AppNotifications.showError(context, 'Получен неверный id комнаты');
+
+          return;
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() async {
+    super.dispose();
+    _linkSubscriprion?.cancel();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -322,5 +392,32 @@ void _handleMessageClick(Map<String, dynamic> data) {
     navigatorKey.currentState?.push(
       MaterialPageRoute(builder: (context) => const NotificationsView()),
     );
+  }
+}
+
+class DeepLinkManager {
+  StreamSubscription<Uri>? _linkSubscriprion;
+
+  final _appLinks = AppLinks();
+
+  void initDeepLinks() {
+    _linkSubscriprion = _appLinks.uriLinkStream.listen((uri) {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (context) => FooView()),
+      );
+    });
+  }
+
+  void dispose() async {
+    await _linkSubscriprion?.cancel();
+  }
+}
+
+class FooView extends StatelessWidget {
+  const FooView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold();
   }
 }
