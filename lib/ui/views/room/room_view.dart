@@ -8,6 +8,7 @@ import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/ui/views/chat/chat_screen.dart';
+import 'package:strife/ui/views/room/layout_coordinate.dart';
 import 'package:strife/ui/views/room/participants_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 
@@ -120,7 +121,7 @@ class RoomView extends StatelessWidget {
           },
         ),
 
-        // СЛУШАТЕЛЬ КАМЕРЫ
+        // Слушатель камеры
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) {
             if (c.isReconnecting || p.isReconnecting) return false;
@@ -225,7 +226,7 @@ class FullVideoCallView extends StatelessWidget {
         // Основной контент
         Container(
           decoration: const BoxDecoration(color: Colors.black),
-          child: const SafeArea(child: ParticipantLayout()),
+          child: SafeArea(child: ParticipantLayout()),
         ),
 
         // Overlay загрузки
@@ -681,11 +682,9 @@ class ParticipantLayout extends StatelessWidget {
     final participants = context.select(
       (VCSBloc bloc) => bloc.state.participants,
     );
-
     final pinnedSid = context.select(
       (VCSBloc bloc) => bloc.state.pinnedParticipantSid,
     );
-
     final activeSpeakerSid = context.select(
       (VCSBloc bloc) => bloc.state.activeSpeakerSid,
     );
@@ -694,67 +693,51 @@ class ParticipantLayout extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final pinned = pinnedSid == null
-        ? null
-        : participants.firstWhere(
-            (p) => p.sid == pinnedSid,
-            orElse: () => participants.first,
-          );
+    // Находим индексы специального отображения
+    int? pinnedIndex = pinnedSid != null
+        ? participants.indexWhere((p) => p.sid == pinnedSid)
+        : null;
+    int? activeIndex = activeSpeakerSid != null
+        ? participants.indexWhere((p) => p.sid == activeSpeakerSid)
+        : null;
 
-    final activeSpeaker = activeSpeakerSid == null
-        ? null
-        : participants.firstWhere(
-            (p) => p.sid == activeSpeakerSid,
-            orElse: () => participants.first,
-          );
-
-    /*===================Что будем отображать===============*/
-
-    if (pinned != null) {
-      return PinnedParticipantView(pinned: pinned, participants: participants);
+    if (participants.length < 3) {
+      activeIndex = null;
+    }
+    if (pinnedIndex != null) {
+      activeIndex = null;
     }
 
-    if (participants.length >= 3 && activeSpeaker != null && pinned == null) {
-      return ActiveSpeakerView(
-        activeSpeaker: activeSpeaker,
-        participants: participants,
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final coordinates = calculateLayout(
+          totalCount: participants.length,
+          maxWidth: constraints.maxWidth,
+          maxHeight: constraints.maxHeight,
+          pinnedIndex: pinnedIndex == -1 ? null : pinnedIndex,
+          activeIndex: activeIndex == -1 ? null : activeIndex,
+        );
 
-    switch (participants.length) {
-      case 0:
-        {
-          return Container();
-        }
-      case 1:
-        {
-          return OneParticipantView(participant: participants.first);
-        }
-      case 2:
-        {
-          return TwoParticipantsView(participants: participants);
-        }
-      case <= 4:
-        {
-          return GridParticipantsView(
-            participants: participants,
-            crossAxisCount: 2,
-            k: 2,
-          );
-        }
-      case >= 5:
-        {
-          return GridParticipantsView(
-            participants: participants,
-            crossAxisCount: 2,
-            k: 4,
-          );
-        }
-      default:
-        {
-          return Container();
-        }
-    }
+        return Stack(
+          children: [
+            for (int i = 0; i < participants.length; i++)
+              AnimatedPositioned(
+                key: ValueKey(participants[i].identity),
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeInOutCubic,
+                left: coordinates[i].left,
+                top: coordinates[i].top,
+                width: coordinates[i].width,
+                height: coordinates[i].height,
+                child: ParticipantTile(
+                  participant: participants[i],
+                  isCompact: coordinates[i].isCompact,
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -774,7 +757,14 @@ class PinnedParticipantView extends StatelessWidget {
 
     return Column(
       children: [
-        Expanded(flex: 3, child: ParticipantTile(participant: pinned)),
+        Expanded(
+          flex: 3,
+          child: AnimatedHero(
+            isCompact: false,
+            tag: pinned.identity,
+            participant: pinned,
+          ),
+        ),
 
         if (others.isNotEmpty)
           Flexible(
@@ -786,9 +776,10 @@ class PinnedParticipantView extends StatelessWidget {
               itemBuilder: (context, index) {
                 return SizedBox(
                   width: 180,
-                  child: ParticipantTile(
-                    participant: others[index]!,
+                  child: AnimatedHero(
                     isCompact: true,
+                    tag: others[index]!.identity,
+                    participant: others[index]!,
                   ),
                 );
               },
@@ -815,7 +806,14 @@ class ActiveSpeakerView extends StatelessWidget {
 
     return Column(
       children: [
-        Expanded(flex: 3, child: ParticipantTile(participant: activeSpeaker)),
+        Expanded(
+          flex: 3,
+          child: AnimatedHero(
+            isCompact: false,
+            tag: activeSpeaker.identity,
+            participant: activeSpeaker,
+          ),
+        ),
 
         if (others.isNotEmpty)
           Flexible(
@@ -827,9 +825,10 @@ class ActiveSpeakerView extends StatelessWidget {
               itemBuilder: (context, index) {
                 return SizedBox(
                   width: 180,
-                  child: ParticipantTile(
-                    participant: others[index]!,
+                  child: AnimatedHero(
                     isCompact: true,
+                    tag: others[index]!.identity,
+                    participant: others[index]!,
                   ),
                 );
               },
@@ -863,8 +862,11 @@ class GridParticipantsView extends StatelessWidget {
           mainAxisExtent: constraints.maxHeight / k - 5,
         ),
         itemCount: participants.length,
-        itemBuilder: (context, index) =>
-            ParticipantTile(participant: participants[index]!, isCompact: true),
+        itemBuilder: (context, index) => AnimatedHero(
+          isCompact: true,
+          tag: participants[index]!.identity,
+          participant: participants[index]!,
+        ),
       ),
     );
   }
@@ -880,8 +882,13 @@ class TwoParticipantsView extends StatelessWidget {
     return Column(
       children: participants
           .map(
-            (participant) =>
-                Expanded(child: ParticipantTile(participant: participant!)),
+            (participant) => Expanded(
+              child: AnimatedHero(
+                isCompact: false,
+                tag: participant!.identity,
+                participant: participant,
+              ),
+            ),
           )
           .toList(),
     );
@@ -893,7 +900,31 @@ class OneParticipantView extends StatelessWidget {
   final Participant participant;
   @override
   Widget build(BuildContext context) {
-    return ParticipantTile(participant: participant);
+    return AnimatedHero(
+      isCompact: false,
+      tag: participant.identity,
+      participant: participant,
+    );
+  }
+}
+
+class AnimatedHero extends StatelessWidget {
+  const AnimatedHero({
+    super.key,
+    required this.participant,
+    required this.tag,
+    required this.isCompact,
+  });
+
+  final Participant<TrackPublication<Track>> participant;
+  final Object tag;
+  final bool isCompact;
+  @override
+  Widget build(BuildContext context) {
+    return Hero(
+      tag: tag,
+      child: ParticipantTile(participant: participant, isCompact: isCompact),
+    );
   }
 }
 
@@ -998,7 +1029,10 @@ class ParticipantTile extends StatelessWidget {
                 ),
 
                 // Статус бар со статусом вкл/выкл камеры и мирко
-                BottomStatusBarCameraAndMicrophone(participant: participant),
+                BottomStatusBarCameraAndMicrophone(
+                  participant: participant,
+                  isCompact: isCompact,
+                ),
               ],
             ),
           ),
@@ -1028,12 +1062,10 @@ class UserPhoto extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Positioned(
-      child: Center(
-        child: CircleAvatar(
-          radius: isCompact ? 25 : 40,
-          backgroundImage: NetworkImage(photoUrl),
-        ),
+    return Center(
+      child: CircleAvatar(
+        radius: isCompact ? 30 : 40,
+        backgroundImage: NetworkImage(photoUrl),
       ),
     );
   }
@@ -1098,8 +1130,10 @@ class BottomStatusBarCameraAndMicrophone extends StatelessWidget {
   const BottomStatusBarCameraAndMicrophone({
     super.key,
     required this.participant,
+    required this.isCompact,
   });
   final Participant participant;
+  final bool isCompact;
   @override
   Widget build(BuildContext context) {
     final hasVideo = context.select<VCSBloc, bool>(
@@ -1125,12 +1159,12 @@ class BottomStatusBarCameraAndMicrophone extends StatelessWidget {
             Icon(
               hasVideo ? Icons.videocam_outlined : Icons.videocam_off_outlined,
               color: Colors.white,
-              size: 16,
+              size: isCompact ? 12 : 15,
             ),
             Icon(
               hasAudio ? Icons.mic_none_outlined : Icons.mic_off_outlined,
               color: Colors.white,
-              size: 16,
+              size: isCompact ? 12 : 15,
             ),
           ],
         ),

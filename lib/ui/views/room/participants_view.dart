@@ -1,3 +1,4 @@
+import 'package:clipboard/clipboard.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -67,20 +68,22 @@ class ParticipantsView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Список участников звонка (ограничен по высоте)
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight:
-                  MediaQuery.sizeOf(context).height *
-                  0.4, // Список занимает максимум 40% экрана
-            ),
-            child: ListView.builder(
-              controller: scrollController,
-              shrinkWrap: true,
-              itemCount: count,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: ParticipantWidget(participant: participants[index]),
+          // Список участников звонка
+          Expanded(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight:
+                    MediaQuery.sizeOf(context).height *
+                    0.4, // Список занимает максимум 40% экрана
+              ),
+              child: ListView.builder(
+                controller: scrollController,
+                shrinkWrap: true,
+                itemCount: count,
+                itemBuilder: (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: ParticipantWidget(participant: participants[index]),
+                ),
               ),
             ),
           ),
@@ -90,31 +93,7 @@ class ParticipantsView extends StatelessWidget {
           Row(
             children: [
               // Кнопка cкопировать ссылку
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.link_rounded,
-                    size: 18,
-                    color: Colors.black87,
-                  ),
-                  label: const Text(
-                    'Ссылка',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: BorderSide(color: Colors.grey.shade400),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
+              const LinkButton(),
               const SizedBox(width: 12),
 
               // Кнопка пригласить контакты
@@ -172,6 +151,51 @@ class ParticipantsView extends StatelessWidget {
           ),
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+}
+
+class LinkButton extends StatelessWidget {
+  const LinkButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          try {
+            await FlutterClipboard.copy(
+              'strife://room?id=${context.read<VCSBloc>().roomId!}',
+            );
+            if (!context.mounted) return;
+            AppNotifications.showInfo(
+              context,
+              'Ссылка для подключения скоприрована',
+            );
+          } catch (e) {
+            AppNotifications.showError(
+              context,
+              'Не удалось получить ссылку: ${e.toString()}',
+            );
+          }
+        },
+        icon: const Icon(Icons.link_rounded, size: 18, color: Colors.black87),
+        label: const Text(
+          'Ссылка',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          side: BorderSide(color: Colors.grey.shade400),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       ),
     );
   }
@@ -381,79 +405,97 @@ class _InviteContactSheetState extends State<InviteContactSheet> {
             ),
             const SizedBox(height: 24),
 
-            ElevatedButton(
-              onPressed: isLoading || _selectedUserIds.isEmpty
-                  ? null // Блокируем кнопку, если идет загрузка или никто не выбран
-                  : () {
-                      final senderId = widget.user.uid;
-                      final senderName = widget.user.displayName ?? 'User';
-                      final senderPhotoUrl = widget.user.photoURL ?? '';
-
-                      // Рассылаем уведомления выбранным контактам
-                      final notificationRepository = context
-                          .read<NotificationRepository>();
-                      for (var id in _selectedUserIds) {
-                        final contactData = contacts.firstWhere(
-                          (c) => c['id'] == id,
-                        );
-
-                        final Map<String, Map<String, dynamic>>
-                        participantsInfo = {
-                          widget.user.uid: {
-                            'displayName': widget.user.displayName,
-                            'photoUrl': widget.user.photoURL,
-                          },
-                          id: {
-                            'displayName': contactData['displayName'],
-                            'photoUrl': contactData['photoUrl'],
-                          },
-                        };
-
-                        notificationRepository.sendCallRequest(
-                          recipientId: id,
-                          roomId: widget.roomId,
-                          senderId: senderId,
-                          senderPhotoUrl: senderPhotoUrl,
-                          senderName: senderName,
-                          participantsInfo: participantsInfo,
-                        );
-                      }
-
-                      AppNotifications.showSuccess(
-                        context,
-                        'Приглашения отправлены',
-                      );
-                      Navigator.pop(context);
-                    },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text(
-                      'Пригласить',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+            InviteButton(
+              isLoading: isLoading,
+              selectedUserIds: _selectedUserIds,
+              widget: widget,
+              contacts: contacts,
             ),
             const SizedBox(height: 32),
           ],
         ),
       ),
+    );
+  }
+}
+
+class InviteButton extends StatelessWidget {
+  const InviteButton({
+    super.key,
+    required this.isLoading,
+    required Set<String> selectedUserIds,
+    required this.widget,
+    required this.contacts,
+  }) : _selectedUserIds = selectedUserIds;
+
+  final bool isLoading;
+  final Set<String> _selectedUserIds;
+  final InviteContactSheet widget;
+  final List<Map<String, dynamic>> contacts;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: isLoading || _selectedUserIds.isEmpty
+          ? null
+          : () {
+              final senderId = widget.user.uid;
+              final senderName = widget.user.displayName ?? 'User';
+              final senderPhotoUrl = widget.user.photoURL ?? '';
+
+              // Рассылаем уведомления выбранным контактам
+              final notificationRepository = context
+                  .read<NotificationRepository>();
+              for (var id in _selectedUserIds) {
+                final contactData = contacts.firstWhere((c) => c['id'] == id);
+
+                final Map<String, Map<String, dynamic>> participantsInfo = {
+                  widget.user.uid: {
+                    'displayName': widget.user.displayName,
+                    'photoUrl': widget.user.photoURL,
+                  },
+                  id: {
+                    'displayName': contactData['displayName'],
+                    'photoUrl': contactData['photoUrl'],
+                  },
+                };
+
+                notificationRepository.sendCallRequest(
+                  recipientId: id,
+                  roomId: widget.roomId,
+                  senderId: senderId,
+                  senderPhotoUrl: senderPhotoUrl,
+                  senderName: senderName,
+                  participantsInfo: participantsInfo,
+                );
+              }
+
+              AppNotifications.showSuccess(context, 'Приглашения отправлены');
+              Navigator.pop(context);
+            },
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: isLoading
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            )
+          : Text(
+              _selectedUserIds.isNotEmpty
+                  ? 'Пригласить (${_selectedUserIds.length})'
+                  : 'Пригласить',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
     );
   }
 }
