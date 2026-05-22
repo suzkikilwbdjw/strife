@@ -242,7 +242,9 @@ class CallsHistory extends StatelessWidget {
 
         // Затем состояние ожидания
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
+          );
         }
 
         // Проверяем наличие данных

@@ -51,7 +51,9 @@ class _ChatsViewState extends State<ChatsView>
         ),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
+            );
           }
 
           final chats = snapshot.data ?? [];

@@ -29,7 +29,9 @@ class _ProfileViewState extends State<ProfileView>
         builder: (context, snapshot) {
           // Пока данные загружаются
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
+            );
           }
 
           // Если есть ошибка или нет пользователя
@@ -69,7 +71,7 @@ class _ProfileViewState extends State<ProfileView>
                     _buildSectionTitle('Security & Settings'),
                     _buildMenuItem(
                       'Изменить имя пользователя',
-                      icon: Icons.person_outlined,
+                      icon: Icon(Icons.person_outlined, color: Colors.black),
                       onTap: () {
                         showModalBottomSheet(
                           context: context,
@@ -105,7 +107,7 @@ class _ProfileViewState extends State<ProfileView>
 
                     _buildMenuItem(
                       'Сменить пароль',
-                      icon: Icons.lock_outline,
+                      icon: Icon(Icons.lock_outline, color: Colors.black),
                       onTap: () {
                         showModalBottomSheet(
                           context: context,
@@ -143,27 +145,115 @@ class _ProfileViewState extends State<ProfileView>
                     ),
 
                     _buildMenuItem(
-                      'Выйти из аккаунта...',
-                      icon: Icons.logout_outlined,
+                      'Выйти из аккаунта',
+                      icon: Icon(
+                        Icons.logout_outlined,
+                        color: Colors.redAccent,
+                      ),
+                      colorTitle: Colors.redAccent,
                       isLast: true,
                       onTap: () async {
-                        showDialog(
+                        final bool? isConfirm = await showDialog<bool>(
                           context: context,
-                          barrierDismissible: false,
-                          builder: (_) =>
-                              const Center(child: CircularProgressIndicator()),
+                          builder: (dialogContext) => AlertDialog(
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            contentPadding: const EdgeInsets.only(
+                              top: 20,
+                              left: 24,
+                              right: 24,
+                              bottom: 12,
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Выход из аккаунта',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Вы действительно хотите выйти из аккаунта?',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black54,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Кнопка выйти из аккаунта
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.redAccent,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  onPressed: () async {
+                                    Navigator.pop(dialogContext, true);
+                                  },
+                                  child: const Text(
+                                    'Выйти',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+
+                                // Кнопка oтмена
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(dialogContext, false),
+                                  child: const Text(
+                                    'Отмена',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         );
-                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        if (isConfirm == true) {
+                          if (!context.mounted) return;
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (dialogContext) => const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFFB91ED0),
+                              ),
+                            ),
+                          );
 
-                        await context.read<UserRepository>().goOffline(uid!);
+                          final uid = FirebaseAuth.instance.currentUser?.uid;
+                          if (uid == null) return;
 
-                        if (!context.mounted) return;
+                          if (!context.mounted) return;
+                          await context.read<UserRepository>().goOffline(uid);
 
-                        await context.read<AuthRepository>().logout();
+                          if (!context.mounted) return;
+                          await context.read<AuthRepository>().logout();
 
-                        if (!context.mounted) return;
-
-                        Navigator.of(context).pop();
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                        }
                       },
                     ),
 
@@ -208,7 +298,8 @@ class _ProfileViewState extends State<ProfileView>
   // Вспомогательный виджет для пунктов меню
   Widget _buildMenuItem(
     String title, {
-    IconData? icon,
+    Color? colorTitle,
+    Icon? icon,
     Widget? trailing,
     bool isLast = false,
     VoidCallback? onTap,
@@ -216,8 +307,11 @@ class _ProfileViewState extends State<ProfileView>
     return Column(
       children: [
         ListTile(
-          leading: icon != null ? Icon(icon, color: Colors.black) : null,
-          title: Text(title, style: const TextStyle(fontSize: 16)),
+          leading: icon,
+          title: Text(
+            title,
+            style: TextStyle(fontSize: 16, color: colorTitle ?? Colors.black),
+          ),
           trailing: trailing,
           onTap: onTap,
         ),

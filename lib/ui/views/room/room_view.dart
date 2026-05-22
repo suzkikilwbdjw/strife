@@ -52,7 +52,7 @@ class RoomView extends StatelessWidget {
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) => p.isReconnecting != c.isReconnecting,
           listener: (context, state) {
-            if (state.isReconnecting) {
+            if (state.isReconnecting && state.isConnected) {
               showDialog(
                 context: context,
                 useRootNavigator: true,
@@ -267,7 +267,6 @@ class FullVideoCallView extends StatelessWidget {
         BlocBuilder<VCSBloc, VCSState>(
           builder: (context, state) {
             if (state.isConnected) return const SizedBox.shrink();
-
             return Container(
               color: Colors.black.withValues(alpha: 0.7),
               child: const Center(

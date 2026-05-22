@@ -210,8 +210,8 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     try {
       if (_room != null) {
         await _listener?.dispose();
-        await _room!.disconnect();
-        await _room!.dispose();
+        await _room?.disconnect();
+        await _room?.dispose();
       }
 
       emit(state.copyWith(error: null));
@@ -219,10 +219,10 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
       // Создаем экземпляр комнаты
       _room = Room(
         roomOptions: const RoomOptions(
-          adaptiveStream: true,
+          adaptiveStream: false,
           dynacast: true,
           defaultVideoPublishOptions: VideoPublishOptions(
-            videoCodec: 'h264',
+            videoCodec: 'v8',
             simulcast: true,
             videoEncoding: VideoEncoding(
               maxFramerate: 30,
@@ -232,7 +232,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
         ),
       );
 
-      _listener = _room!.createListener();
+      _listener = _room?.createListener();
       _setupRoomListeners(); // Настраиваем подписки LiveKit
 
       final data = await _vcsRepository.fetchToken(
@@ -243,12 +243,12 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
       );
 
       // Подключаемся к комнате
-      await _room!.connect(data['serverURL'], data['participantToken']);
+      await _room?.connect(data['serverURL'], data['participantToken']);
 
       add(RoomDataChanged());
       emit(state.copyWith(isConnected: true));
 
-      roomId = _room!.name;
+      roomId = _room?.name;
     } catch (e) {
       rethrow;
     }
@@ -292,7 +292,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   ) async {
     final newValue = !state.isCameraEnabled;
 
-    await _room!.localParticipant?.setCameraEnabled(
+    await _room?.localParticipant?.setCameraEnabled(
       newValue,
       cameraCaptureOptions: CameraCaptureOptions(
         params: VideoParametersPresets.h1080_169,
@@ -307,7 +307,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     final trackPub =
-        _room!.localParticipant?.videoTrackPublications.firstOrNull;
+        _room?.localParticipant?.videoTrackPublications.firstOrNull;
     final track = trackPub?.track;
 
     if (track is LocalVideoTrack) {

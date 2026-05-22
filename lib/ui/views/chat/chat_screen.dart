@@ -357,7 +357,9 @@ class ListMessages extends StatelessWidget {
       child: BlocBuilder<ChatBloc, ChatState>(
         builder: (context, state) {
           if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
+            );
           }
 
           if (state.messages.isEmpty) {
