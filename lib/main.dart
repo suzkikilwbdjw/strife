@@ -82,6 +82,7 @@ Future<void> main() async {
           BlocProvider(
             create: (context) => MeetingsBloc(
               notificationRepository: context.read<NotificationRepository>(),
+              userRepository: context.read<UserRepository>(),
             ),
           ),
           BlocProvider(

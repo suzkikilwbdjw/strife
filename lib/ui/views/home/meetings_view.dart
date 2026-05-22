@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/meetings/meetings_bloc.dart';
@@ -27,6 +26,15 @@ class _MeetingsViewState extends State<MeetingsView>
   bool get wantKeepAlive => true;
 
   @override
+  void initState() {
+    super.initState();
+    context.read<MeetingsBloc>().add(
+      LoadMeetingsRequested(userId: FirebaseAuth.instance.currentUser!.uid),
+    );
+    context.read<MeetingsBloc>().add(SearchMeetingsRequested(query: ''));
+  }
+
+  @override
   Widget build(BuildContext context) {
     super.build(context);
 
@@ -46,29 +54,9 @@ class _MeetingsViewState extends State<MeetingsView>
         title: MeetingsAppBar(),
       ),
 
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: context.read<UserRepository>().getMettingsStream(
-          FirebaseAuth.instance.currentUser!.uid,
-        ),
-        builder: (context, snapshot) {
-          // Обработка ошибки
-          if (snapshot.hasError) {
-            return Center(child: Text('Ошибка: ${snapshot.error}'));
-          }
-
-          // Затем состояние ожидания
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
-            );
-          }
-
-          // Проверяем наличие данных
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('У вас пока нет активных встреч'));
-          }
-
-          final meetings = snapshot.data!;
+      body: BlocBuilder<MeetingsBloc, MeetingsState>(
+        builder: (context, state) {
+          final meetings = state.filteredMeetings;
 
           return ListView.builder(
             padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 12.0),
@@ -136,7 +124,9 @@ class MeetingsAppBar extends StatelessWidget {
           style: const TextStyle(color: Colors.white),
           cursorColor: Colors.white, // Белый курсор
           onChanged: (value) {
-            // context.read<MeetingsBloc>().add(SearchMeetingsRequested(query: value));
+            context.read<MeetingsBloc>().add(
+              SearchMeetingsRequested(query: value),
+            );
           },
           decoration: InputDecoration(
             labelText: 'Поиск встреч',
