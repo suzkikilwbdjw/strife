@@ -21,6 +21,33 @@ class RoomView extends StatelessWidget {
 
     return MultiBlocListener(
       listeners: [
+        // Слушатель подключения участника
+        BlocListener<VCSBloc, VCSState>(
+          listenWhen: (previous, current) =>
+              previous.participantJoin != current.participantJoin,
+          listener: (context, state) {
+            if (state.participantJoin != null) {
+              AppNotifications.showInfo(
+                context,
+                'Присоединился новый участник ${state.participantJoin!.name}',
+              );
+            }
+          },
+        ),
+        // Слушатель выходы участника участника
+        BlocListener<VCSBloc, VCSState>(
+          listenWhen: (previous, current) =>
+              previous.participantLeft != current.participantLeft,
+          listener: (context, state) {
+            if (state.participantLeft != null) {
+              AppNotifications.showInfo(
+                context,
+                'Участник ${state.participantJoin!.name} вышел',
+              );
+            }
+          },
+        ),
+
         // Слушатель переподключения
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) => p.isReconnecting != c.isReconnecting,
@@ -33,11 +60,18 @@ class RoomView extends StatelessWidget {
                 builder: (_) => const PopScope(
                   canPop: false,
                   child: AlertDialog(
-                    content: Row(
+                    backgroundColor: Colors.transparent,
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(),
-                        SizedBox(width: 16),
-                        Text('Переподключение...'),
+                        CircularProgressIndicator(color: Colors.white),
+                        SizedBox(height: 16),
+                        Text(
+                          'Переподключение...',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                   ),
@@ -245,6 +279,8 @@ class FullVideoCallView extends StatelessWidget {
                     Text(
                       'Подключение...',
                       style: TextStyle(color: Colors.white, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

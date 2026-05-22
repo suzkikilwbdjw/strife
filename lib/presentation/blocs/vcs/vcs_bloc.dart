@@ -47,6 +47,12 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     on<RoomTerminatedByHostRequested>(_onRoomTerminatedByHost);
     on<RoomTerminateRequested>(_onRoomTerminate);
     on<AddParticipantRequested>(_onAddParticipantInRoomToDB);
+    on<ParticipantJoinRequested>((event, emit) {
+      emit(state.copyWith(participantJoin: event.participantJoin));
+    });
+    on<ParticipantLeftRequested>((event, emit) {
+      emit(state.copyWith(participantLeft: event.participantLeft));
+    });
 
     // Внутренние
     on<RoomDataChanged>((event, emit) {
@@ -391,10 +397,12 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
             participantId: event.participant.identity,
           ),
         );
+        add(ParticipantJoinRequested(participantJoin: event.participant));
       })
       // Участник вышел
       ..on<ParticipantDisconnectedEvent>((event) {
         add(RoomDataChanged());
+        add(ParticipantLeftRequested(participantLeft: event.participant));
       })
       // Переподключение началось
       ..on<RoomReconnectingEvent>((event) {

@@ -113,6 +113,22 @@ class TransferHostRequested extends VCSEvent {
   List<Object?> get props => [participantIdentity];
 }
 
+class ParticipantJoinRequested extends VCSEvent {
+  final Participant participantJoin;
+
+  const ParticipantJoinRequested({required this.participantJoin});
+  @override
+  List<Object?> get props => [participantJoin];
+}
+
+class ParticipantLeftRequested extends VCSEvent {
+  final Participant participantLeft;
+
+  const ParticipantLeftRequested({required this.participantLeft});
+  @override
+  List<Object?> get props => [participantLeft];
+}
+
 class SyncHardwareStatus extends VCSEvent {
   final bool? isMicEnabled;
   final bool? isCamEnabled;
