@@ -10,22 +10,33 @@ class NotificationRepository {
   // Метод для отправки запроса в контакты
   Future<void> sendFriendRequest({
     required String senderId,
-    required String recipientEmail,
+    String? recipientEmail,
+    String? recipientId,
     required String senderName,
     required String senderPhotoUrl,
   }) async {
     try {
-      //  Ищем ID получателя
-      final userSnap = await _firestore
-          .collection('users')
-          .where('email', isEqualTo: recipientEmail)
-          .get();
+      String? targetRecipientId = recipientId;
 
-      if (userSnap.docs.isEmpty) {
-        throw Exception('Пользователь с таким email не найден');
+      if (targetRecipientId == null) {
+        if (recipientEmail == null) {
+          throw ArgumentError(
+            'Необходимо указать либо recipientId, либо recipientEmail',
+          );
+        }
+
+        //  Ищем ID получателя
+        final userSnap = await _firestore
+            .collection('users')
+            .where('email', isEqualTo: recipientEmail)
+            .get();
+
+        if (userSnap.docs.isEmpty) {
+          throw Exception('Пользователь с таким email не найден');
+        }
+
+        targetRecipientId = userSnap.docs.first.id;
       }
-
-      final recipientId = userSnap.docs.first.id;
 
       // Делаем запрос на бэкэнд
       final response = await http.post(
@@ -33,7 +44,7 @@ class NotificationRepository {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'senderId': senderId,
-          'recipientId': recipientId,
+          'recipientId': targetRecipientId,
           'senderName': senderName,
           'senderPhotoUrl': senderPhotoUrl,
         }),

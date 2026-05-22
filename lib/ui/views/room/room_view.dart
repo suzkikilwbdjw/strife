@@ -26,7 +26,7 @@ class RoomView extends StatelessWidget {
           listenWhen: (previous, current) =>
               previous.participantJoin != current.participantJoin,
           listener: (context, state) {
-            if (state.participantJoin != null) {
+            if (state.participantJoin != null && !state.isReconnecting) {
               AppNotifications.showInfo(
                 context,
                 'Присоединился новый участник ${state.participantJoin!.name}',
@@ -39,10 +39,10 @@ class RoomView extends StatelessWidget {
           listenWhen: (previous, current) =>
               previous.participantLeft != current.participantLeft,
           listener: (context, state) {
-            if (state.participantLeft != null) {
+            if (state.participantLeft != null && !state.isReconnecting) {
               AppNotifications.showInfo(
                 context,
-                'Участник ${state.participantJoin!.name} вышел',
+                'Участник ${state.participantLeft!.name} вышел',
               );
             }
           },

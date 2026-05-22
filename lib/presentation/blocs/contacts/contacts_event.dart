@@ -12,13 +12,15 @@ class ResetContactsStatusRequested extends ContactsEvent {}
 // Событие для отправки запроса в контакты
 class SendFriendRequestRequested extends ContactsEvent {
   final String senderId;
-  final String recipientEmail;
+  final String? recipientEmail;
+  final String? recipientId;
   final String senderName;
   final String senderPhotoUrl;
 
   const SendFriendRequestRequested({
     required this.senderId,
-    required this.recipientEmail,
+    this.recipientEmail,
+    this.recipientId,
     required this.senderName,
     required this.senderPhotoUrl,
   });
@@ -27,6 +29,7 @@ class SendFriendRequestRequested extends ContactsEvent {
   List<Object?> get props => [
     senderId,
     recipientEmail,
+    recipientId,
     senderName,
     senderPhotoUrl,
   ];
