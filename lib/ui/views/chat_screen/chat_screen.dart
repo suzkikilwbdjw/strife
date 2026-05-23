@@ -301,7 +301,7 @@ class InputField extends StatelessWidget {
                       if (text.isEmpty) return;
 
                       context.read<ChatBloc>().add(
-                        SendMessageRequest(textMessage: text),
+                        SendMessageRequested(textMessage: text),
                       );
 
                       _controller.clear();

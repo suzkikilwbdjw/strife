@@ -24,11 +24,10 @@ import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/home/home_bloc.dart';
 import 'package:strife/presentation/blocs/home/home_event.dart';
-import 'package:strife/presentation/blocs/meetings/meetings_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
 import 'package:strife/data/repositories/auth_repository.dart';
-import 'package:strife/ui/views/chat/chat_screen.dart';
+import 'package:strife/ui/views/chat_screen/chat_screen.dart';
 
 // Импорты экранов
 import 'package:strife/ui/views/auth/login_view.dart';
@@ -80,19 +79,10 @@ Future<void> main() async {
           ),
 
           BlocProvider(
-            create: (context) => MeetingsBloc(
-              notificationRepository: context.read<NotificationRepository>(),
-              userRepository: context.read<UserRepository>(),
-            ),
-          ),
-          BlocProvider(
             create: (context) =>
                 VCSBloc(vcsRepository: context.read<VCSRepository>()),
           ),
-          BlocProvider(
-            create: (context) => NavigationBloc(),
-            child: const HomeView(),
-          ),
+          BlocProvider(create: (context) => NavigationBloc()),
         ],
         child: const MyApp(),
       ),

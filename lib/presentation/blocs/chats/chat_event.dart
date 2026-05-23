@@ -17,6 +17,34 @@ class InitChat extends ChatEvent {
   List<Object> get props => [chatId];
 }
 
+//
+class InitChats extends ChatEvent {
+  final String userId;
+
+  const InitChats({required this.userId});
+
+  @override
+  List<Object?> get props => [userId];
+}
+
+class UpdateChats extends ChatEvent {
+  final List<Map<String, dynamic>> allChats;
+
+  const UpdateChats({required this.allChats});
+
+  @override
+  List<Object?> get props => [allChats];
+}
+
+class SearchChats extends ChatEvent {
+  final String searchQuery;
+
+  const SearchChats({required this.searchQuery});
+
+  @override
+  List<Object?> get props => [searchQuery];
+}
+
 // Событие для обновление сообщений
 class MessagesUpdated extends ChatEvent {
   final List<MessageModel> messages;
@@ -44,10 +72,10 @@ class SendMessage extends ChatEvent {
 }
 
 // Событие для отправки сообщений c уведомлениями
-class SendMessageRequest extends ChatEvent {
+class SendMessageRequested extends ChatEvent {
   final String textMessage;
 
-  const SendMessageRequest({required this.textMessage});
+  const SendMessageRequested({required this.textMessage});
 
   @override
   List<Object?> get props => [textMessage];

@@ -7,7 +7,7 @@ import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
-import 'package:strife/ui/views/chat/chat_screen.dart';
+import 'package:strife/ui/views/chat_screen/chat_screen.dart';
 import 'package:strife/ui/views/room/layout_coordinate.dart';
 import 'package:strife/ui/views/room/participants_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';

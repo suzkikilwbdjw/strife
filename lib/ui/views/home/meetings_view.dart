@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:strife/data/repositories/notification_repository.dart';
+import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/presentation/blocs/meetings/meetings_bloc.dart';
@@ -25,49 +27,68 @@ class _MeetingsViewState extends State<MeetingsView>
   @override
   bool get wantKeepAlive => true;
 
-  @override
-  void initState() {
-    super.initState();
-    context.read<MeetingsBloc>().add(
-      LoadMeetingsRequested(userId: FirebaseAuth.instance.currentUser!.uid),
-    );
-    context.read<MeetingsBloc>().add(SearchMeetingsRequested(query: ''));
-  }
+  final String userId = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 140,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: Theme.of(
-              context,
-            ).extension<GradientTheme>()!.mainGradient,
+    return BlocProvider(
+      create: (context) =>
+          MeetingsBloc(
+              notificationRepository: context.read<NotificationRepository>(),
+              userRepository: context.read<UserRepository>(),
+            )
+            ..add(LoadMeetingsRequested(userId: userId))
+            ..add(SearchMeetingsRequested(query: '')),
+      child: Scaffold(
+        appBar: AppBar(
+          toolbarHeight: 140,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: Theme.of(
+                context,
+              ).extension<GradientTheme>()!.mainGradient,
+            ),
           ),
+
+          title: MeetingsAppBar(),
         ),
 
-        title: MeetingsAppBar(),
-      ),
+        body: BlocBuilder<MeetingsBloc, MeetingsState>(
+          builder: (context, state) {
+            final meetings = state.filteredMeetings;
 
-      body: BlocBuilder<MeetingsBloc, MeetingsState>(
-        builder: (context, state) {
-          final meetings = state.filteredMeetings;
+            if (meetings.isEmpty) {
+              if (state.searchQuery.isNotEmpty) {
+                return const Center(
+                  child: Text(
+                    'Встречи не найдены',
+                    style: TextStyle(color: Colors.black45, fontSize: 15),
+                  ),
+                );
+              }
+              return const Center(
+                child: Text(
+                  'У вас пока нету встреч',
+                  style: TextStyle(color: Colors.black45, fontSize: 15),
+                ),
+              );
+            }
 
-          return ListView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 12.0),
-            itemCount: meetings.length,
-            itemBuilder: (context, index) {
-              final meeting = meetings[index];
+            return ListView.builder(
+              padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 12.0),
+              itemCount: meetings.length,
+              itemBuilder: (context, index) {
+                final meeting = meetings[index];
 
-              return MeetingCard(meetingInfo: meeting);
-            },
-          );
-        },
+                return MeetingCard(meetingInfo: meeting);
+              },
+            );
+          },
+        ),
       ),
     );
   }

@@ -249,7 +249,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
 
       roomId = _room?.name;
     } catch (e) {
-      rethrow;
+      emit(state.copyWith(error: e.toString()));
     }
   }
 

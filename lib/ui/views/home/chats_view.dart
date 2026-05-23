@@ -10,7 +10,7 @@ import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
 import 'package:strife/themes/gradient_theme.dart';
-import 'package:strife/ui/views/chat/chat_screen.dart';
+import 'package:strife/ui/views/chat_screen/chat_screen.dart';
 import 'package:strife/ui/widgets/contact_widget.dart';
 
 class ChatsView extends StatefulWidget {
@@ -25,87 +25,101 @@ class _ChatsViewState extends State<ChatsView>
   @override
   bool get wantKeepAlive => true;
 
+  final String userId = FirebaseAuth.instance.currentUser!.uid;
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Scaffold(
-      // Загловок страницы
-      appBar: AppBar(
-        toolbarHeight: 140,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: Theme.of(
-              context,
-            ).extension<GradientTheme>()!.mainGradient,
+    return BlocProvider(
+      create: (context) => ChatBloc(
+        chatRepository: context.read<ChatRepository>(),
+        userRepository: context.read<UserRepository>(),
+        notificationRepository: context.read<NotificationRepository>(),
+      )..add(InitChats(userId: userId)),
+      child: Scaffold(
+        // Загловок страницы
+        appBar: AppBar(
+          toolbarHeight: 140,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: Theme.of(
+                context,
+              ).extension<GradientTheme>()!.mainGradient,
+            ),
           ),
+
+          title: ChatAppBar(),
         ),
 
-        title: ChatAppBar(),
-      ),
+        body: BlocBuilder<ChatBloc, ChatState>(
+          builder: (context, state) {
+            final chats = state.filteredChats;
 
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: context.read<ChatRepository>().getAllMyChats(
-          FirebaseAuth.instance.currentUser!.uid,
-        ),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
-            );
-          }
-
-          final chats = snapshot.data ?? [];
-
-          if (chats.isEmpty) {
-            return const Center(child: Text('У вас пока нет активных чатов'));
-          }
-
-          return ListView.builder(
-            itemCount: chats.length,
-            itemBuilder: (context, index) {
-              //Данные чата
-              final chat = chats[index];
-
-              // Мой id
-              final myId = FirebaseAuth.instance.currentUser!.uid;
-
-              // Учасtника чата, list содеrжит только id
-              final participants = List<String>.from(
-                chat['participants'] ?? [],
-              );
-
-              // Находим ID собеседника
-              String partnerId;
-
-              if (participants.length > 1) {
-                partnerId = participants.firstWhere(
-                  (id) => id != myId,
-                  orElse: () => myId, // Если вдруг не нашли, берем себя
+            if (chats.isEmpty) {
+              if (state.searchQuery.isNotEmpty) {
+                return const Center(
+                  child: Text(
+                    'Чаты не найдены',
+                    style: TextStyle(color: Colors.black45, fontSize: 15),
+                  ),
                 );
-              } else {
-                partnerId = myId;
               }
-
-              // Достаем данные из мапы participantsInfo
-              final Map<String, dynamic> members =
-                  chat['participantsInfo'] ?? {};
-              final Map<String, dynamic> partnerData = members[partnerId] ?? {};
-
-              final String name = partnerData['displayName'];
-              final String? photo = partnerData['photoUrl'];
-
-              return UserInChatCard(
-                photo: photo,
-                name: name,
-                partnerId: partnerId,
-                chat: chat,
-                myId: myId,
+              return const Center(
+                child: Text(
+                  'У вас пока нет активных чатов',
+                  style: TextStyle(color: Colors.black45, fontSize: 15),
+                ),
               );
-            },
-          );
-        },
+            }
+
+            return ListView.builder(
+              itemCount: chats.length,
+              itemBuilder: (context, index) {
+                //Данные чата
+                final chat = chats[index];
+
+                // Мой id
+                final myId = FirebaseAuth.instance.currentUser!.uid;
+
+                // Учасtника чата, list содеrжит только id
+                final participants = List<String>.from(
+                  chat['participants'] ?? [],
+                );
+
+                // Находим ID собеседника
+                String partnerId;
+
+                if (participants.length > 1) {
+                  partnerId = participants.firstWhere(
+                    (id) => id != myId,
+                    orElse: () => myId, // Если вдруг не нашли, берем себя
+                  );
+                } else {
+                  partnerId = myId;
+                }
+
+                // Достаем данные из мапы participantsInfo
+                final Map<String, dynamic> participantsInfo =
+                    chat['participantsInfo'] ?? {};
+                final Map<String, dynamic> partnerData =
+                    participantsInfo[partnerId] ?? {};
+
+                final String name = partnerData['displayName'];
+                final String? photo = partnerData['photoUrl'];
+
+                return UserInChatCard(
+                  photo: photo,
+                  name: name,
+                  partnerId: partnerId,
+                  chat: chat,
+                  myId: myId,
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -409,6 +423,9 @@ class ChatAppBar extends StatelessWidget {
         // Поле поиска чатов
         TextField(
           style: const TextStyle(color: Colors.white),
+          onChanged: (searchQuery) {
+            context.read<ChatBloc>().add(SearchChats(searchQuery: searchQuery));
+          },
           decoration: InputDecoration(
             labelText: 'Поиск чатов',
             labelStyle: const TextStyle(color: Colors.white70),
