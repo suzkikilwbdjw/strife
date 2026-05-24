@@ -13,6 +13,8 @@ class GradientTheme extends ThemeExtension<GradientTheme> {
   @override
   GradientTheme lerp(ThemeExtension<GradientTheme>? other, double t) {
     if (other is! GradientTheme) return this;
-    return this;
+    return GradientTheme(
+      mainGradient: Gradient.lerp(mainGradient, other.mainGradient, t)!,
+    );
   }
 }

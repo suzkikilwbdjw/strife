@@ -195,6 +195,18 @@ class VCSRepository {
     }
   }
 
+  Stream<bool> watchRoomStatus(String roomId) {
+    return _firestore.collection('rooms').doc(roomId).snapshots().map((
+      snapshot,
+    ) {
+      if (!snapshot.exists) {
+        return true;
+      }
+      final data = snapshot.data();
+      return data?['status'] == 'completed';
+    });
+  }
+
   // Проверка на существовавние комнаты
   Future<bool> isRoomCompleted(String roomId) async {
     try {
@@ -206,7 +218,7 @@ class VCSRepository {
         return false;
       }
     } catch (e) {
-      return false;
+      rethrow;
     }
   }
 }

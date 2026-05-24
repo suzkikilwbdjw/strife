@@ -123,7 +123,9 @@ class MeetingsAppBar extends StatelessWidget {
               ),
               tooltip: 'Новая встреча',
               onPressed: () async {
-                await showModalBottomSheet(
+                final meetingsBloc = context.read<MeetingsBloc>();
+
+                showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
                   shape: const RoundedRectangleBorder(
@@ -131,7 +133,10 @@ class MeetingsAppBar extends StatelessWidget {
                       top: Radius.circular(24),
                     ),
                   ),
-                  builder: (context) => const NewMeetingSheet(),
+                  builder: (context) => BlocProvider.value(
+                    value: meetingsBloc,
+                    child: const NewMeetingSheet(),
+                  ),
                 );
               },
             ),
@@ -256,7 +261,8 @@ class MeetingCard extends StatelessWidget {
                       size: 24,
                     ),
                     onPressed: () async {
-                      await showModalBottomSheet(
+                      final meetingsBloc = context.read<MeetingsBloc>();
+                      showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,
                         shape: const RoundedRectangleBorder(
@@ -264,8 +270,10 @@ class MeetingCard extends StatelessWidget {
                             top: Radius.circular(24),
                           ),
                         ),
-                        builder: (context) =>
-                            NewMeetingSheet(initialMeeting: meetingInfo),
+                        builder: (_) => BlocProvider.value(
+                          value: meetingsBloc,
+                          child: NewMeetingSheet(initialMeeting: meetingInfo),
+                        ),
                       );
                     },
                   ),
@@ -353,6 +361,13 @@ class MeetingCard extends StatelessWidget {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () async {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(
+                      child: CircularProgressIndicator(color: brandColor),
+                    ),
+                  );
                   final roomId = meetingInfo['roomId'];
                   final bool exists = await context
                       .read<VCSRepository>()
@@ -373,6 +388,8 @@ class MeetingCard extends StatelessWidget {
                       ),
                     );
 
+                    Navigator.pop(context); // Закрываем crytilcy
+
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => BlocProvider.value(
@@ -382,6 +399,7 @@ class MeetingCard extends StatelessWidget {
                       ),
                     );
                   } else {
+                    Navigator.pop(context); // Закрываем crytilcy
                     AppNotifications.showError(
                       context,
                       'Эта комната конференции больше не существует',

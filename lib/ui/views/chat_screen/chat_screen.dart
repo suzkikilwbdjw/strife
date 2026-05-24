@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:strife/data/models/message_model.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
@@ -10,14 +9,12 @@ import 'package:strife/ui/views/room/room_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
 import '../../widgets/message_bubble.dart';
 
-class ChatScreen extends StatelessWidget {
+class ChatScreen extends StatefulWidget {
   final String chatId;
   final String currentUserId;
   final ScrollController? controller;
 
-  final TextEditingController _controller = TextEditingController();
-
-  ChatScreen({
+  const ChatScreen({
     required this.chatId,
     required this.currentUserId,
     this.controller,
@@ -25,16 +22,29 @@ class ChatScreen extends StatelessWidget {
   });
 
   @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    super.dispose();
+    _controller.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     const brandColor = Color(0xFFB91ED0);
-    final bool isPrivateChat = chatId.contains('_');
+    final bool isPrivateChat = widget.chatId.contains('_');
 
     String? partnerId;
     if (isPrivateChat) {
-      final parts = chatId.split('_');
+      final parts = widget.chatId.split('_');
       partnerId = parts.firstWhere(
-        (id) => id != currentUserId,
-        orElse: () => currentUserId,
+        (id) => id != widget.currentUserId,
+        orElse: () => widget.currentUserId,
       );
     }
 
@@ -100,16 +110,16 @@ class ChatScreen extends StatelessWidget {
         children: [
           // Список сообщений
           ListMessages(
-            controller: controller,
-            currentUserId: currentUserId,
+            controller: widget.controller,
+            currentUserId: widget.currentUserId,
             isPrivateChat: isPrivateChat,
           ),
 
           // Поле ввода
           InputField(
             controller: _controller,
-            chatId: chatId,
-            currentUserId: currentUserId,
+            chatId: widget.chatId,
+            currentUserId: widget.currentUserId,
             isPrivateChat: isPrivateChat,
           ),
         ],
@@ -389,7 +399,9 @@ class ListMessages extends StatelessWidget {
               if (type == 'call' && roomId != null) {
                 // Рисуем плашку звонка для всех
                 return InviteInRoomCard(
-                  message: message,
+                  key: ValueKey(message.id),
+                  roomId: roomId,
+                  senderId: msgData['senderId'],
                   currentUserId: currentUserId,
                 );
               }
@@ -441,27 +453,29 @@ class ListMessages extends StatelessWidget {
 }
 
 class InviteInRoomCard extends StatelessWidget {
-  final MessageModel message;
+  final String senderId;
+  final String roomId;
   final String currentUserId;
 
   const InviteInRoomCard({
     super.key,
-    required this.message,
     required this.currentUserId,
+    required this.senderId,
+    required this.roomId,
   });
 
   @override
   Widget build(BuildContext context) {
     const brandColor = Color(0xFFB91ED0);
-    final dataMessage = message.toFirestore();
-    final String? roomId = dataMessage['roomId'];
 
-    if (roomId == null || roomId.isEmpty) return const SizedBox.shrink();
+    if (roomId.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
-    final bool isMe = message.senderId == currentUserId;
+    final bool isMe = senderId == currentUserId;
 
-    return FutureBuilder<bool>(
-      future: context.read<VCSRepository>().isRoomCompleted(roomId),
+    return StreamBuilder<bool>(
+      stream: context.read<VCSRepository>().watchRoomStatus(roomId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(
@@ -590,7 +604,7 @@ class InviteInRoomCard extends StatelessWidget {
                             .checkRoomExists(roomId);
 
                         if (!context.mounted) return;
-                        Navigator.of(context).pop();
+                        Navigator.popUntil(context, (route) => !route.isFirst);
 
                         if (exists) {
                           final User user = FirebaseAuth.instance.currentUser!;
@@ -615,6 +629,8 @@ class InviteInRoomCard extends StatelessWidget {
                             ),
                           );
                         } else {
+                          Navigator.pop(context);
+
                           AppNotifications.showError(
                             context,
                             'Эта комната больше не доступна на сервере',

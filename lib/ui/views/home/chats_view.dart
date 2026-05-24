@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -125,22 +126,6 @@ class _ChatsViewState extends State<ChatsView>
   }
 }
 
-void _navigateToChat(BuildContext context, String chatId, String myId) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => BlocProvider(
-        create: (context) => ChatBloc(
-          chatRepository: context.read<ChatRepository>(),
-          userRepository: context.read<UserRepository>(),
-          notificationRepository: context.read<NotificationRepository>(),
-        )..add(InitChat(chatId)),
-        child: ChatScreen(chatId: chatId, currentUserId: myId),
-      ),
-    ),
-  );
-}
-
 class UserInChatCard extends StatelessWidget {
   const UserInChatCard({
     super.key,
@@ -178,28 +163,41 @@ class UserInChatCard extends StatelessWidget {
     final bool isReadByPartner =
         isMyMessage && lastMessageReadBy.contains(partnerId);
 
+    final chatRepo = context.read<ChatRepository>();
+    final userRepo = context.read<UserRepository>();
+    final notifRepo = context.read<NotificationRepository>();
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0),
-      child: Ink(
-        decoration: BoxDecoration(
-          color: isUnreadForMe
-              ? brandColor.withValues(alpha: 0.06)
-              : const Color(0xFFF5F5F7),
+      child: OpenContainer(
+        transitionDuration: const Duration(milliseconds: 500),
+        transitionType: ContainerTransitionType.fadeThrough,
+        openElevation: 0,
+        closedElevation: 0,
+        closedShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isUnreadForMe
-                ? brandColor.withValues(alpha: 0.15)
-                : brandColor.withValues(alpha: 0.03),
-            width: 1,
-          ),
         ),
-        child: InkWell(
+        openShape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.zero,
+        ),
+        closedColor: isUnreadForMe
+            ? brandColor.withValues(alpha: 0.06)
+            : const Color(0xFFF5F5F7),
+        openColor: Theme.of(context).scaffoldBackgroundColor,
+
+        openBuilder: (context, _) => BlocProvider(
+          create: (_) => ChatBloc(
+            chatRepository: chatRepo,
+            userRepository: userRepo,
+            notificationRepository: notifRepo,
+          )..add(InitChat(chat['id'])),
+          child: ChatScreen(chatId: chat['id'], currentUserId: myId),
+        ),
+
+        closedBuilder: (context, openContainerAction) => InkWell(
           borderRadius: BorderRadius.circular(14),
           splashColor: brandColor.withValues(alpha: 0.1),
           highlightColor: brandColor.withValues(alpha: 0.04),
-          onTap: () {
-            _navigateToChat(context, chat['id'], myId);
-          },
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 12.0,
@@ -207,7 +205,6 @@ class UserInChatCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Аватарка и онлайн статус
                 Stack(
                   children: [
                     CircleAvatar(
@@ -402,6 +399,7 @@ class ChatAppBar extends StatelessWidget {
                 size: 28.0,
               ),
               onPressed: () {
+                final chatBloc = context.read<ChatBloc>();
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
@@ -410,8 +408,12 @@ class ChatAppBar extends StatelessWidget {
                       top: Radius.circular(24),
                     ),
                   ),
-                  builder: (context) =>
-                      SingleChildScrollView(child: const NewChatSheet()),
+                  builder: (context) => SingleChildScrollView(
+                    child: BlocProvider.value(
+                      value: chatBloc,
+                      child: const NewChatSheet(),
+                    ),
+                  ),
                 );
               },
             ),
@@ -560,11 +562,14 @@ class ContactListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Извлекаем репозитории на самом верхнем уровне виджета, где контекст 100% валидный
+    final chatRepo = context.read<ChatRepository>();
+    final userRepo = context.read<UserRepository>();
+    final notifRepo = context.read<NotificationRepository>();
+
     return ConstrainedBox(
       constraints: BoxConstraints(
-        maxHeight:
-            MediaQuery.sizeOf(context).height *
-            0.4, // Список занимает максимум 40% экрана
+        maxHeight: MediaQuery.sizeOf(context).height * 0.4,
       ),
       child: contacts.isEmpty
           ? const SizedBox(
@@ -581,76 +586,107 @@ class ContactListWidget extends StatelessWidget {
               itemCount: contacts.length,
               itemBuilder: (context, index) {
                 final contact = contacts[index];
+
+                final containerKey = GlobalKey<OpenContainerState>();
+
+                String? generatedChatId;
+                final currentUser = FirebaseAuth.instance.currentUser;
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFB91ED0).withValues(alpha: 0.04),
+                  child: OpenContainer(
+                    key: containerKey,
+                    tappable: false,
+                    transitionType: ContainerTransitionType.fadeThrough,
+                    transitionDuration: const Duration(milliseconds: 500),
+                    openElevation: 0,
+                    closedElevation: 0,
+                    closedShape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: const Color(0xFFB91ED0).withValues(alpha: 0.06),
-                        width: 1,
+                    ),
+                    openShape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
+                    ),
+                    closedColor: const Color(
+                      0xFFB91ED0,
+                    ).withValues(alpha: 0.04),
+                    openColor: Theme.of(context).scaffoldBackgroundColor,
+
+                    openBuilder: (context, _) => BlocProvider(
+                      create: (_) => ChatBloc(
+                        chatRepository: chatRepo,
+                        userRepository: userRepo,
+                        notificationRepository: notifRepo,
+                      )..add(InitChat(generatedChatId!)),
+                      child: ChatScreen(
+                        chatId: generatedChatId!,
+                        currentUserId: currentUser!.uid,
                       ),
                     ),
 
-                    // Стрелка
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      splashColor: const Color(
-                        0xFFB91ED0,
-                      ).withValues(alpha: 0.1),
-                      highlightColor: const Color(
-                        0xFFB91ED0,
-                      ).withValues(alpha: 0.04),
-                      onTap: () async {
-                        // Получаем текущего пользователя
-                        final currentUser = FirebaseAuth.instance.currentUser;
-                        if (currentUser == null) return;
-
-                        // Получаем наш айди
-                        final myId = currentUser.uid;
-                        // ID контакта, на которого нажали
-                        final partnerId = contact['id'];
-
-                        // Собираем Map с информацией о себе и о собеседнике
-                        final Map<String, Map<String, String>>
-                        participantsInfo = {
-                          myId: {
-                            'displayName': currentUser.displayName!,
-                            'photoUrl': currentUser.photoURL!,
-                          },
-                          partnerId: {
-                            'displayName': contact['displayName'],
-                            'photoUrl': contact['photoUrl'],
-                          },
-                        };
-
-                        // Создаем или получаем айди чата личного с контактом
-                        final chatId = await context
-                            .read<ChatRepository>()
-                            .getOrCreatePrivateChatId(
-                              myId,
-                              contact['id'],
-                              participantsInfo,
-                            );
-
-                        if (!context.mounted) return;
-                        Navigator.pop(context);
-
-                        // Переходим на страницу самого чата
-                        _navigateToChat(context, chatId, myId);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8.0,
-                          vertical: 2.0,
+                    closedBuilder: (context, openContainer) => Ink(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: const Color(
+                            0xFFB91ED0,
+                          ).withValues(alpha: 0.06),
+                          width: 1,
                         ),
-                        child: ContactWidget(
-                          userData: contact,
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 14,
-                            color: Colors.black26,
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        splashColor: const Color(
+                          0xFFB91ED0,
+                        ).withValues(alpha: 0.1),
+                        highlightColor: const Color(
+                          0xFFB91ED0,
+                        ).withValues(alpha: 0.04),
+                        onTap: () async {
+                          if (currentUser == null) return;
+
+                          final myId = currentUser.uid;
+                          final partnerId = contact['id'];
+
+                          final Map<String, Map<String, String>>
+                          participantsInfo = {
+                            myId: {
+                              'displayName': currentUser.displayName ?? 'Я',
+                              'photoUrl': currentUser.photoURL ?? '',
+                            },
+                            partnerId: {
+                              'displayName': contact['displayName'] ?? '',
+                              'photoUrl': contact['photoUrl'] ?? '',
+                            },
+                          };
+
+                          final chatId = await chatRepo
+                              .getOrCreatePrivateChatId(
+                                myId,
+                                partnerId,
+                                participantsInfo,
+                              );
+
+                          generatedChatId = chatId;
+
+                          if (!context.mounted) return;
+
+                          Navigator.pop(context);
+
+                          containerKey.currentState?.openContainer();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 2.0,
+                          ),
+                          child: ContactWidget(
+                            userData: contact,
+                            trailing: const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 14,
+                              color: Colors.black26,
+                            ),
                           ),
                         ),
                       ),

@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -80,8 +81,16 @@ class _CallsViewState extends State<CallsView>
                     ),
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationsView(),
+                        PageRouteBuilder(
+                          pageBuilder: (_, _, _) => const NotificationsView(),
+                          transitionsBuilder: (_, animation, _, child) =>
+                              FadeScaleTransition(
+                                animation: CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.fastOutSlowIn,
+                                ),
+                                child: child,
+                              ),
                         ),
                       );
                     },
@@ -249,7 +258,12 @@ class CallsHistory extends StatelessWidget {
 
         // Проверяем наличие данных
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('У вас пока нет истории звонков'));
+          return const Center(
+            child: Text(
+              'У вас пока нет истории звонков',
+              style: TextStyle(color: Colors.black45, fontSize: 15),
+            ),
+          );
         }
 
         final calls = snapshot.data!;
@@ -265,8 +279,9 @@ class CallsHistory extends StatelessWidget {
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (_) =>
-                      const Center(child: CircularProgressIndicator()),
+                  builder: (_) => const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
+                  ),
                 );
 
                 final vcsBloc = context.read<VCSBloc>();
@@ -280,7 +295,7 @@ class CallsHistory extends StatelessWidget {
                   ),
                 );
 
-                Navigator.pop(context); // Закрываем саму шторку
+                Navigator.pop(context); // Закрываем crytilcy
 
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -954,6 +969,13 @@ class _NewCallSheetState extends State<NewCallSheet> {
           // Кнопка создать звонок
           ElevatedButton(
             onPressed: () async {
+              showDialog(
+                context: context,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
+                ),
+              );
+
               final rawRoomName = _roomNameController.text.trim();
               final displayRoomName = rawRoomName.isNotEmpty
                   ? rawRoomName
@@ -982,7 +1004,7 @@ class _NewCallSheetState extends State<NewCallSheet> {
                   ),
                 );
 
-                Navigator.pop(context); // Закрываем саму шторку
+                Navigator.popUntil(context, (route) => !route.isFirst);
 
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -1020,6 +1042,8 @@ class _NewCallSheetState extends State<NewCallSheet> {
                   );
                 }
               } else {
+                Navigator.pop(context);
+
                 AppNotifications.showError(
                   context,
                   'Не удалось создать комнату',
