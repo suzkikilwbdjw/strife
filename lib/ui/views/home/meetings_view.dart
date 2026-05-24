@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/data/repositories/vcs_repository.dart';
 import 'package:strife/presentation/blocs/contacts/contacts_bloc.dart';
@@ -26,58 +27,68 @@ class _MeetingsViewState extends State<MeetingsView>
   @override
   bool get wantKeepAlive => true;
 
+  final String userId = FirebaseAuth.instance.currentUser!.uid;
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 140,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: Theme.of(
-              context,
-            ).extension<GradientTheme>()!.mainGradient,
+    return BlocProvider(
+      create: (context) =>
+          MeetingsBloc(
+              notificationRepository: context.read<NotificationRepository>(),
+              userRepository: context.read<UserRepository>(),
+            )
+            ..add(LoadMeetingsRequested(userId: userId))
+            ..add(SearchMeetingsRequested(query: '')),
+      child: Scaffold(
+        appBar: AppBar(
+          toolbarHeight: 140,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: Theme.of(
+                context,
+              ).extension<GradientTheme>()!.mainGradient,
+            ),
           ),
+
+          title: MeetingsAppBar(),
         ),
 
-        title: MeetingsAppBar(),
-      ),
+        body: BlocBuilder<MeetingsBloc, MeetingsState>(
+          builder: (context, state) {
+            final meetings = state.filteredMeetings;
 
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: context.read<UserRepository>().getMettingsStream(
-          FirebaseAuth.instance.currentUser!.uid,
+            if (meetings.isEmpty) {
+              if (state.searchQuery.isNotEmpty) {
+                return const Center(
+                  child: Text(
+                    'Встречи не найдены',
+                    style: TextStyle(color: Colors.black45, fontSize: 15),
+                  ),
+                );
+              }
+              return const Center(
+                child: Text(
+                  'У вас пока нету встреч',
+                  style: TextStyle(color: Colors.black45, fontSize: 15),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 12.0),
+              itemCount: meetings.length,
+              itemBuilder: (context, index) {
+                final meeting = meetings[index];
+
+                return MeetingCard(meetingInfo: meeting);
+              },
+            );
+          },
         ),
-        builder: (context, snapshot) {
-          // Обработка ошибки
-          if (snapshot.hasError) {
-            return Center(child: Text('Ошибка: ${snapshot.error}'));
-          }
-
-          // Затем состояние ожидания
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          // Проверяем наличие данных
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('У вас пока нет активных встреч'));
-          }
-
-          final meetings = snapshot.data!;
-
-          return ListView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 12.0),
-            itemCount: meetings.length,
-            itemBuilder: (context, index) {
-              final meeting = meetings[index];
-
-              return MeetingCard(meetingInfo: meeting);
-            },
-          );
-        },
       ),
     );
   }
@@ -112,7 +123,9 @@ class MeetingsAppBar extends StatelessWidget {
               ),
               tooltip: 'Новая встреча',
               onPressed: () async {
-                await showModalBottomSheet(
+                final meetingsBloc = context.read<MeetingsBloc>();
+
+                showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
                   shape: const RoundedRectangleBorder(
@@ -120,7 +133,10 @@ class MeetingsAppBar extends StatelessWidget {
                       top: Radius.circular(24),
                     ),
                   ),
-                  builder: (context) => const NewMeetingSheet(),
+                  builder: (context) => BlocProvider.value(
+                    value: meetingsBloc,
+                    child: const NewMeetingSheet(),
+                  ),
                 );
               },
             ),
@@ -134,7 +150,9 @@ class MeetingsAppBar extends StatelessWidget {
           style: const TextStyle(color: Colors.white),
           cursorColor: Colors.white, // Белый курсор
           onChanged: (value) {
-            // context.read<MeetingsBloc>().add(SearchMeetingsRequested(query: value));
+            context.read<MeetingsBloc>().add(
+              SearchMeetingsRequested(query: value),
+            );
           },
           decoration: InputDecoration(
             labelText: 'Поиск встреч',
@@ -243,7 +261,8 @@ class MeetingCard extends StatelessWidget {
                       size: 24,
                     ),
                     onPressed: () async {
-                      await showModalBottomSheet(
+                      final meetingsBloc = context.read<MeetingsBloc>();
+                      showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,
                         shape: const RoundedRectangleBorder(
@@ -251,8 +270,10 @@ class MeetingCard extends StatelessWidget {
                             top: Radius.circular(24),
                           ),
                         ),
-                        builder: (context) =>
-                            NewMeetingSheet(initialMeeting: meetingInfo),
+                        builder: (_) => BlocProvider.value(
+                          value: meetingsBloc,
+                          child: NewMeetingSheet(initialMeeting: meetingInfo),
+                        ),
                       );
                     },
                   ),
@@ -340,6 +361,13 @@ class MeetingCard extends StatelessWidget {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () async {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(
+                      child: CircularProgressIndicator(color: brandColor),
+                    ),
+                  );
                   final roomId = meetingInfo['roomId'];
                   final bool exists = await context
                       .read<VCSRepository>()
@@ -360,6 +388,8 @@ class MeetingCard extends StatelessWidget {
                       ),
                     );
 
+                    Navigator.pop(context); // Закрываем crytilcy
+
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => BlocProvider.value(
@@ -369,6 +399,7 @@ class MeetingCard extends StatelessWidget {
                       ),
                     );
                   } else {
+                    Navigator.pop(context); // Закрываем crytilcy
                     AppNotifications.showError(
                       context,
                       'Эта комната конференции больше не существует',

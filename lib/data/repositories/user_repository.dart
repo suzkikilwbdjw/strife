@@ -192,7 +192,7 @@ class UserRepository {
   }
 
   // Стрим для отслеживания Встреч
-  Stream<List<Map<String, dynamic>>> getMettingsStream(String userId) {
+  Stream<List<Map<String, dynamic>>> getMeetingsStream(String userId) {
     return _firestore
         .collection('meetings')
         .where('participantIds', arrayContains: userId)

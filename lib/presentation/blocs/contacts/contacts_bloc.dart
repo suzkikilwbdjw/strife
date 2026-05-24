@@ -68,6 +68,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
       await _notificationRepository.sendFriendRequest(
         senderId: event.senderId,
         recipientEmail: event.recipientEmail,
+        recipientId: event.recipientId,
         senderName: event.senderName,
         senderPhotoUrl: event.senderPhotoUrl,
       );

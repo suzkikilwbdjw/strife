@@ -47,6 +47,12 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     on<RoomTerminatedByHostRequested>(_onRoomTerminatedByHost);
     on<RoomTerminateRequested>(_onRoomTerminate);
     on<AddParticipantRequested>(_onAddParticipantInRoomToDB);
+    on<ParticipantJoinRequested>((event, emit) {
+      emit(state.copyWith(participantJoin: event.participantJoin));
+    });
+    on<ParticipantLeftRequested>((event, emit) {
+      emit(state.copyWith(participantLeft: event.participantLeft));
+    });
 
     // Внутренние
     on<RoomDataChanged>((event, emit) {
@@ -202,21 +208,20 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     try {
+      emit(state.copyWith(error: null));
       if (_room != null) {
         await _listener?.dispose();
-        await _room!.disconnect();
-        await _room!.dispose();
+        await _room?.disconnect();
+        await _room?.dispose();
       }
-
-      emit(state.copyWith(error: null));
 
       // Создаем экземпляр комнаты
       _room = Room(
         roomOptions: const RoomOptions(
-          adaptiveStream: true,
+          adaptiveStream: false,
           dynacast: true,
           defaultVideoPublishOptions: VideoPublishOptions(
-            videoCodec: 'h264',
+            videoCodec: 'v8',
             simulcast: true,
             videoEncoding: VideoEncoding(
               maxFramerate: 30,
@@ -226,7 +231,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
         ),
       );
 
-      _listener = _room!.createListener();
+      _listener = _room?.createListener();
       _setupRoomListeners(); // Настраиваем подписки LiveKit
 
       final data = await _vcsRepository.fetchToken(
@@ -237,14 +242,14 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
       );
 
       // Подключаемся к комнате
-      await _room!.connect(data['serverURL'], data['participantToken']);
+      await _room?.connect(data['serverURL'], data['participantToken']);
 
       add(RoomDataChanged());
       emit(state.copyWith(isConnected: true));
 
-      roomId = _room!.name;
+      roomId = _room?.name;
     } catch (e) {
-      rethrow;
+      emit(state.copyWith(error: e.toString()));
     }
   }
 
@@ -273,27 +278,36 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     ToggleMicrophoneRequested event,
     Emitter<VCSState> emit,
   ) async {
-    final newValue = !state.isMicrophoneEnabled;
+    try {
+      emit(state.copyWith(error: null));
+      final newValue = !state.isMicrophoneEnabled;
 
-    await _room!.localParticipant?.setMicrophoneEnabled(newValue);
+      await _room!.localParticipant?.setMicrophoneEnabled(newValue);
 
-    emit(state.copyWith(isMicrophoneEnabled: newValue));
+      emit(state.copyWith(isMicrophoneEnabled: newValue));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
   }
 
   Future<void> _onToggleCamera(
     ToggleCameraRequested event,
     Emitter<VCSState> emit,
   ) async {
-    final newValue = !state.isCameraEnabled;
+    try {
+      emit(state.copyWith(error: null));
+      final newValue = !state.isCameraEnabled;
 
-    await _room!.localParticipant?.setCameraEnabled(
-      newValue,
-      cameraCaptureOptions: CameraCaptureOptions(
-        params: VideoParametersPresets.h1080_169,
-      ),
-    );
-
-    emit(state.copyWith(isCameraEnabled: newValue));
+      await _room?.localParticipant?.setCameraEnabled(
+        newValue,
+        cameraCaptureOptions: CameraCaptureOptions(
+          params: VideoParametersPresets.h1080_169,
+        ),
+      );
+      emit(state.copyWith(isCameraEnabled: newValue));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
   }
 
   Future<void> _onFlipCamera(
@@ -301,7 +315,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
     Emitter<VCSState> emit,
   ) async {
     final trackPub =
-        _room!.localParticipant?.videoTrackPublications.firstOrNull;
+        _room?.localParticipant?.videoTrackPublications.firstOrNull;
     final track = trackPub?.track;
 
     if (track is LocalVideoTrack) {
@@ -391,10 +405,12 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
             participantId: event.participant.identity,
           ),
         );
+        add(ParticipantJoinRequested(participantJoin: event.participant));
       })
       // Участник вышел
       ..on<ParticipantDisconnectedEvent>((event) {
         add(RoomDataChanged());
+        add(ParticipantLeftRequested(participantLeft: event.participant));
       })
       // Переподключение началось
       ..on<RoomReconnectingEvent>((event) {

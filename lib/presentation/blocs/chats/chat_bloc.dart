@@ -17,8 +17,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final UserRepository _userRepository;
   final NotificationRepository _notificationRepository;
 
+  // Подписка на сообщения в чате
   StreamSubscription<List<MessageModel>>? _messagesSubscription;
+
+  // Подписка на сам чат
   StreamSubscription<DocumentSnapshot>? _chatSubscription;
+
+  // Подписка на чаты
+  StreamSubscription<List<Map<String, dynamic>>>? _chatsSubscription;
 
   String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
   String? _currentChatId;
@@ -32,15 +38,80 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
        _userRepository = userRepository,
        super(const ChatState()) {
     on<InitChat>(_onInitChat);
+    on<InitChats>(_onInitChats);
     on<MessagesUpdated>(_onMessagesUpdated);
     on<ChatDataUpdated>(_onChatDataUpdated);
     on<SendMessage>(_onSendMessage);
     on<LoadUser>(_onLoadUser);
-    on<SendMessageRequest>(_onSendMessageRequest);
+    on<SendMessageRequested>(_onSendMessageRequest);
+    on<UpdateChats>(_updateChats);
+    on<SearchChats>(_searchChats);
+  }
+
+  Future<void> _searchChats(SearchChats event, Emitter<ChatState> emit) async {
+    final query = event.searchQuery.toLowerCase();
+
+    if (query.isEmpty) {
+      // Если строка пустая, показываем все без фильтрации
+      emit(state.copyWith(filteredChats: state.allChats, searchQuery: ''));
+    } else {
+      final filtered = state.allChats.where((chat) {
+        final name =
+            chat['participantsInfo'][(chat['participants'] as List?)
+                    ?.firstWhere(
+                      (id) => id != currentUserId,
+                      orElse: () => currentUserId,
+                    )]['displayName']
+                .toString()
+                .toLowerCase();
+        return name.contains(query);
+      }).toList();
+
+      emit(state.copyWith(filteredChats: filtered, searchQuery: query));
+    }
+  }
+
+  Future<void> _updateChats(UpdateChats event, Emitter<ChatState> emit) async {
+    emit(
+      state.copyWith(
+        allChats: event.allChats,
+        filteredChats: state.searchQuery.isEmpty
+            ? event.allChats
+            : event.allChats
+                  .where(
+                    (chat) =>
+                        chat['participantsInfo'][(chat['participants'] as List?)
+                                ?.firstWhere(
+                                  (id) => id != currentUserId,
+                                  orElse: () => currentUserId,
+                                )]['displayName']
+                            .toString()
+                            .toLowerCase()
+                            .contains(state.searchQuery),
+                  )
+                  .toList(),
+      ),
+    );
+  }
+
+  Future<void> _onInitChats(InitChats event, Emitter<ChatState> emit) async {
+    try {
+      emit(state.copyWith(error: null));
+
+      await _chatsSubscription?.cancel();
+
+      _chatsSubscription = _chatRepository.getAllMyChats(event.userId).listen((
+        chats,
+      ) {
+        add(UpdateChats(allChats: chats));
+      });
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
   }
 
   Future<void> _onSendMessageRequest(
-    SendMessageRequest event,
+    SendMessageRequested event,
     Emitter<ChatState> emit,
   ) async {
     if (_currentChatId == null || currentUserId == null) return;
@@ -198,6 +269,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   Future<void> close() {
     _messagesSubscription?.cancel();
     _chatSubscription?.cancel();
+    _chatsSubscription?.cancel();
     return super.close();
   }
 }

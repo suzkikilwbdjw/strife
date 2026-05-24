@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -686,17 +687,12 @@ class LoginButton extends StatelessWidget {
   }
 }
 
-Route<void> _createRoute(Widget widget) {
+Route _createRoute(Widget widget) {
   return PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) => widget,
+    pageBuilder: (_, _, _) => widget,
     transitionDuration: const Duration(milliseconds: 400),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return ScaleTransition(
-        scale: Tween<double>(begin: 0.85, end: 1.0).animate(
-          CurvedAnimation(parent: animation, curve: Curves.easeInOutCubic),
-        ),
-        child: FadeTransition(opacity: animation, child: child),
-      );
+    transitionsBuilder: (_, animation, _, child) {
+      return FadeScaleTransition(animation: animation, child: child);
     },
   );
 }

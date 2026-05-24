@@ -83,11 +83,11 @@ class _HomeViewState extends State<HomeView> {
                 context.read<NavigationBloc>().add(ChangeTab(index));
               },
               children: const [
-                CallsView(key: ValueKey('calls')),
-                ChatsView(key: ValueKey('chats')),
-                MeetingsView(key: ValueKey('meetings')),
-                ContactsView(key: ValueKey('contacts')),
-                ProfileView(key: ValueKey('profile')),
+                CallsView(),
+                ChatsView(),
+                MeetingsView(),
+                ContactsView(),
+                ProfileView(),
               ],
             ),
 

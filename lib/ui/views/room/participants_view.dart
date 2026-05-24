@@ -48,7 +48,7 @@ class ParticipantsView extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Левосторонний заголовок со счетчиком в стиле Strife
+          // Левосторонний заголовок
           Row(
             children: [
               const Text(

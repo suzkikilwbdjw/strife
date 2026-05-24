@@ -7,6 +7,33 @@ abstract class MeetingsEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+class LoadMeetingsRequested extends MeetingsEvent {
+  final String userId;
+
+  const LoadMeetingsRequested({required this.userId});
+
+  @override
+  List<Object?> get props => [userId];
+}
+
+class UpdateMeetingsRequested extends MeetingsEvent {
+  final List<Map<String, dynamic>> fullMeetings;
+
+  const UpdateMeetingsRequested({required this.fullMeetings});
+
+  @override
+  List<Object?> get props => [fullMeetings];
+}
+
+class SearchMeetingsRequested extends MeetingsEvent {
+  final String query;
+
+  const SearchMeetingsRequested({required this.query});
+
+  @override
+  List<Object?> get props => [query];
+}
+
 class SendMeetingRequestRequested extends MeetingsEvent {
   final String senderId;
   final List<String> participantIds;

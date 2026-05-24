@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -27,19 +28,16 @@ class _CallsViewState extends State<CallsView>
   @override
   bool get wantKeepAlive => true;
 
-  late final TextEditingController _textEditingController;
   late final User _user;
 
   @override
   void initState() {
     super.initState();
-    _textEditingController = TextEditingController();
     _user = FirebaseAuth.instance.currentUser!;
   }
 
   @override
   void dispose() {
-    _textEditingController.dispose();
     super.dispose();
   }
 
@@ -83,8 +81,16 @@ class _CallsViewState extends State<CallsView>
                     ),
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationsView(),
+                        PageRouteBuilder(
+                          pageBuilder: (_, _, _) => const NotificationsView(),
+                          transitionsBuilder: (_, animation, _, child) =>
+                              FadeScaleTransition(
+                                animation: CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.fastOutSlowIn,
+                                ),
+                                child: child,
+                              ),
                         ),
                       );
                     },
@@ -154,7 +160,6 @@ class _CallsViewState extends State<CallsView>
                 Expanded(
                   child: JoinRoomButton(
                     user: FirebaseAuth.instance.currentUser!,
-                    textEditingController: _textEditingController,
                   ),
                 ),
               ],
@@ -246,12 +251,19 @@ class CallsHistory extends StatelessWidget {
 
         // Затем состояние ожидания
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
+          );
         }
 
         // Проверяем наличие данных
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('У вас пока нет истории звонков'));
+          return const Center(
+            child: Text(
+              'У вас пока нет истории звонков',
+              style: TextStyle(color: Colors.black45, fontSize: 15),
+            ),
+          );
         }
 
         final calls = snapshot.data!;
@@ -267,8 +279,9 @@ class CallsHistory extends StatelessWidget {
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (_) =>
-                      const Center(child: CircularProgressIndicator()),
+                  builder: (_) => const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
+                  ),
                 );
 
                 final vcsBloc = context.read<VCSBloc>();
@@ -282,7 +295,7 @@ class CallsHistory extends StatelessWidget {
                   ),
                 );
 
-                Navigator.pop(context); // Закрываем саму шторку
+                Navigator.pop(context); // Закрываем crytilcy
 
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -498,13 +511,8 @@ class CallCardWidget extends StatelessWidget {
 }
 
 class JoinRoomButton extends StatelessWidget {
-  const JoinRoomButton({
-    super.key,
-    required this.user,
-    required this.textEditingController,
-  });
+  const JoinRoomButton({super.key, required this.user});
 
-  final TextEditingController textEditingController;
   final User user;
 
   @override
@@ -514,129 +522,7 @@ class JoinRoomButton extends StatelessWidget {
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
-          builder: (context) => DraggableScrollableSheet(
-            initialChildSize: 0.65,
-            maxChildSize: 0.65,
-            minChildSize: 0.4,
-            expand: false,
-            builder: (context, scrollController) {
-              return Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(top: 20),
-                child: Column(
-                  children: <Widget>[
-                    // Заголовок
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 9.0),
-                      child: Text(
-                        'Присоединиться к звонку',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-
-                    // Поле с вводом id комнаты
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: TextField(
-                        controller: textEditingController,
-                        decoration: InputDecoration(
-                          hintText: 'Введите id встречи...',
-                          hintStyle: TextStyle(color: Colors.grey),
-                          prefixIcon: Icon(
-                            Icons.connect_without_contact_rounded,
-                            color: Colors.grey,
-                          ), // Иконка поиска
-                          filled: true,
-
-                          fillColor: Color(0xFFD9D9D9),
-
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Кнопка присоединиться
-                    FilledButton(
-                      onPressed: () async {
-                        final roomId = textEditingController.text.trim();
-                        if (roomId.isEmpty) return;
-
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (_) =>
-                              const Center(child: CircularProgressIndicator()),
-                        );
-
-                        final exists = await context
-                            .read<VCSRepository>()
-                            .checkRoomExists(roomId);
-
-                        if (!context.mounted) return;
-
-                        if (exists) {
-                          final vcsBloc = context.read<VCSBloc>();
-
-                          vcsBloc.add(
-                            ConnectRequested(
-                              roomId: roomId,
-                              identity: user.uid,
-                              name: user.displayName!,
-                              photoUrl: user.photoURL,
-                            ),
-                          );
-
-                          Navigator.pop(context); // Закрываем саму шторку
-
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => BlocProvider.value(
-                                value: vcsBloc,
-                                child: const RoomView(),
-                              ),
-                            ),
-                          );
-                        } else {
-                          // Ошибка в случае неправельного id комнаты
-                          if (!context.mounted) return;
-
-                          Navigator.of(context).pop(); // закрываем лоадер
-
-                          // Показываем ошибку пользователю
-                          AppNotifications.showError(
-                            context,
-                            'Введен неверный id комнаты',
-                          );
-
-                          return;
-                        }
-                      },
-
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Colors.purpleAccent, // Цвет фона кнопки
-                        fixedSize: Size(
-                          MediaQuery.widthOf(context) * 0.8,
-                          60,
-                        ), // Размер кнопки
-                        textStyle: TextStyle(fontSize: 18),
-                      ),
-
-                      child: Text('Присоединиться'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+          builder: (context) => JoinRoomSheet(user: user),
         );
       },
 
@@ -647,7 +533,7 @@ class JoinRoomButton extends StatelessWidget {
       ),
 
       // Оформление кнопки
-      child: Ink(
+      child: SizedBox(
         height: 150,
         width: 150,
         child: Column(
@@ -668,9 +554,131 @@ class JoinRoomButton extends StatelessWidget {
             const Text(
               'Присоединиться',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class JoinRoomSheet extends StatefulWidget {
+  const JoinRoomSheet({super.key, required this.user});
+
+  final User user;
+
+  @override
+  State<JoinRoomSheet> createState() => _JoinRoomSheetState();
+}
+
+class _JoinRoomSheetState extends State<JoinRoomSheet> {
+  final TextEditingController _roomIdController = TextEditingController();
+
+  @override
+  void dispose() {
+    super.dispose();
+    _roomIdController.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Полоска-индикатор сверху шторки
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // заголовок
+          const Text(
+            'Присоединиться к звонку',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.start,
+          ),
+
+          const SizedBox(height: 20),
+
+          // Поле ввода id комнта
+          TextField(
+            controller: _roomIdController,
+            decoration: const InputDecoration(
+              labelText: 'ID Комнаты',
+              hintText: 'Введите id...',
+              prefixIcon: Icon(Icons.search_rounded),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Кнопка Присоедниться
+          ElevatedButton(
+            onPressed: () async {
+              final roomId = _roomIdController.text.trim();
+              final roomExists = await context
+                  .read<VCSRepository>()
+                  .checkRoomExists(roomId);
+              if (roomExists) {
+                if (!context.mounted) return;
+
+                final vcsBloc = context.read<VCSBloc>();
+                vcsBloc.add(
+                  ConnectRequested(
+                    roomId: roomId,
+                    identity: widget.user.uid,
+                    name: widget.user.displayName!,
+                    photoUrl: widget.user.photoURL,
+                  ),
+                );
+
+                Navigator.pop(context); // Закрываем саму шторку
+
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider.value(
+                      value: vcsBloc,
+                      child: const RoomView(),
+                    ),
+                  ),
+                );
+              } else {}
+            },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Присоединиться',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: 32),
+        ],
       ),
     );
   }
@@ -961,6 +969,13 @@ class _NewCallSheetState extends State<NewCallSheet> {
           // Кнопка создать звонок
           ElevatedButton(
             onPressed: () async {
+              showDialog(
+                context: context,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFB91ED0)),
+                ),
+              );
+
               final rawRoomName = _roomNameController.text.trim();
               final displayRoomName = rawRoomName.isNotEmpty
                   ? rawRoomName
@@ -989,7 +1004,7 @@ class _NewCallSheetState extends State<NewCallSheet> {
                   ),
                 );
 
-                Navigator.pop(context); // Закрываем саму шторку
+                Navigator.popUntil(context, (route) => !route.isFirst);
 
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -1027,6 +1042,8 @@ class _NewCallSheetState extends State<NewCallSheet> {
                   );
                 }
               } else {
+                Navigator.pop(context);
+
                 AppNotifications.showError(
                   context,
                   'Не удалось создать комнату',

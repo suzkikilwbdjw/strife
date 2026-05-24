@@ -251,6 +251,13 @@ class _ContactsViewState extends State<ContactsView>
             size: 22,
           ),
           onPressed: () async {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const Center(
+                child: CircularProgressIndicator(color: brandColor),
+              ),
+            );
             final senderId = user.uid;
             final senderName = user.displayName!;
             final senderPhotoUrl = user.photoURL!;
@@ -273,6 +280,8 @@ class _ContactsViewState extends State<ContactsView>
                   photoUrl: user.photoURL,
                 ),
               );
+
+              Navigator.pop(context);
 
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -306,6 +315,7 @@ class _ContactsViewState extends State<ContactsView>
                 participantsInfo: participantsInfo,
               );
             } else {
+              Navigator.pop(context);
               AppNotifications.showError(context, 'Не удалось создать комнату');
             }
           },

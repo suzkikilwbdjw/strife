@@ -10,6 +10,8 @@ class VCSState extends Equatable {
   final bool isConnected;
 
   final List<Participant> participants;
+  final Participant? participantJoin;
+  final Participant? participantLeft;
 
   final String? pinnedParticipantSid;
   final String? activeSpeakerSid;
@@ -36,6 +38,8 @@ class VCSState extends Equatable {
   const VCSState({
     this.isMinimized = false,
     this.isConnected = false,
+    this.participantJoin,
+    this.participantLeft,
     this.participants = const [],
     this.pinnedParticipantSid,
     this.activeSpeakerSid,
@@ -58,6 +62,8 @@ class VCSState extends Equatable {
     bool? isMinimized,
     bool? isConnected,
     List<Participant>? participants,
+    Participant? participantLeft,
+    Participant? participantJoin,
     Object? pinnedParticipantSid = _undefined,
     String? activeSpeakerSid,
     List<String>? hostSids,
@@ -75,6 +81,8 @@ class VCSState extends Equatable {
     String? error,
   }) {
     return VCSState(
+      participantJoin: participantJoin ?? this.participantJoin,
+      participantLeft: participantLeft ?? this.participantLeft,
       isMinimized: isMinimized ?? this.isMinimized,
       isConnected: isConnected ?? this.isConnected,
       participants: participants ?? this.participants,
@@ -104,6 +112,8 @@ class VCSState extends Equatable {
   List<Object?> get props => [
     isMinimized,
     isConnected,
+    participantJoin,
+    participantLeft,
     participants,
     pinnedParticipantSid,
     activeSpeakerSid,

@@ -7,7 +7,7 @@ import 'package:strife/data/repositories/notification_repository.dart';
 import 'package:strife/data/repositories/user_repository.dart';
 import 'package:strife/presentation/blocs/chats/chat_bloc.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
-import 'package:strife/ui/views/chat/chat_screen.dart';
+import 'package:strife/ui/views/chat_screen/chat_screen.dart';
 import 'package:strife/ui/views/room/layout_coordinate.dart';
 import 'package:strife/ui/views/room/participants_view.dart';
 import 'package:strife/ui/widgets/app_notifications.dart';
@@ -21,11 +21,38 @@ class RoomView extends StatelessWidget {
 
     return MultiBlocListener(
       listeners: [
+        // Слушатель подключения участника
+        BlocListener<VCSBloc, VCSState>(
+          listenWhen: (previous, current) =>
+              previous.participantJoin != current.participantJoin,
+          listener: (context, state) {
+            if (state.participantJoin != null && !state.isReconnecting) {
+              AppNotifications.showInfo(
+                context,
+                'Присоединился новый участник ${state.participantJoin!.name}',
+              );
+            }
+          },
+        ),
+        // Слушатель выходы участника участника
+        BlocListener<VCSBloc, VCSState>(
+          listenWhen: (previous, current) =>
+              previous.participantLeft != current.participantLeft,
+          listener: (context, state) {
+            if (state.participantLeft != null && !state.isReconnecting) {
+              AppNotifications.showInfo(
+                context,
+                'Участник ${state.participantLeft!.name} вышел',
+              );
+            }
+          },
+        ),
+
         // Слушатель переподключения
         BlocListener<VCSBloc, VCSState>(
           listenWhen: (p, c) => p.isReconnecting != c.isReconnecting,
           listener: (context, state) {
-            if (state.isReconnecting) {
+            if (state.isReconnecting && state.isConnected) {
               showDialog(
                 context: context,
                 useRootNavigator: true,
@@ -33,11 +60,18 @@ class RoomView extends StatelessWidget {
                 builder: (_) => const PopScope(
                   canPop: false,
                   child: AlertDialog(
-                    content: Row(
+                    backgroundColor: Colors.transparent,
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(),
-                        SizedBox(width: 16),
-                        Text('Переподключение...'),
+                        CircularProgressIndicator(color: Colors.white),
+                        SizedBox(height: 16),
+                        Text(
+                          'Переподключение...',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                   ),
@@ -233,7 +267,6 @@ class FullVideoCallView extends StatelessWidget {
         BlocBuilder<VCSBloc, VCSState>(
           builder: (context, state) {
             if (state.isConnected) return const SizedBox.shrink();
-
             return Container(
               color: Colors.black.withValues(alpha: 0.7),
               child: const Center(
@@ -245,6 +278,8 @@ class FullVideoCallView extends StatelessWidget {
                     Text(
                       'Подключение...',
                       style: TextStyle(color: Colors.white, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -737,193 +772,6 @@ class ParticipantLayout extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class PinnedParticipantView extends StatelessWidget {
-  const PinnedParticipantView({
-    super.key,
-    required this.pinned,
-    required this.participants,
-  });
-
-  final Participant pinned;
-  final List<Participant?> participants;
-
-  @override
-  Widget build(BuildContext context) {
-    final others = participants.where((p) => p != pinned).toList();
-
-    return Column(
-      children: [
-        Expanded(
-          flex: 3,
-          child: AnimatedHero(
-            isCompact: false,
-            tag: pinned.identity,
-            participant: pinned,
-          ),
-        ),
-
-        if (others.isNotEmpty)
-          Flexible(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.all(8),
-              itemCount: others.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                return SizedBox(
-                  width: 180,
-                  child: AnimatedHero(
-                    isCompact: true,
-                    tag: others[index]!.identity,
-                    participant: others[index]!,
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class ActiveSpeakerView extends StatelessWidget {
-  const ActiveSpeakerView({
-    super.key,
-    required this.activeSpeaker,
-    required this.participants,
-  });
-
-  final Participant activeSpeaker;
-  final List<Participant?> participants;
-
-  @override
-  Widget build(BuildContext context) {
-    final others = participants.where((p) => p != activeSpeaker).toList();
-
-    return Column(
-      children: [
-        Expanded(
-          flex: 3,
-          child: AnimatedHero(
-            isCompact: false,
-            tag: activeSpeaker.identity,
-            participant: activeSpeaker,
-          ),
-        ),
-
-        if (others.isNotEmpty)
-          Flexible(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.all(8),
-              itemCount: others.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                return SizedBox(
-                  width: 180,
-                  child: AnimatedHero(
-                    isCompact: true,
-                    tag: others[index]!.identity,
-                    participant: others[index]!,
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class GridParticipantsView extends StatelessWidget {
-  const GridParticipantsView({
-    super.key,
-    required this.participants,
-    required this.crossAxisCount,
-    required this.k,
-  });
-
-  final List<Participant?> participants;
-  final int crossAxisCount;
-  final int k;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 5,
-          mainAxisSpacing: 5,
-          mainAxisExtent: constraints.maxHeight / k - 5,
-        ),
-        itemCount: participants.length,
-        itemBuilder: (context, index) => AnimatedHero(
-          isCompact: true,
-          tag: participants[index]!.identity,
-          participant: participants[index]!,
-        ),
-      ),
-    );
-  }
-}
-
-class TwoParticipantsView extends StatelessWidget {
-  const TwoParticipantsView({super.key, required this.participants});
-
-  final List<Participant?> participants;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: participants
-          .map(
-            (participant) => Expanded(
-              child: AnimatedHero(
-                isCompact: false,
-                tag: participant!.identity,
-                participant: participant,
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class OneParticipantView extends StatelessWidget {
-  const OneParticipantView({super.key, required this.participant});
-  final Participant participant;
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedHero(
-      isCompact: false,
-      tag: participant.identity,
-      participant: participant,
-    );
-  }
-}
-
-class AnimatedHero extends StatelessWidget {
-  const AnimatedHero({
-    super.key,
-    required this.participant,
-    required this.tag,
-    required this.isCompact,
-  });
-
-  final Participant<TrackPublication<Track>> participant;
-  final Object tag;
-  final bool isCompact;
-  @override
-  Widget build(BuildContext context) {
-    return Hero(
-      tag: tag,
-      child: ParticipantTile(participant: participant, isCompact: isCompact),
     );
   }
 }
