@@ -9,6 +9,8 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
+const goRushUri = 'http://localhost:8088/api/push';
+
 // Роут для отметки уведомлений прочитанными
 router.post('/mark-notifications-read', async (req, res) => {
   try {
@@ -71,7 +73,6 @@ router.post('/send-call-request', async (req, res) => {
         {
           chatId: chatId,
           lastMessage: 'Видеовстреча',
-          lastMessage: 'Видеовстреча',
           lastUpdate: admin.firestore.FieldValue.serverTimestamp(),
           lastMessageSenderId: senderId,
           lastMessageReadBy: [senderId],
@@ -104,31 +105,47 @@ router.post('/send-call-request', async (req, res) => {
     });
 
     if (fcmToken) {
-      const message = {
-        notification: {
-          title: 'Входящий вызов',
-          body: `${senderName} приглашает вас в звонок`,
-        },
-        android: {
-          notification: {
-            channelId: 'high_importance_channel',
-            priority: 'high',
-            imageUrl: senderPhotoUrl,
-          },
-        },
-        data: {type: 'call_request', chatId: chatId, roomId: roomId},
-        token: fcmToken,
-      };
-
       try {
-        await admin.messaging().send(message);
-        console.log('Пуш звонка успешно отправлен');
-      } catch (error) {
-        if (error.code === 'messaging/registration-token-not-registered') {
-          console.log(`Токен получателя ${recipientId} протух.`);
-        } else {
-          throw error;
+        const response = await fetch(goRushUri, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            'notifications': [{
+              'tokens': [fcmToken],
+              'platform': 2,
+              'title': 'Входящий вызов',
+              'message': `${senderName} приглашает вас в звонок`,
+              'image': senderPhotoUrl,
+              'priority': 'high',
+              'data': {
+                'type': 'call_request',
+                'chatId': chatId,
+                'roomId': roomId,
+                'image_url': senderPhotoUrl
+              },
+            }],
+          })
+        });
+
+        const data = await response.json();
+
+        console.log('Ответ Gorush:', data);
+
+        if (data.counts === 0 || (data.logs && data.logs.length > 0)) {
+          const hasBadTokenError = data.logs.some(
+              log => log.error.includes('Unregistered') ||
+                  log.error.includes('InvalidRegistration'));
+
+          if (hasBadTokenError) {
+            console.log(`Токен получателя ${recipientId} не активен.`);
+            db.collection('users').doc(recipientId).update({
+              fcmToken: admin.firestore.FieldValue.delete()
+            });
+          }
         }
+
+      } catch (error) {
+        console.error('Ошибка сети или Gorush сервера:', error);
       }
     }
 
@@ -175,13 +192,41 @@ router.post('/send-friend-request', async (req, res) => {
       };
 
       try {
-        await admin.messaging().send(message);
-      } catch (error) {
-        if (error.code === 'messaging/registration-token-not-registered') {
-          console.log(`Токен получателя ${recipientId} не активен.`);
-        } else {
-          throw error;
+        const response = await fetch(goRushUri, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            'notifications': [{
+              'tokens': [fcmToken],
+              'platform': 2,
+              'title': 'Новый запрос в контакты',
+              'message': `${senderName} хочет добавить вас в контакты`,
+              'image': senderPhotoUrl,
+              'priority': 'high',
+              'data': {'type': 'friend_request', 'image_url': senderPhotoUrl},
+            }],
+          }),
+        });
+
+        const data = await response.json();
+
+        console.log('Ответ Gorush:', data);
+
+        if (data.counts === 0 || (data.logs && data.logs.length > 0)) {
+          const hasBadTokenError = data.logs.some(
+              log => log.error.includes('Unregistered') ||
+                  log.error.includes('InvalidRegistration'));
+
+          if (hasBadTokenError) {
+            console.log(`Токен получателя ${recipientId} не активен.`);
+            db.collection('users').doc(recipientId).update({
+              fcmToken: admin.firestore.FieldValue.delete()
+            });
+          }
         }
+
+      } catch (error) {
+        console.error('Ошибка сети или Gorush сервера:', error);
       }
     }
 
@@ -248,38 +293,48 @@ router.post('/send-meeting-request', async (req, res) => {
       });
 
       if (fcmToken) {
-        const message = {
-          notification: {
-            title: `Новая встреча: ${titleMeeting}`,
-            body: `${senderName} пригласил вас на ${formattedDate} в ${
-                formattedTime}`,
-          },
-          android: {
-            notification: {
-              channelId: 'high_importance_channel',
-              priority: 'high',
-            },
-          },
-          token: fcmToken,
-          data: {
-            type: 'meeting_request',
-            roomId: roomId,
-            meetingId: meetingRef.id
-          },
-        };
-
         try {
-          await admin.messaging().send(message);
-        } catch (error) {
-          if (error.code === 'messaging/registration-token-not-registered') {
-            console.log(
-                `Токен пользователя ${recipientId} неактивен. Удаляем...`);
-            await db.collection('users').doc(recipientId).update({
-              fcmToken: admin.firestore.FieldValue.delete()
-            });
-          } else {
-            console.error('Ошибка отправки FCM:', error);
+          const response = await fetch(goRushUri, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              'notifications': [{
+                'tokens': [fcmToken],
+                'platform': 2,
+                'title': `Новая встреча: ${titleMeeting}`,
+                'message': `${senderName} пригласил вас на ${formattedDate} в ${
+                    formattedTime}`,
+                'image': senderPhotoUrl,
+                'priority': 'high',
+                'data': {
+                  'type': 'meeting_request',
+                  'roomId': roomId,
+                  'meetingId': meetingRef.id,
+                  'image_url': senderPhotoUrl
+                },
+              }],
+            }),
+          });
+
+          const data = await response.json();
+
+          console.log('Ответ Gorush:', data);
+
+          if (data.counts === 0 || (data.logs && data.logs.length > 0)) {
+            const hasBadTokenError = data.logs.some(
+                log => log.error.includes('Unregistered') ||
+                    log.error.includes('InvalidRegistration'));
+
+            if (hasBadTokenError) {
+              console.log(`Токен получателя ${recipientId} не активен.`);
+              db.collection('users').doc(recipientId).update({
+                fcmToken: admin.firestore.FieldValue.delete()
+              });
+            }
           }
+
+        } catch (error) {
+          console.error('Ошибка сети или Gorush сервера:', error);
         }
       }
     });
@@ -291,7 +346,7 @@ router.post('/send-meeting-request', async (req, res) => {
     console.error('Error sending meeting request:', error);
     res.status(500).json({error: error.message});
   }
-})
+});
 
 // Роут для обновления данных встречи
 router.put('/update-meeting/:id', async (req, res) => {
@@ -343,38 +398,48 @@ router.put('/update-meeting/:id', async (req, res) => {
       });
 
       if (fcmToken) {
-        const message = {
-          notification: {
-            title: `Встреча изменена: ${titleMeeting}`,
-            body: `${senderName} изменил параметры встречи на ${
-                formattedDate} в ${formattedTime}`,
-          },
-          android: {
-            notification: {
-              channelId: 'high_importance_channel',
-              priority: 'high',
-            },
-          },
-          token: fcmToken,
-          data: {
-            type: 'update_meeting_request',
-            roomId: roomId || '',
-            meetingId: id
-          },
-        };
-
         try {
-          await admin.messaging().send(message);
-        } catch (error) {
-          if (error.code === 'messaging/registration-token-not-registered') {
-            console.log(
-                `Токен пользователя ${recipientId} неактивен. Удаляем...`);
-            await db.collection('users').doc(recipientId).update({
-              fcmToken: admin.firestore.FieldValue.delete()
-            });
-          } else {
-            console.error('Ошибка отправки FCM:', error);
+          const response = await fetch(goRushUri, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              'notifications': [{
+                'tokens': [fcmToken],
+                'platform': 2,
+                'title': `Встреча изменена: ${titleMeeting}`,
+                'message': `${senderName} изменил параметры встречи на ${
+                    formattedDate} в ${formattedTime}`,
+                'image': senderPhotoUrl,
+                'priority': 'high',
+                'data': {
+                  'type': 'update_meeting_request',
+                  'roomId': roomId || '',
+                  'meetingId': id,
+                  'image_url': senderPhotoUrl
+                },
+              }],
+            }),
+          });
+
+          const data = await response.json();
+
+          console.log('Ответ Gorush:', data);
+
+          if (data.counts === 0 || (data.logs && data.logs.length > 0)) {
+            const hasBadTokenError = data.logs.some(
+                log => log.error.includes('Unregistered') ||
+                    log.error.includes('InvalidRegistration'));
+
+            if (hasBadTokenError) {
+              console.log(`Токен получателя ${recipientId} не активен.`);
+              db.collection('users').doc(recipientId).update({
+                fcmToken: admin.firestore.FieldValue.delete()
+              });
+            }
           }
+
+        } catch (error) {
+          console.error('Ошибка сети или Gorush сервера:', error);
         }
       }
     });
@@ -407,100 +472,98 @@ router.post('/check-meeting-reminders', async (req, res) => {
           {success: true, message: 'No meetings to remind'});
     }
 
-    const results = [];
-
     for (const doc of meetingsSnapshot.docs) {
       const meeting = doc.data();
       const meetingId = doc.id;
 
-      // Отправляем уведомления всем участникам
-      const promises = meeting.participantIds.map(async (participantId) => {
-        const userDoc = await db.collection('users').doc(participantId).get();
-        if (!userDoc.exists) return;
-
-        const fcmToken = userDoc.data()?.fcmToken;
-        const userLang = userDoc.data()?.language || 'ru';
-
-        const meetingDate = meeting.meetingDateTime.toDate();
-        const formattedDate = formatDateForNotification(meetingDate, userLang);
-        const formattedTime = formatTimeForNotification(meetingDate, userLang);
-
-        await db.collection('notifications').add({
-          type: 'meeting_reminder_request',
-          meetingId: meetingId,
-          recipientId: participantId,
-          senderId: meeting.senderId,
-          titleMeeting: meeting.titleMeeting,
-          meetingDateTime: meeting.meetingDateTime,
-          roomId: meeting.roomId,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-          status: 'unread'
-        });
-
-        // Обновляем данные встречи
+      try {
         await db.collection('meetings').doc(meetingId).update({
-          status: 'started'
+          reminderSent: true,
+          status: 'started',
+          reminderSentAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        if (fcmToken) {
-          const message = {
-            notification: {
-              title: '⏰ Встреча скоро начнется!',
-              body: `"${meeting.titleMeeting}" начнется сегодня в ${
-                  formattedTime}`,
-            },
-            android: {
-              notification: {
-                channelId: 'high_importance_channel',
-                priority: 'high',
-              },
-            },
-            token: fcmToken,
-            data: {
-              type: 'meeting_reminder_request',
-              meetingId: meetingId,
-              roomId: meeting.roomId,
-            },
-          };
+        // Отправляем уведомления всем участникам
+        const promises = meeting.participantIds.map(async (participantId) => {
+          const userDoc = await db.collection('users').doc(participantId).get();
+          if (!userDoc.exists) return;
 
-          try {
-            await admin.messaging().send(message);
-            return {participantId, status: 'sent'};
-          } catch (error) {
-            if (error.code === 'messaging/registration-token-not-registered') {
-              console.log(`Токен пользователя ${participantId} неактивен.`);
-              await db.collection('users').doc(participantId).update({
-                fcmToken: admin.firestore.FieldValue.delete()
+          const fcmToken = userDoc.data()?.fcmToken;
+          const userLang = userDoc.data()?.language || 'ru';
+
+          const meetingDate = meeting.meetingDateTime.toDate();
+          const formattedDate =
+              formatDateForNotification(meetingDate, userLang);
+          const formattedTime =
+              formatTimeForNotification(meetingDate, userLang);
+
+          await db.collection('notifications').add({
+            type: 'meeting_reminder_request',
+            meetingId: meetingId,
+            recipientId: participantId,
+            senderId: meeting.senderId,
+            titleMeeting: meeting.titleMeeting,
+            meetingDateTime: meeting.meetingDateTime,
+            roomId: meeting.roomId,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            status: 'unread'
+          });
+
+          if (fcmToken) {
+            try {
+              const response = await fetch(goRushUri, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                  'notifications': [{
+                    'tokens': [fcmToken],
+                    'platform': 2,
+                    'title': '⏰ Встреча скоро начнется!',
+                    'message': `"${meeting.titleMeeting}" начнется сегодня в ${
+                        formattedTime}`,
+                    'priority': 'high',
+                    'data': {
+                      'type': 'meeting_reminder_request',
+                      'roomId': meeting.roomId,
+                      'meetingId': meetingId,
+                    },
+                  }],
+                }),
               });
-              return {participantId, status: 'token_invalid'};
-            } else {
-              console.error('Ошибка отправки FCM:', error);
-              return {participantId, status: 'error', error: error.message};
+
+              const data = await response.json();
+
+              console.log('Ответ Gorush:', data);
+
+              if (data.counts === 0 || (data.logs && data.logs.length > 0)) {
+                const hasBadTokenError = data.logs.some(
+                    log => log.error.includes('Unregistered') ||
+                        log.error.includes('InvalidRegistration'));
+
+                if (hasBadTokenError) {
+                  console.log(`Токен получателя ${recipientId} не активен.`);
+                  db.collection('users').doc(recipientId).update({
+                    fcmToken: admin.firestore.FieldValue.delete()
+                  });
+                }
+              }
+
+            } catch (error) {
+              console.error('Ошибка сети или Gorush сервера:', error);
             }
           }
-        }
-        return {participantId, status: 'no_token'};
-      });
+        });
 
-      await Promise.all(promises);
-
-      // Отмечаем, что напоминание отправлено
-      await db.collection('meetings').doc(meetingId).update({
-        reminderSent: true,
-        reminderSentAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      results.push({
-        meetingId: meetingId,
-        title: meeting.titleMeeting,
-        participantsCount: meeting.participantIds.length
-      });
+        await Promise.all(promises);
+      } catch (error) {
+        console.error(
+            `Не удалось заблокировать встречу ${meetingId}, пропускаем:`,
+            error);
+      }
     }
 
     res.status(200).json({
       success: true,
-      reminderCount: meetingsSnapshot.size,
-      results: results
     });
 
   } catch (error) {
@@ -538,12 +601,14 @@ router.post('/send-message-request', async (req, res) => {
       readBy: [senderId]
     });
 
-    await db.collection('chats').doc(chatId).update({
-      lastMessage: textMessage,
-      lastUpdate: admin.firestore.FieldValue.serverTimestamp(),
-      lastMessageSenderId: senderId,
-      lastMessageReadBy: [senderId],
-    });
+    await db.collection('chats').doc(chatId).set(
+        {
+          lastMessage: textMessage,
+          lastUpdate: admin.firestore.FieldValue.serverTimestamp(),
+          lastMessageSenderId: senderId,
+          lastMessageReadBy: [senderId],
+        },
+        {merge: true});
 
     await db.collection('notifications').add({
       type: 'message_request',
@@ -555,37 +620,51 @@ router.post('/send-message-request', async (req, res) => {
       status: 'unread'
     });
 
-    if (fcmToken) {
-      const message = {
-        notification: {
-          title: senderName,
-          body: textMessage,
-        },
-        android: {
-          notification: {
-            channelId: 'high_importance_channel',
-            priority: 'high',
-            imageUrl: senderPhotoUrl,
-          },
-        },
-        data: {type: 'message_request', chatId: chatId},
-        token: fcmToken,
-      };
-
-      try {
-        await admin.messaging().send(message);
-        console.log('Пуш сообщения успешно отправлен');
-      } catch (error) {
-        if (error.code === 'messaging/registration-token-not-registered') {
-          console.log(`Токен получателя ${recipientId} протух.`);
-        } else {
-          throw error;
-        }
-      }
-    }
-
     res.status(200).json({success: true});
 
+    if (fcmToken) {
+      try {
+        const response = await fetch(goRushUri, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            'notifications': [{
+              'tokens': [fcmToken],
+              'platform': 2,
+              'title': senderName,
+              'message': textMessage,
+              'priority': 'high',
+              'image': senderPhotoUrl,
+              'data': {
+                'type': 'message_request',
+                'chatId': chatId,
+                'imageUrl': senderPhotoUrl,
+              },
+            }],
+          }),
+        });
+
+        const data = await response.json();
+
+        console.log('Ответ Gorush:', data);
+
+        if (data.counts === 0 || (data.logs && data.logs.length > 0)) {
+          const hasBadTokenError = data.logs.some(
+              log => log.error.includes('Unregistered') ||
+                  log.error.includes('InvalidRegistration'));
+
+          if (hasBadTokenError) {
+            console.log(`Токен получателя ${recipientId} не активен.`);
+            db.collection('users').doc(recipientId).update({
+              fcmToken: admin.firestore.FieldValue.delete()
+            });
+          }
+        }
+
+      } catch (error) {
+        console.error('Ошибка сети или Gorush сервера:', error);
+      }
+    }
   } catch (error) {
     console.error('Ошибка при обработке сообщения:', error);
     res.status(500).json({error: error.message});
@@ -693,8 +772,7 @@ router.put('/cancle-meeting-request/:id', async (req, res) => {
           await admin.messaging().send(message);
         } catch (error) {
           if (error.code === 'messaging/registration-token-not-registered') {
-            console.log(
-                `Токен пользователя ${recipientId} неактивен. Удаляем...`);
+            console.log(`Токен пользователя ${recipientId} неактивен.`);
             await db.collection('users').doc(recipientId).update({
               fcmToken: admin.firestore.FieldValue.delete()
             });

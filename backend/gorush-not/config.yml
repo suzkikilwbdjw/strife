@@ -1,0 +1,24 @@
+core:
+  enabled: true
+  address: ""
+  port: "8088"
+  worker_num: 0
+  queue_num: 8192
+  max_notification: 100
+
+android:
+  enabled: true
+  key_path: "serviceAccount.json"
+
+queue:
+  engine: "local"
+
+stat:
+  engine: "memory"
+
+log:
+  format: "string" 
+  access_log: "access_log"
+  access_level: "debug"
+  error_log: "error_log"
+  error_level: "error"

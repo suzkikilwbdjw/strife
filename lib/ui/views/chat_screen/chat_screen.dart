@@ -20,6 +20,7 @@ class ChatScreen extends StatefulWidget {
     this.controller,
     super.key,
   });
+  static String? currentOpenChatId;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -27,10 +28,18 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    ChatScreen.currentOpenChatId = widget.chatId;
+  }
 
   @override
   void dispose() {
     super.dispose();
+    if (ChatScreen.currentOpenChatId == widget.chatId) {
+      ChatScreen.currentOpenChatId = null;
+    }
     _controller.dispose();
   }
 

@@ -253,6 +253,15 @@ Future<void> setupNotifications() async {
   );
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+    final notificationType = message.data['type'];
+    final incomingChatId = message.data['chatId'];
+
+    if (notificationType == 'message_request' &&
+        incomingChatId != null &&
+        incomingChatId == ChatScreen.currentOpenChatId) {
+      return;
+    }
+
     await _showNotificationWithAvatar(message);
   });
 
