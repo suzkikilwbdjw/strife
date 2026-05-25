@@ -121,7 +121,7 @@ The application provides a complete communication ecosystem with:
 | Video Communication | LiveKit |
 | Database | Cloud Firestore, Firebase Realtime Database |
 | Authentication | Firebase Auth, Yandex OAuth |
-| Notifications | Firebase Cloud Messaging, flutter_local_notifications |
+| Notifications | Firebase Cloud Messaging, flutter_local_notifications, gorush |
 | State Management | flutter_bloc, Provider |
 | Deep Links | app_links, url_launcher |
 | UI & Animations | animations, bot_toast |
@@ -173,9 +173,11 @@ When the application is installed, opening the link automatically redirects the 
 # 🖥 Backend Structure
 
 ```text
-backend/
+backend
+├── gorush-not
+│   └── config.yml
 ├── index.js
-└── routes/
+└── routes
     ├── auth.js
     ├── avatar.js
     ├── livekit.js
