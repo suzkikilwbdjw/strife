@@ -394,30 +394,3 @@ void _handleMessageClick(Map<String, dynamic> data) {
     );
   }
 }
-
-class DeepLinkManager {
-  StreamSubscription<Uri>? _linkSubscriprion;
-
-  final _appLinks = AppLinks();
-
-  void initDeepLinks() {
-    _linkSubscriprion = _appLinks.uriLinkStream.listen((uri) {
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(builder: (context) => FooView()),
-      );
-    });
-  }
-
-  void dispose() async {
-    await _linkSubscriprion?.cancel();
-  }
-}
-
-class FooView extends StatelessWidget {
-  const FooView({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold();
-  }
-}
