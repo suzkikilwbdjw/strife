@@ -35,8 +35,8 @@ The application provides a complete communication ecosystem with:
 - Deep linking support
 - Modern animated UI
 
-> ⚠ This project is currently under active development and is intended for educational purposes only.
-
+> [!Warning]
+> This project is currently under active development and is intended for educational purposes only.
 ---
 
 # 📱 Features
