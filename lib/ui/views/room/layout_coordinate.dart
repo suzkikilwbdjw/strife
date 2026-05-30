@@ -1,3 +1,15 @@
+class LayoutResult {
+  final List<LayoutCoordinate> layoutCoordinate;
+  final double? lenghtList;
+  final double? lenghtRibbon;
+
+  LayoutResult({
+    required this.layoutCoordinate,
+    this.lenghtRibbon,
+    this.lenghtList,
+  });
+}
+
 class LayoutCoordinate {
   final double left;
   final double top;
@@ -13,7 +25,7 @@ class LayoutCoordinate {
   });
 }
 
-List<LayoutCoordinate> calculateLayout({
+LayoutResult calculateLayout({
   required int totalCount,
   required double maxWidth,
   required double maxHeight,
@@ -25,7 +37,7 @@ List<LayoutCoordinate> calculateLayout({
     final mainIndex = pinnedIndex ?? activeIndex!;
     final mainHeight = maxHeight * 0.75;
     final listHeight = maxHeight * 0.25;
-    final itemWidth = 180.0;
+    final itemWidth = maxWidth * 0.5;
 
     int secondaryCount = 0;
     for (int i = 0; i < totalCount; i++) {
@@ -41,7 +53,7 @@ List<LayoutCoordinate> calculateLayout({
       } else {
         coords.add(
           LayoutCoordinate(
-            left: secondaryCount * (itemWidth + 8),
+            left: secondaryCount * itemWidth,
             top: mainHeight,
             width: itemWidth,
             height: listHeight,
@@ -51,16 +63,18 @@ List<LayoutCoordinate> calculateLayout({
         secondaryCount++;
       }
     }
-    return coords;
+
+    final double lenghtRibbon = (totalCount - 1) * itemWidth;
+    return LayoutResult(layoutCoordinate: coords, lenghtRibbon: lenghtRibbon);
   }
 
   int columns = totalCount >= 3 ? 2 : 1;
-  int rows = (totalCount / columns).ceil();
+  int realRows = (totalCount / columns).ceil();
 
-  if (totalCount > 4) rows = 4;
+  int visibleRows = totalCount > 4 ? 4 : realRows;
 
   double itemWidth = maxWidth / columns;
-  double itemHeight = maxHeight / rows;
+  double itemHeight = maxHeight / visibleRows;
 
   for (int i = 0; i < totalCount; i++) {
     int row = i ~/ columns;
@@ -71,9 +85,14 @@ List<LayoutCoordinate> calculateLayout({
         top: row * itemHeight,
         width: itemWidth,
         height: itemHeight,
+        isCompact: totalCount > 4,
       ),
     );
   }
 
-  return coords;
+  int totalPages = (realRows / visibleRows).ceil();
+
+  final double lenghtList = totalPages * maxHeight;
+
+  return LayoutResult(layoutCoordinate: coords, lenghtList: lenghtList);
 }
