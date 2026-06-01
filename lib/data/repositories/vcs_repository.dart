@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,7 +21,7 @@ class VCSRepository {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'room_name': roomId,
-        'participant_identity': identity + Random().nextDouble().toString(),
+        'participant_identity': identity,
         'participant_name': name,
         'photo_url': photoUrl,
       }),
@@ -180,6 +179,20 @@ class VCSRepository {
       return doc.exists;
     } catch (e) {
       return false;
+    }
+  }
+
+  // Получить название комнаты
+  Future<String?> getRoomName(String roomId) async {
+    try {
+      final doc = await _firestore.collection('rooms').doc(roomId).get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['roomName'];
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
     }
   }
 

@@ -7,6 +7,7 @@ import 'package:strife/presentation/blocs/home/home_bloc.dart';
 import 'package:strife/presentation/blocs/home/home_event.dart';
 import 'package:strife/presentation/blocs/home/home_state.dart';
 import 'package:strife/presentation/blocs/vcs/vcs_bloc.dart';
+import 'package:strife/services/notification_service.dart';
 import 'package:strife/ui/views/home/calls_view.dart';
 import 'package:strife/ui/views/home/chats_view.dart';
 import 'package:strife/ui/views/home/contacts_view.dart';
@@ -44,6 +45,24 @@ class _HomeViewState extends State<HomeView> {
         currentUserId: FirebaseAuth.instance.currentUser!.uid,
       ),
     );
+
+    NotificationService.listenNotificationActions((actionId) {
+      if (!mounted) return;
+
+      final vcsBloc = context.read<VCSBloc>();
+
+      switch (actionId) {
+        case '0':
+          vcsBloc.add(ToggleMicrophoneRequested());
+          break;
+        case '1':
+          vcsBloc.add(ToggleCameraRequested());
+          break;
+        case '2':
+          vcsBloc.add(DisconnectRequested());
+          break;
+      }
+    });
   }
 
   @override
