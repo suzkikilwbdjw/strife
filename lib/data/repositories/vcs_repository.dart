@@ -182,6 +182,20 @@ class VCSRepository {
     }
   }
 
+  // Получить название комнаты
+  Future<String?> getRoomName(String roomId) async {
+    try {
+      final doc = await _firestore.collection('rooms').doc(roomId).get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['roomName'];
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Запрос на заверешение комнаты для всех
   Future<void> terminateRoom(String roomId) async {
     final res = await http.post(

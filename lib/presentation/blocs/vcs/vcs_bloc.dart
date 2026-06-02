@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:strife/services/notification_service.dart';
 import '../../../data/repositories/vcs_repository.dart';
 part 'vcs_event.dart';
 part 'vcs_state.dart';
@@ -16,6 +18,7 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   Room? _room;
 
   EventsListener<RoomEvent>? _listener;
+  StreamSubscription<VCSState>? _notificationSubscription;
 
   VCSBloc({required VCSRepository vcsRepository})
     : _vcsRepository = vcsRepository,
@@ -248,6 +251,49 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
       emit(state.copyWith(isConnected: true));
 
       roomId = _room?.name;
+
+      if (roomId != null) {
+        String? roomName = await _vcsRepository.getRoomName(roomId!);
+
+        if (roomName != null) {
+          await _notificationSubscription?.cancel();
+
+          _notificationSubscription = stream.listen((state) async {
+            if (state.isConnected) {
+              await NotificationService.showVCSNotification(
+                title: roomName,
+                body:
+                    '${state.participants.length} участник${state.participants.length == 1
+                        ? ''
+                        : (state.participants.length > 1 && state.participants.length <= 4)
+                        ? 'а'
+                        : 'ов'}',
+                actions: [
+                  AndroidNotificationAction(
+                    '0',
+                    state.isMicrophoneEnabled ? 'Выкл. микро' : 'Вкл. микро',
+                    cancelNotification: false,
+                  ),
+                  AndroidNotificationAction(
+                    '1',
+                    state.isCameraEnabled ? 'Выкл. камеру' : 'Вкл. камеру',
+                    cancelNotification: false,
+                  ),
+                  AndroidNotificationAction(
+                    '2',
+                    'Отключиться',
+                    cancelNotification: false,
+                  ),
+                ],
+              );
+            } else {
+              await NotificationService.hideVCSNotification();
+              await _notificationSubscription?.cancel();
+              _notificationSubscription = null;
+            }
+          });
+        }
+      }
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -555,6 +601,8 @@ class VCSBloc extends Bloc<VCSEvent, VCSState> {
   Future<void> close() async {
     await _listener?.dispose();
     await _room?.dispose();
-    return super.close();
+    await NotificationService.hideVCSNotification();
+    _notificationSubscription?.cancel();
+    super.close();
   }
 }

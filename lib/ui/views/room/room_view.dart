@@ -709,8 +709,16 @@ class NavigationBottomAppBar extends StatelessWidget {
   }
 }
 
-class ParticipantLayout extends StatelessWidget {
+class ParticipantLayout extends StatefulWidget {
   const ParticipantLayout({super.key});
+
+  @override
+  State<ParticipantLayout> createState() => _ParticipantLayoutState();
+}
+
+class _ParticipantLayoutState extends State<ParticipantLayout> {
+  double horizontalScrollOffset = 0.0;
+  double verticalScrollOffset = 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -728,7 +736,6 @@ class ParticipantLayout extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // Находим индексы специального отображения
     int? pinnedIndex = pinnedSid != null
         ? participants.indexWhere((p) => p.sid == pinnedSid)
         : null;
@@ -743,9 +750,12 @@ class ParticipantLayout extends StatelessWidget {
       activeIndex = null;
     }
 
+    if (pinnedIndex == -1) pinnedIndex = null;
+    if (activeIndex == -1) activeIndex = null;
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final coordinates = calculateLayout(
+        final layoutResult = calculateLayout(
           totalCount: participants.length,
           maxWidth: constraints.maxWidth,
           maxHeight: constraints.maxHeight,
@@ -753,23 +763,262 @@ class ParticipantLayout extends StatelessWidget {
           activeIndex: activeIndex == -1 ? null : activeIndex,
         );
 
-        return Stack(
-          children: [
-            for (int i = 0; i < participants.length; i++)
-              AnimatedPositioned(
-                key: ValueKey(participants[i].identity),
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeInOutCubic,
-                left: coordinates[i].left,
-                top: coordinates[i].top,
-                width: coordinates[i].width,
-                height: coordinates[i].height,
-                child: ParticipantTile(
-                  participant: participants[i],
-                  isCompact: coordinates[i].isCompact,
+        final bool isHorizontalMode =
+            layoutResult.lenghtRibbon != null &&
+            layoutResult.lenghtRibbon! > constraints.maxWidth &&
+            (pinnedIndex != null || activeIndex != null);
+
+        final bool isVerticalMode =
+            (pinnedIndex == null && activeIndex == null) &&
+            layoutResult.lenghtList != null &&
+            layoutResult.lenghtList! > constraints.maxHeight;
+
+        if (!isHorizontalMode && horizontalScrollOffset != 0.0) {
+          horizontalScrollOffset = 0.0;
+        }
+        if (!isVerticalMode && verticalScrollOffset != 0.0) {
+          verticalScrollOffset = 0.0;
+        }
+
+        // Находим максимальный возможный скролл и округляем его до целого пикселя
+        final int maxHorizontalScroll =
+            isHorizontalMode && layoutResult.lenghtRibbon != null
+            ? (layoutResult.lenghtRibbon! - constraints.maxWidth).round()
+            : 0;
+        final int currentHorizontalScroll = horizontalScrollOffset.round();
+
+        final bool showLeftArrow =
+            isHorizontalMode && currentHorizontalScroll > 0;
+        final bool showRightArrow =
+            isHorizontalMode && currentHorizontalScroll < maxHorizontalScroll;
+
+        // Находим максимальный возможный скролл для вертикального списка и округляем
+        final int maxVerticalScroll =
+            isVerticalMode && layoutResult.lenghtList != null
+            ? (layoutResult.lenghtList! - constraints.maxHeight).round()
+            : 0;
+        final int currentVerticalScroll = verticalScrollOffset.round();
+
+        final bool showUpArrow = isVerticalMode && currentVerticalScroll > 0;
+        final bool showDownArrow =
+            isVerticalMode && currentVerticalScroll < maxVerticalScroll;
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanEnd: (details) {
+            final velocityX = details.velocity.pixelsPerSecond.dx;
+            final velocityY = details.velocity.pixelsPerSecond.dy;
+
+            const double swipeThreshold = 250.0;
+
+            // Свайпы горизонтальные
+            if (isHorizontalMode && velocityX.abs() > swipeThreshold) {
+              if (velocityX < 0 && showRightArrow) {
+                setState(() {
+                  horizontalScrollOffset =
+                      (horizontalScrollOffset + constraints.maxWidth * 0.5)
+                          .clamp(0.0, maxHorizontalScroll.toDouble());
+                });
+              } else if (velocityX > 0 && showLeftArrow) {
+                setState(() {
+                  horizontalScrollOffset =
+                      (horizontalScrollOffset - constraints.maxWidth * 0.5)
+                          .clamp(0.0, maxHorizontalScroll.toDouble());
+                });
+              }
+            }
+
+            // Свайпы вертикальные
+            if (isVerticalMode && velocityY.abs() > swipeThreshold) {
+              if (velocityY < 0 && showDownArrow) {
+                setState(() {
+                  verticalScrollOffset =
+                      (verticalScrollOffset + constraints.maxHeight).clamp(
+                        0.0,
+                        maxVerticalScroll.toDouble(),
+                      );
+                });
+              } else if (velocityY > 0 && showUpArrow) {
+                setState(() {
+                  verticalScrollOffset =
+                      (verticalScrollOffset - constraints.maxHeight).clamp(
+                        0.0,
+                        maxVerticalScroll.toDouble(),
+                      );
+                });
+              }
+            }
+          },
+          child: Stack(
+            children: [
+              for (int i = 0; i < participants.length; i++)
+                if (i == pinnedIndex || i == activeIndex)
+                  AnimatedPositioned(
+                    key: ValueKey(participants[i].identity),
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOutCubic,
+                    left: 0,
+                    top: 0,
+                    width: layoutResult.layoutCoordinate[i].width,
+                    height: layoutResult.layoutCoordinate[i].height,
+                    child: ParticipantTile(participant: participants[i]),
+                  )
+                else
+                  AnimatedPositioned(
+                    key: ValueKey(participants[i].identity),
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOutCubic,
+                    left: isHorizontalMode
+                        ? layoutResult.layoutCoordinate[i].left -
+                              horizontalScrollOffset
+                        : layoutResult.layoutCoordinate[i].left,
+                    top: isVerticalMode
+                        ? layoutResult.layoutCoordinate[i].top -
+                              verticalScrollOffset
+                        : layoutResult.layoutCoordinate[i].top,
+                    width: layoutResult.layoutCoordinate[i].width,
+                    height: layoutResult.layoutCoordinate[i].height,
+                    child: ParticipantTile(
+                      participant: participants[i],
+                      isCompact: layoutResult.layoutCoordinate[i].isCompact,
+                    ),
+                  ),
+
+              if (isHorizontalMode) ...[
+                // Правая кнопка
+                Positioned(
+                  top: constraints.maxHeight * 0.845,
+                  right: 0,
+                  child: AnimatedOpacity(
+                    opacity: showRightArrow ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: Visibility(
+                      visible: showRightArrow,
+                      maintainState: true,
+                      maintainAnimation: true,
+                      maintainSize: true,
+                      child: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            horizontalScrollOffset =
+                                (horizontalScrollOffset +
+                                        constraints.maxWidth * 0.5)
+                                    .clamp(0.0, maxHorizontalScroll.toDouble());
+                          });
+                        },
+                        icon: const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-          ],
+
+                // Левая кнопка
+                Positioned(
+                  top: constraints.maxHeight * 0.845,
+                  left: 0,
+                  child: AnimatedOpacity(
+                    opacity: showLeftArrow ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: Visibility(
+                      visible: showLeftArrow,
+                      maintainState: true,
+                      maintainAnimation: true,
+                      maintainSize: true,
+                      child: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            horizontalScrollOffset =
+                                (horizontalScrollOffset -
+                                        constraints.maxWidth * 0.5)
+                                    .clamp(0.0, maxHorizontalScroll.toDouble());
+                          });
+                        },
+                        icon: const Icon(
+                          Icons.arrow_back_ios_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              if (isVerticalMode) ...[
+                // Кнопка вверх
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: AnimatedOpacity(
+                      opacity: showUpArrow ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      child: Visibility(
+                        visible: showUpArrow,
+                        maintainState: true,
+                        maintainAnimation: true,
+                        maintainSize: true,
+                        child: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              verticalScrollOffset =
+                                  (verticalScrollOffset - constraints.maxHeight)
+                                      .clamp(0.0, maxVerticalScroll.toDouble());
+                            });
+                          },
+                          icon: const Icon(
+                            Icons.keyboard_arrow_up_rounded,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Кнопка вниз
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: AnimatedOpacity(
+                      opacity: showDownArrow ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      child: Visibility(
+                        visible: showDownArrow,
+                        maintainState: true,
+                        maintainAnimation: true,
+                        maintainSize: true,
+                        child: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              verticalScrollOffset =
+                                  (verticalScrollOffset + constraints.maxHeight)
+                                      .clamp(0.0, maxVerticalScroll.toDouble());
+                            });
+                          },
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         );
       },
     );
