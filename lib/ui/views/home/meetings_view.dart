@@ -755,7 +755,7 @@ class _NewMeetingSheetState extends State<NewMeetingSheet> {
                               final roomId = await context
                                   .read<VCSRepository>()
                                   .createRoom(
-                                    roomName: 'test',
+                                    roomName: titleMeeting,
                                     creatorId: senderId,
                                     type: 'meeting',
                                   );
